@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Font Matching Spike</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; color: #222; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+
+    .drop-zone {
+      border: 2px dashed #aaa; border-radius: 8px; padding: 40px;
+      text-align: center; background: #fff; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone.drag-over { border-color: #4f46e5; background: #eef2ff; }
+    .drop-zone input { display: none; }
+
+    .panel { background: #fff; border-radius: 8px; padding: 20px; margin-top: 16px; border: 1px solid #e5e5e5; }
+    .panel h2 { font-size: 15px; margin-bottom: 12px; }
+
+    .font-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    .font-row:last-child { border-bottom: none; }
+    .badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .badge.high { background: #d1fae5; color: #065f46; }
+    .badge.fallback { background: #fef3c7; color: #92400e; }
+    .font-sample { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; }
+
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat { background: #f9f9f9; border-radius: 6px; padding: 12px; text-align: center; }
+    .stat .num { font-size: 28px; font-weight: bold; }
+    .stat .label { font-size: 12px; color: #666; margin-top: 2px; }
+    .stat.green .num { color: #059669; }
+    .stat.yellow .num { color: #d97706; }
+
+    .replace-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .replace-row input { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    button { padding: 8px 16px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    button:hover { background: #4338ca; }
+    button.secondary { background: #fff; color: #4f46e5; border: 1px solid #4f46e5; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+
+    #log { margin-top: 12px; font-size: 12px; color: #555; line-height: 1.6; }
+    .log-ok { color: #059669; }
+    .log-warn { color: #d97706; }
+    .log-err { color: #dc2626; }
+
+    canvas { max-width: 100%; border: 1px solid #e5e5e5; border-radius: 4px; display: block; margin-top: 8px; }
+    #results { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>PDF Font Matching Spike</h1>
+<p class="subtitle">Drop a real PDF to test client-side font detection and text replacement. No data leaves your browser.</p>
+
+<div class="drop-zone" id="dropZone">
+  <input type="file" id="fileInput" accept=".pdf">
+  <div style="font-size:32px; margin-bottom:8px;">📄</div>
+  <div style="font-weight:bold;">Drop a PDF here</div>
+  <div style="font-size:13px; color:#888; margin-top:4px;">or click to browse — use a messy real-world PDF (lease, invoice, form)</div>
+</div>
+
+<div id="results">
+  <div class="panel">
+    <h2>Font Coverage</h2>
+    <div class="summary">
+      <div class="stat" id="statTotal"><div class="num" id="numTotal">—</div><div class="label">Fonts found</div></div>
+      <div class="stat green" id="statHigh"><div class="num" id="numHigh">—</div><div class="label">Matched (high confidence)</div></div>
+      <div class="stat yellow" id="statFallback"><div class="num" id="numFallback">—</div><div class="label">Fallback (best guess)</div></div>
+    </div>
+    <div id="fontList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Text Replacement Test</h2>
+    <p style="font-size:13px; color:#555; margin-bottom:12px;">
+      Find a word from your PDF (exact match). The tool will draw a white mask over it and place new text in the matched font at the same position and size.
+    </p>
+    <div class="replace-row">
+      <input id="findText" placeholder="Word or phrase to find (e.g. 'Agreement')">
+      <input id="replaceText" placeholder="Replace with">
+      <button id="replaceBtn">Replace</button>
+    </div>
+    <div id="replaceLog"></div>
+    <button id="downloadBtn" style="display:none; margin-top:12px;">⬇ Download Modified PDF</button>
+  </div>
+
+  <div class="panel">
+    <h2>Page 1 Preview</h2>
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:16px;">
+  <h2>Spike Log</h2>
+  <div id="log">Waiting for PDF...</div>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- pdf-lib -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<!-- Font map -->
+<script src="font-map.js"></script>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
+let pdfBytes = null
+let textItems = []
+let pdfJsDoc = null
+
+const log = (msg, type = '') => {
+  const div = document.getElementById('log')
+  const line = document.createElement('div')
+  line.className = type ? `log-${type}` : ''
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+  div.appendChild(line)
+  div.scrollTop = div.scrollHeight
+}
+
+// --- Drop zone ---
+const dropZone = document.getElementById('dropZone')
+const fileInput = document.getElementById('fileInput')
+
+dropZone.addEventListener('click', () => fileInput.click())
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over') })
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'))
+dropZone.addEventListener('drop', e => {
+  e.preventDefault()
+  dropZone.classList.remove('drag-over')
+  const file = e.dataTransfer.files[0]
+  if (file?.type === 'application/pdf') loadPDF(file)
+})
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadPDF(e.target.files[0])
+})
+
+// --- Load PDF ---
+async function loadPDF(file) {
+  document.getElementById('log').innerHTML = ''
+  log(`Loading: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
+
+  const arrayBuffer = await file.arrayBuffer()
+  log(`Read ${arrayBuffer.byteLength} bytes from file`)
+
+  if (arrayBuffer.byteLength === 0) {
+    log('File appears to be empty', 'err'); return
+  }
+
+  // Check PDF header before doing anything
+  const header = new TextDecoder('ascii', { fatal: false }).decode(new Uint8Array(arrayBuffer, 0, 8))
+  log(`File header: "${header}"`)
+  if (!header.startsWith('%PDF')) {
+    log('Not a valid PDF — header should start with %PDF', 'err'); return
+  }
+
+  // IMPORTANT: PDF.js may transfer the ArrayBuffer to its worker thread,
+  // detaching it. Keep a separate copy for pdf-lib.
+  pdfBytes = new Uint8Array(arrayBuffer.slice(0))  // explicit copy for pdf-lib
+  const pdfJsBytes = new Uint8Array(arrayBuffer)   // may be transferred — that's fine
+
+  try {
+    pdfJsDoc = await pdfjsLib.getDocument({ data: pdfJsBytes }).promise
+    log(`Loaded — ${pdfJsDoc.numPages} page(s)`, 'ok')
+    await analysefonts()
+    await renderPage()
+    document.getElementById('results').style.display = 'block'
+  } catch (err) {
+    log(`PDF.js failed: ${err.message}`, 'err')
+    console.error(err)
+  }
+}
+
+// --- Analyse fonts ---
+async function analysefonts() {
+  log('Analysing fonts across all pages...')
+  const fontMap = {}
+
+  for (let p = 1; p <= pdfJsDoc.numPages; p++) {
+    const page = await pdfJsDoc.getPage(p)
+    const content = await page.getTextContent({ includeMarkedContent: false })
+
+    content.items.forEach(item => {
+      if (!item.str?.trim()) return
+      const fn = item.fontName || 'Unknown'
+      if (!fontMap[fn]) {
+        fontMap[fn] = { rawName: fn, samples: [], mapped: window.FontMap.mapFont(fn) }
+      }
+      if (fontMap[fn].samples.length < 4) fontMap[fn].samples.push(item.str.trim())
+    })
+
+    // Collect all items from page 1 for replacement
+    if (p === 1) {
+      const viewport = page.getViewport({ scale: 1 })
+      textItems = content.items
+        .filter(i => i.str?.trim())
+        .map(i => {
+          // Transform PDF coordinates to canvas coords
+          const tx = pdfjsLib.Util.transform(viewport.transform, i.transform)
+          return {
+            str: i.str,
+            fontName: i.fontName,
+            x: tx[4],
+            y: tx[5],
+            width: i.width,
+            height: i.height,
+            fontSize: Math.sqrt(tx[0]*tx[0] + tx[1]*tx[1]),
+            pdfX: i.transform[4],
+            pdfY: i.transform[5],
+            pdfFontSize: Math.abs(i.transform[0] || i.transform[3]),
+          }
+        })
+    }
+  }
+
+  // Render results
+  const fonts = Object.values(fontMap)
+  const high = fonts.filter(f => f.mapped.confidence === 'high')
+  const fallback = fonts.filter(f => f.mapped.confidence === 'fallback')
+  const pct = fonts.length ? Math.round((high.length / fonts.length) * 100) : 0
+
+  document.getElementById('numTotal').textContent = fonts.length
+  document.getElementById('numHigh').textContent = `${high.length} (${pct}%)`
+  document.getElementById('numFallback').textContent = fallback.length
+
+  const list = document.getElementById('fontList')
+  list.innerHTML = ''
+  fonts.forEach(f => {
+    const row = document.createElement('div')
+    row.className = 'font-row'
+    row.innerHTML = `
+      <span class="badge ${f.mapped.confidence}">${f.mapped.confidence}</span>
+      <span style="font-size:12px; min-width:180px; color:#333;">${f.mapped.cleanName || f.rawName}</span>
+      <span style="font-size:12px; color:#888;">→</span>
+      <span style="font-size:12px; min-width:200px;">${f.mapped.cssFont}</span>
+      <span class="font-sample" style="font-family:${f.mapped.cssFont}">${f.samples.slice(0,3).join(' · ')}</span>
+    `
+    list.appendChild(row)
+  })
+
+  log(`Font analysis complete: ${high.length}/${fonts.length} high-confidence matches (${pct}%)`,
+    pct >= 80 ? 'ok' : pct >= 60 ? 'warn' : 'err')
+
+  if (fallback.length > 0) {
+    fallback.forEach(f => log(`Fallback font: "${f.rawName}" → using ${f.mapped.standardFont}`, 'warn'))
+  }
+}
+
+// --- Render page ---
+async function renderPage() {
+  const page = await pdfJsDoc.getPage(1)
+  const viewport = page.getViewport({ scale: 1.5 })
+  const canvas = document.getElementById('canvas')
+  canvas.width = viewport.width
+  canvas.height = viewport.height
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+  log('Page 1 rendered to canvas', 'ok')
+}
+
+// --- Text replacement ---
+document.getElementById('replaceBtn').addEventListener('click', async () => {
+  const find = document.getElementById('findText').value.trim()
+  const replace = document.getElementById('replaceText').value.trim()
+  const replaceLog = document.getElementById('replaceLog')
+
+  if (!find || !replace) { replaceLog.textContent = 'Enter both find and replace text.'; return }
+  if (!pdfBytes) { replaceLog.textContent = 'Load a PDF first.'; return }
+
+  replaceLog.textContent = 'Processing...'
+  log(`Replacing "${find}" with "${replace}"`)
+
+  try {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib
+
+    // Find matching text items on page 1
+    const matches = textItems.filter(i => i.str.includes(find))
+    if (matches.length === 0) {
+      replaceLog.textContent = `❌ "${find}" not found on page 1. Try another word.`
+      log(`Text "${find}" not found in page 1 text items`, 'warn')
+      log(`Available text (first 10): ${textItems.slice(0,10).map(i=>i.str).join(' | ')}`)
+      return
+    }
+
+    log(`Found ${matches.length} match(es) on page 1`)
+
+    // Load with pdf-lib
+    const pdfDoc = await PDFDocument.load(pdfBytes)
+    const page = pdfDoc.getPages()[0]
+    const { height: pageHeight } = page.getSize()
+
+    for (const item of matches) {
+      const mapped = window.FontMap.mapFont(item.fontName)
+
+      // pdf-lib embedFont accepts the string values directly (e.g. 'Helvetica-Bold')
+      const font = await pdfDoc.embedFont(mapped.standardFont ?? 'Helvetica')
+
+      const fontSize = item.pdfFontSize || 12
+
+      // White mask over original text
+      const textWidth = font.widthOfTextAtSize(item.str, fontSize)
+      page.drawRectangle({
+        x: item.pdfX - 1,
+        y: item.pdfY - 2,
+        width: textWidth + 4,
+        height: fontSize + 4,
+        color: rgb(1, 1, 1),
+        opacity: 1,
+      })
+
+      // Draw replacement text
+      const newText = item.str.replace(find, replace)
+      page.drawText(newText, {
+        x: item.pdfX,
+        y: item.pdfY,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      })
+
+      log(`Replaced at (${item.pdfX.toFixed(0)}, ${item.pdfY.toFixed(0)}) — font: ${mapped.cleanName} → ${mapped.standardFont} [${mapped.confidence}]`,
+        mapped.confidence === 'high' ? 'ok' : 'warn')
+    }
+
+    const modifiedBytes = await pdfDoc.save()
+    pdfBytes = new Uint8Array(modifiedBytes) // update for further edits
+
+    // Reload PDF.js from the new bytes for re-render
+    pdfJsDoc = await pdfjsLib.getDocument({ data: pdfBytes.slice(0) }).promise
+
+    const blob = new Blob([modifiedBytes], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+
+    const btn = document.getElementById('downloadBtn')
+    btn.style.display = 'inline-block'
+    btn.onclick = () => {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'spike-output.pdf'
+      a.click()
+    }
+
+    replaceLog.innerHTML = `<span style="color:#059669">✓ ${matches.length} replacement(s) made. Download to verify.</span>`
+    await renderPage()
+
+  } catch (err) {
+    replaceLog.textContent = `Error: ${err.message}`
+    log(`Replacement failed: ${err.message}`, 'err')
+  }
+})
+</script>
+</body>
+</html>

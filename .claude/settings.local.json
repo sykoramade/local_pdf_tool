@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.claude/agents && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.antigravity)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:old.reddit.com)",
+      "Bash(mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/docs/tasks && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/docs/messages && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/docs/guidelines && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/docs/reference && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/docs/tracking && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.claude/commands && rm -rf /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.antigravity)",
+      "Bash(npx create-next-app@14 app --typescript --tailwind --app --no-eslint --no-src-dir --import-alias \"@/*\" --yes 2>&1)",
+      "Bash(cd /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app && npm install pdfjs-dist pdf-lib 2>&1 | tail -5)",
+      "Bash(node -e \"const p = require\\('./node_modules/pdfjs-dist/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(ls /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public && cp /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/node_modules/pdfjs-dist/build/pdf.worker.min.mjs /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && echo \"Done\")",
+      "Bash(mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public && cp /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/node_modules/pdfjs-dist/build/pdf.worker.min.mjs /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && echo \"Done\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
