@@ -47,11 +47,40 @@
 - [x] Google Search Console setup instructions — docs/tracking/gsc-setup.md
 - [x] Vercel deployment config — app/vercel.json with security headers
 
-### Backlog (not this sprint)
-- PDF Merge / Split
+---
+
+## Sprint 4 — COMPLETE ✅
+**Completed:** 2026-03-12
+**Goal:** PDF Merge tool + SEO content gap fill.
+
+### Done
+- [x] lib/pdf/merge.ts — in-browser PDF merge via pdf-lib
+- [x] /merge page + MergeTool component (multi-file drop, reorder with ↑↓, merge, download)
+- [x] Nav updated across all pages (Editor | Compress | Merge | About)
+- [x] /guides/merge-pdf-free — SEO guide page
+- [x] /guides/compress-pdf-free — SEO guide page (gap from Sprint 2)
+- [x] sitemap.ts updated with all new routes
+
+---
+
+## Sprint 5 — Up Next
+**Goal:** Auth (Supabase) + soft usage gate. Email capture + conversion signal before billing.
+
+### To Do
+- [ ] Supabase project setup + env vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
+- [ ] Auth UI — Sign In / Sign Up modal (email magic link + Google OAuth)
+- [ ] Session handling — useUser hook, persist session client-side
+- [ ] Soft usage gate — anonymous users: 3 free tool uses per day; signed-in: unlimited free
+- [ ] Usage counter — stored in localStorage for anonymous, Supabase for signed-in
+- [ ] /account page — show email, usage today, sign out
+- [ ] Nav update — Sign In button (anonymous) / email avatar (signed-in)
+
+---
+
+## Backlog (not this sprint)
+- PDF Split (separate pages into individual files)
 - Word ↔ PDF convert
-- Auth (Supabase)
-- Billing (Stripe) — needed before 6-month check-in
+- Billing (Stripe) — Sprint 6
 - PDF → JPG, JPG → PDF
 - Bold/italic preservation in saved PDF (known gap)
 - OCR for scanned documents

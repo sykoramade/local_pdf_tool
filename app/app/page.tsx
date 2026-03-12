@@ -23,6 +23,7 @@ export default function Home() {
         <div className="flex gap-4 text-sm">
           <Link href="/" className="text-indigo-600 font-medium">PDF Editor</Link>
           <Link href="/compress" className="text-gray-500 hover:text-gray-800">Compress</Link>
+          <Link href="/merge" className="text-gray-500 hover:text-gray-800">Merge</Link>
           <Link href="/about" className="text-gray-500 hover:text-gray-800">About</Link>
         </div>
       </nav>
