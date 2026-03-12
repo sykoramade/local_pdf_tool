@@ -84,22 +84,40 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 6 — Up Next
+## Sprint 6 — COMPLETE ✅
+**Completed:** 2026-03-12
 **Goal:** Billing (Stripe). Pricing page, Pro plan, checkout, webhook.
 
-### To Do
-- [ ] Pricing page (/pricing) — Free vs Pro comparison, clear about what's paid
-- [ ] Stripe product + price created in Stripe dashboard (MD action)
-- [ ] Stripe Checkout integration — redirect to Stripe-hosted checkout
-- [ ] Stripe webhook handler — /api/stripe/webhook (update user record in Supabase on payment)
-- [ ] Pro plan benefits: remove usage gate, early access to new tools
-- [ ] Supabase: add `is_pro` boolean to user profile table
-- [ ] Nav: "Upgrade" CTA for free signed-in users
-- [ ] Post-payment success page (/billing/success)
+### Done
+- [x] stripe server SDK installed
+- [x] lib/stripe/server.ts — Stripe client (server-side only, never bundled to client)
+- [x] /api/stripe/create-checkout — POST: creates Stripe Checkout session for signed-in user
+- [x] /api/stripe/webhook — POST: handles checkout.session.completed + subscription.deleted
+- [x] useUser hook extended with isPro from user_profiles Supabase table
+- [x] /pricing page — Free vs Pro comparison, Stripe checkout redirect
+- [x] /billing/success page — post-payment confirmation
+- [x] docs/supabase/schema.sql — user_profiles table + RLS + auto-create trigger
+- [x] NavBar: Pricing link added
+- [x] sitemap.ts: /pricing added
+- [x] .env.local.example: all Sprint 6 env vars documented
 
-### Pre-conditions
-- Sprint 5 env vars must be configured (Supabase project live)
-- MD approval required before touching Stripe (CLAUDE.md rule)
+### Setup required before billing works (MD actions)
+1. Create Supabase project → run docs/supabase/schema.sql in SQL editor
+2. Fill in .env.local from .env.local.example (Supabase URL, anon key, service role key)
+3. Create Stripe product ($9/month Pro) → copy STRIPE_PRICE_ID to .env.local
+4. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in .env.local
+5. Register webhook URL in Stripe: https://yourdomain.com/api/stripe/webhook
+   Events to listen for: checkout.session.completed, customer.subscription.deleted, invoice.payment_failed
+
+---
+
+## Backlog
+- PDF Split (separate pages into individual files)
+- Word ↔ PDF convert
+- PDF → JPG, JPG → PDF
+- Bold/italic preservation in saved PDF (known gap)
+- OCR for scanned documents
+- Bulk processing (Pro feature)
 
 ---
 

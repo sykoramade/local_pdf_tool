@@ -8,7 +8,7 @@ import { usesRemaining, FREE_USES_PER_DAY } from '@/lib/usage'
 import AuthModal from './AuthModal'
 
 interface NavBarProps {
-  current?: 'editor' | 'compress' | 'merge' | 'about' | 'account'
+  current?: 'editor' | 'compress' | 'merge' | 'about' | 'account' | 'pricing'
 }
 
 export default function NavBar({ current }: NavBarProps) {
@@ -28,6 +28,7 @@ export default function NavBar({ current }: NavBarProps) {
     { href: '/', label: 'PDF Editor', key: 'editor' },
     { href: '/compress', label: 'Compress', key: 'compress' },
     { href: '/merge', label: 'Merge', key: 'merge' },
+    { href: '/pricing', label: 'Pricing', key: 'pricing' },
     { href: '/about', label: 'About', key: 'about' },
   ]
 
