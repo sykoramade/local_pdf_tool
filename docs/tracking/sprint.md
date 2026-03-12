@@ -33,18 +33,19 @@
 
 ---
 
-## Sprint 3 — Up Next
+## Sprint 3 — COMPLETE ✅
+**Completed:** 2026-03-12
 **Goal:** Polish, error handling, mobile, and first real-world testing.
 
-### To Do
-- [ ] Mobile layout review — test PdfViewer on small screens, text layer tap targets
-- [ ] Keyboard accessibility — tab through editable text items
-- [ ] Loading skeleton for PDF viewer (prevent layout jump)
-- [ ] Handle password-protected PDFs gracefully (current: shows error, needs clear message + retry)
-- [ ] Handle oversized files (>20MB warning before attempting load)
-- [ ] "Edited" badge per page — show how many edits on each page in toolbar
-- [ ] Google Search Console setup instructions (docs/tracking/)
-- [ ] Vercel deployment config (vercel.json)
+### Done
+- [x] Mobile layout review — responsive scale (0.65×–1.5×) based on viewport width
+- [x] Keyboard accessibility — tabIndex, role="button", Enter/Space to activate text items
+- [x] Loading skeleton for PDF viewer — A4-shaped skeleton pages with animated shimmer
+- [x] Handle password-protected PDFs gracefully — clear error message + "use Back button" hint
+- [x] Handle oversized files (>20MB) — warning screen with "Load anyway" / "Choose another" options
+- [x] "Edited" badge per page — per-page edit count badge above each page in viewer
+- [x] Google Search Console setup instructions — docs/tracking/gsc-setup.md
+- [x] Vercel deployment config — app/vercel.json with security headers
 
 ### Backlog (not this sprint)
 - PDF Merge / Split

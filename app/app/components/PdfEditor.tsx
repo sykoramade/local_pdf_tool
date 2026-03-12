@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import PdfDropzone from './PdfDropzone'
 import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
@@ -9,8 +9,20 @@ const PdfViewer = dynamic(() => import('./PdfViewer'), { ssr: false })
 
 type EditorState = 'idle' | 'viewing'
 
+function getResponsiveScale(): number {
+  if (typeof window === 'undefined') return 1.5
+  const w = window.innerWidth
+  if (w < 480) return 0.65
+  if (w < 640) return 0.9
+  if (w < 900) return 1.2
+  return 1.5
+}
+
 export default function PdfEditor() {
   const [state, setState] = useState<EditorState>('idle')
+  // Start at 1.5 (SSR-safe), update client-side after mount to avoid hydration mismatch
+  const [viewerScale, setViewerScale] = useState(1.5)
+  useEffect(() => { setViewerScale(getResponsiveScale()) }, [])
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [filename, setFilename] = useState('')
   const [editMap, setEditMap] = useState<EditMap>(new Map())
@@ -169,6 +181,7 @@ export default function PdfEditor() {
         {pdfBytes && (
           <PdfViewer
             pdfBytes={pdfBytes}
+            scale={viewerScale}
             editMap={editMap}
             onEdit={handleEdit}
             onTextItems={handleTextItems}
