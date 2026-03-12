@@ -3,7 +3,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import PdfDropzone from './PdfDropzone'
+import AuthModal from './AuthModal'
 import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
+import { useUser } from '@/hooks/useUser'
+import { canUse, incrementUses } from '@/lib/usage'
 
 const PdfViewer = dynamic(() => import('./PdfViewer'), { ssr: false })
 
@@ -20,8 +23,9 @@ function getResponsiveScale(): number {
 
 export default function PdfEditor() {
   const [state, setState] = useState<EditorState>('idle')
-  // Start at 1.5 (SSR-safe), update client-side after mount to avoid hydration mismatch
   const [viewerScale, setViewerScale] = useState(1.5)
+  const [showAuthGate, setShowAuthGate] = useState(false)
+  const { user } = useUser()
   useEffect(() => { setViewerScale(getResponsiveScale()) }, [])
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [filename, setFilename] = useState('')
@@ -69,6 +73,13 @@ export default function PdfEditor() {
 
   const handleDownload = useCallback(async () => {
     if (!pdfBytes) return
+
+    // Usage gate: anonymous users get FREE_USES_PER_DAY uses/day
+    if (!user && !canUse()) {
+      setShowAuthGate(true)
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -86,12 +97,13 @@ export default function PdfEditor() {
       a.download = filename.replace(/\.pdf$/i, '-edited.pdf')
       a.click()
       URL.revokeObjectURL(url)
+      if (!user) incrementUses()
     } catch (err) {
       alert(`Save failed: ${(err as Error).message ?? 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
-  }, [pdfBytes, editMap, filename])
+  }, [pdfBytes, editMap, filename, user])
 
   if (state === 'idle') {
     return (
@@ -175,6 +187,10 @@ export default function PdfEditor() {
           </button>
         </div>
       </header>
+
+      {showAuthGate && (
+        <AuthModal reason="gate" onClose={() => setShowAuthGate(false)} />
+      )}
 
       {/* PDF Viewer with editable text layer */}
       <div className="flex-1 overflow-y-auto">

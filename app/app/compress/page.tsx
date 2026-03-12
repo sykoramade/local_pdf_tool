@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import NavBar from '@/app/components/NavBar'
 import CompressTool from './CompressTool'
 
 export const metadata: Metadata = {
@@ -11,17 +11,7 @@ export const metadata: Metadata = {
 export default function CompressPage() {
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-indigo-600 hover:text-indigo-800 font-semibold">
-          LocalPDF
-        </Link>
-        <div className="flex gap-4 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-gray-800">PDF Editor</Link>
-          <Link href="/compress" className="text-indigo-600 font-medium">Compress</Link>
-          <Link href="/merge" className="text-gray-500 hover:text-gray-800">Merge</Link>
-          <Link href="/about" className="text-gray-500 hover:text-gray-800">About</Link>
-        </div>
-      </nav>
+      <NavBar current="compress" />
 
       <div className="max-w-2xl mx-auto px-4 py-16">
         <div className="text-center mb-10">

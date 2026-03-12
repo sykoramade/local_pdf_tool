@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import AuthModal from '@/app/components/AuthModal'
+import { useUser } from '@/hooks/useUser'
+import { canUse, incrementUses } from '@/lib/usage'
 
 interface PdfFile {
   id: string
@@ -11,6 +14,8 @@ interface PdfFile {
 type Status = 'idle' | 'merging' | 'done' | 'error'
 
 export default function MergeTool() {
+  const { user } = useUser()
+  const [showAuthGate, setShowAuthGate] = useState(false)
   const [files, setFiles] = useState<PdfFile[]>([])
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -65,6 +70,12 @@ export default function MergeTool() {
 
   async function handleMerge() {
     if (files.length < 2) return
+
+    if (!user && !canUse()) {
+      setShowAuthGate(true)
+      return
+    }
+
     setStatus('merging')
     setErrorMsg('')
 
@@ -74,6 +85,7 @@ export default function MergeTool() {
       outputRef.current = result.output
       setPageCount(result.pageCount)
       setStatus('done')
+      if (!user) incrementUses()
     } catch (err) {
       setErrorMsg((err as Error).message ?? 'Merge failed')
       setStatus('error')
@@ -217,6 +229,8 @@ export default function MergeTool() {
           </button>
         )}
       </div>
+
+      {showAuthGate && <AuthModal reason="gate" onClose={() => setShowAuthGate(false)} />}
     </div>
   )
 }

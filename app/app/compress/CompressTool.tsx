@@ -2,10 +2,15 @@
 
 import { useState, useRef } from 'react'
 import { formatBytes } from '@/lib/pdf/compress'
+import AuthModal from '@/app/components/AuthModal'
+import { useUser } from '@/hooks/useUser'
+import { canUse, incrementUses } from '@/lib/usage'
 
 type State = 'idle' | 'compressing' | 'done' | 'error'
 
 export default function CompressTool() {
+  const { user } = useUser()
+  const [showAuthGate, setShowAuthGate] = useState(false)
   const [state, setState] = useState<State>('idle')
   const [dragging, setDragging] = useState(false)
   const [filename, setFilename] = useState('')
@@ -46,6 +51,10 @@ export default function CompressTool() {
   }
 
   function handleDownload() {
+    if (!user && !canUse()) {
+      setShowAuthGate(true)
+      return
+    }
     const output = outputRef.current
     if (!output) return
     const blob = new Blob([output.buffer as ArrayBuffer], { type: 'application/pdf' })
@@ -55,6 +64,7 @@ export default function CompressTool() {
     a.download = filename.replace(/\.pdf$/i, '-compressed.pdf')
     a.click()
     URL.revokeObjectURL(url)
+    if (!user) incrementUses()
   }
 
   function reset() {
@@ -150,6 +160,8 @@ export default function CompressTool() {
           </div>
         </div>
       )}
+
+      {showAuthGate && <AuthModal reason="gate" onClose={() => setShowAuthGate(false)} />}
     </div>
   )
 }
