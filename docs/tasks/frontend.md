@@ -5,4 +5,9 @@ Delete task when complete. Log any architecture decisions to docs/decisions.md f
 
 ---
 
-_(no tasks yet — Sprint 1 tasks will be added here once scaffold is approved)_
+## SPRINT 7 — Awaiting backend tasks (F7-1 and F7-2 shipped)
+
+Backend tasks (lib/pdf/ work) are in docs/tasks/backend.md.
+Wire-up task (replace onSave demo stub with real pdf-lib call) will be assigned once backend is reviewed.
+
+---
