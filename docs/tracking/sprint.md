@@ -133,15 +133,19 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 8 — IN PROGRESS
+## Sprint 8 — COMPLETE ✅
+**Completed:** 2026-03-13
 **Goal:** PDF Split UI + multi-page signing + localized SEO pages
 
-### In Progress
-- [ ] /split page + SplitTool component (lib/pdf/split.ts already done)
-- [ ] Multi-page signature support — page detection so users can sign any page, not just page 1
-- [ ] /guides/hipaa-friendly-pdf-editor — HIPAA-friendly positioning guide
-- [ ] /guides/de/datenschutz-pdf-editor — German SEO page (GDPR market)
-- [ ] /guides/fr/editeur-pdf-sans-telechargement — French SEO page
+### Done
+- [x] /split page + SplitTool component (wires lib/pdf/split.ts)
+  - All-pages and page-range modes, client-side validation, staggered downloads
+  - Safari-compatible download, usage gate + AuthModal
+- [x] Multi-page signing via IntersectionObserver active-page tracking
+- [x] /guides/hipaa-friendly-pdf-editor — HIPAA-friendly positioning guide with disclaimer
+- [x] /guides/de/datenschutz-pdf-editor — German SEO page (DSGVO/GDPR market)
+- [x] /guides/fr/editeur-pdf-sans-telechargement — French SEO page (RGPD market)
+- [x] NavBar: Split link added; Sitemap: 4 new routes
 
 ---
 
