@@ -19,7 +19,8 @@
       "Bash(mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/auth\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/hooks\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/account\")",
       "Bash(mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/api/stripe/create-checkout\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/api/stripe/webhook\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/stripe\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/pricing\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/billing/success\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/docs/supabase\")",
       "WebFetch(domain:local-pdf-tool-rouge.vercel.app)",
-      "Bash(cd \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\\\\app\" && npm run build 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\\\\app\" && npm run build 2>&1)",
+      "Bash(where gh:*)"
     ]
   }
 }
