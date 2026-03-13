@@ -49,5 +49,9 @@ export function useUser() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { user, isPro, loading }
+  function refresh() {
+    if (user) fetchProfile(user.id)
+  }
+
+  return { user, isPro, loading, refresh }
 }

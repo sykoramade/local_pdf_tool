@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe/server'
+import { getStripe } from '@/lib/stripe/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Supabase is not configured' }, { status: 503 })
+    }
+
     const cookieStore = cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           getAll() { return cookieStore.getAll() },
@@ -27,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Never derive redirect URLs from the request origin — spoofable.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://localpdf.tools'
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       customer_email: user.email,

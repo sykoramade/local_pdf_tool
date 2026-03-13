@@ -8,7 +8,7 @@ import { getUsesToday, FREE_USES_PER_DAY } from '@/lib/usage'
 import { getSupabaseClient } from '@/lib/auth/client'
 
 export default function AccountPage() {
-  const { user, loading } = useUser()
+  const { user, isPro, loading } = useUser()
   const router = useRouter()
 
   useEffect(() => {
@@ -42,7 +42,9 @@ export default function AccountPage() {
 
           <div className="px-6 py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Plan</p>
-            <p className="text-sm text-gray-800">Free — unlimited tool uses</p>
+            <p className="text-sm text-gray-800">
+              {isPro ? 'Pro — $9/month' : 'Free — unlimited tool uses (signed in)'}
+            </p>
           </div>
 
           <div className="px-6 py-4">

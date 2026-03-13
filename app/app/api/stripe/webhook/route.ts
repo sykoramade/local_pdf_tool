@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe/server'
+import { getStripe } from '@/lib/stripe/server'
 import { createClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 
-// Use service role key for webhook — bypasses RLS to update user profiles
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('Supabase service role credentials are not set')
+  return createClient(url, key)
 }
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -20,9 +18,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 })
   }
 
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 503 })
+  }
+
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
   } catch (err) {
     console.error('Webhook signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
@@ -31,13 +33,13 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.CheckoutSession
+        const session = event.data.object as Stripe.Checkout.Session
         // Only grant Pro for subscription checkouts, not one-time payments
         if (session.mode !== 'subscription') break
         const userId = session.metadata?.supabase_user_id
         if (!userId) break
 
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from('user_profiles')
           .upsert({
             id: userId,
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
         // Match on subscription ID (not just customer) to handle multi-subscription edge cases
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from('user_profiles')
           .update({ is_pro: false, stripe_subscription_id: null })
           .eq('stripe_subscription_id', sub.id)

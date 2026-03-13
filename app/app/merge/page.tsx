@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import NavBar from '@/app/components/NavBar'
 import MergeTool from './MergeTool'
 

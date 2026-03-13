@@ -30,7 +30,7 @@ export default function AuthModal({ onClose, reason = 'manual' }: AuthModalProps
 
     const { error: err } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.href },
+      options: { emailRedirectTo: window.location.origin },
     })
 
     setLoading(false)
@@ -46,7 +46,7 @@ export default function AuthModal({ onClose, reason = 'manual' }: AuthModalProps
     if (!supabase) return
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: window.location.origin },
     })
   }
 

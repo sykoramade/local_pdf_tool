@@ -87,9 +87,6 @@ export default function PricingPage() {
 
           {/* Pro */}
           <div className="bg-indigo-600 rounded-2xl p-6 text-white relative overflow-hidden">
-            <div className="absolute top-3 right-3 text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
-              Coming soon
-            </div>
             <div className="mb-4">
               <p className="text-sm font-medium text-indigo-200 uppercase tracking-wide mb-1">Pro</p>
               <p className="text-4xl font-bold">$9</p>

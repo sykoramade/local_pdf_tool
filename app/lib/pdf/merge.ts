@@ -19,7 +19,7 @@ export async function mergePdfs(inputs: Uint8Array[]): Promise<MergeResult> {
   for (const bytes of inputs) {
     const doc = await PDFDocument.load(bytes as unknown as ArrayBuffer)
     const indices = doc.getPageIndices()
-    const copied = await merged.copyPagesFrom(doc, indices)
+    const copied = await merged.copyPages(doc, indices)
     copied.forEach(page => merged.addPage(page))
   }
 
