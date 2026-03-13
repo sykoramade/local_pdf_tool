@@ -435,9 +435,8 @@ export default function SignTool({ onSave }: SignToolProps) {
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map())
   // Force re-render after page refs are set so overlays can read them
   const [pageRefsReady, setPageRefsReady] = useState(false)
-
-  // Default: place signature on page 1
-  const TARGET_PAGE = 1
+  // Track which page is most visible — signature is placed on this page
+  const [activePage, setActivePage] = useState(1)
 
   function handleFileLoad(bytes: Uint8Array, name: string) {
     setPdfBytes(bytes)
@@ -521,6 +520,39 @@ export default function SignTool({ onSave }: SignToolProps) {
     if (pages.length > 0) renderPages(pages)
   }, [pages, renderPages])
 
+  // ── Track active (most visible) page via IntersectionObserver ──────────────
+  useEffect(() => {
+    if (pages.length === 0) return
+    const ratios = new Map<number, number>()
+    const observer = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) {
+          const pageNum = Number((entry.target as HTMLElement).dataset.pagenum)
+          ratios.set(pageNum, entry.intersectionRatio)
+        }
+        // Pick the page with the highest visible ratio
+        let best = 1
+        let bestRatio = -1
+        ratios.forEach((ratio, num) => {
+          if (ratio > bestRatio) { bestRatio = ratio; best = num }
+        })
+        setActivePage(best)
+      },
+      { threshold: [0, 0.25, 0.5, 0.75, 1.0] },
+    )
+    // Observe all page elements once they are mounted
+    const timer = setTimeout(() => {
+      pageRefs.current.forEach((el, pageNum) => {
+        el.dataset.pagenum = String(pageNum)
+        observer.observe(el)
+      })
+    }, 100)
+    return () => {
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [pages, pageRefsReady])
+
   function handleFabClick() {
     setStep('modal')
   }
@@ -533,7 +565,7 @@ export default function SignTool({ onSave }: SignToolProps) {
     const id = `sig-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     setPlacements(prev => [
       ...prev,
-      { id, dataUrl, xPct: 50, yPct: 75, widthPct: 30, pageNum: TARGET_PAGE, committed: false },
+      { id, dataUrl, xPct: 50, yPct: 75, widthPct: 30, pageNum: activePage, committed: false },
     ])
     if (!user) incrementUses()
     setPendingSigDataUrl(null)
