@@ -1,0 +1,9 @@
+import { createBrowserClient } from '@supabase/ssr'
+
+// Returns undefined if env vars are not configured — auth features are silently disabled.
+export function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return null
+  return createBrowserClient(url, key)
+}

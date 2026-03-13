@@ -1,16 +1,32 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import PdfDropzone from './PdfDropzone'
+import AuthModal from './AuthModal'
 import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
+import { useUser } from '@/hooks/useUser'
+import { canUse, incrementUses } from '@/lib/usage'
 
 const PdfViewer = dynamic(() => import('./PdfViewer'), { ssr: false })
 
 type EditorState = 'idle' | 'viewing'
 
+function getResponsiveScale(): number {
+  if (typeof window === 'undefined') return 1.5
+  const w = window.innerWidth
+  if (w < 480) return 0.65
+  if (w < 640) return 0.9
+  if (w < 900) return 1.2
+  return 1.5
+}
+
 export default function PdfEditor() {
   const [state, setState] = useState<EditorState>('idle')
+  const [viewerScale, setViewerScale] = useState(1.5)
+  const [showAuthGate, setShowAuthGate] = useState(false)
+  const { user } = useUser()
+  useEffect(() => { setViewerScale(getResponsiveScale()) }, [])
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [filename, setFilename] = useState('')
   const [editMap, setEditMap] = useState<EditMap>(new Map())
@@ -57,6 +73,13 @@ export default function PdfEditor() {
 
   const handleDownload = useCallback(async () => {
     if (!pdfBytes) return
+
+    // Usage gate: anonymous users get FREE_USES_PER_DAY uses/day
+    if (!user && !canUse()) {
+      setShowAuthGate(true)
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -74,12 +97,13 @@ export default function PdfEditor() {
       a.download = filename.replace(/\.pdf$/i, '-edited.pdf')
       a.click()
       URL.revokeObjectURL(url)
+      if (!user) incrementUses()
     } catch (err) {
       alert(`Save failed: ${(err as Error).message ?? 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
-  }, [pdfBytes, editMap, filename])
+  }, [pdfBytes, editMap, filename, user])
 
   if (state === 'idle') {
     return (
@@ -164,11 +188,16 @@ export default function PdfEditor() {
         </div>
       </header>
 
+      {showAuthGate && (
+        <AuthModal reason="gate" onClose={() => setShowAuthGate(false)} />
+      )}
+
       {/* PDF Viewer with editable text layer */}
       <div className="flex-1 overflow-y-auto">
         {pdfBytes && (
           <PdfViewer
             pdfBytes={pdfBytes}
+            scale={viewerScale}
             editMap={editMap}
             onEdit={handleEdit}
             onTextItems={handleTextItems}

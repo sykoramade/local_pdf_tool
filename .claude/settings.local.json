@@ -11,7 +11,15 @@
       "Bash(ls /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public && cp /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/node_modules/pdfjs-dist/build/pdf.worker.min.mjs /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && echo \"Done\")",
       "Bash(mkdir -p /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public && cp /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/node_modules/pdfjs-dist/build/pdf.worker.min.mjs /c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/public/ && echo \"Done\")",
       "Bash(npx tsc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git commit:*)",
+      "Bash(mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/guides/merge-pdf-free\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/guides/compress-pdf-free\")",
+      "Bash(cd \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app\" && npm show @supabase/supabase-js dist-tags.latest && npm show @supabase/ssr dist-tags.latest)",
+      "Bash(cd \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app\" && node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/auth\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/hooks\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/account\")",
+      "Bash(mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/api/stripe/create-checkout\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/api/stripe/webhook\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/stripe\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/pricing\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/billing/success\" && mkdir -p \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/docs/supabase\")",
+      "WebFetch(domain:local-pdf-tool-rouge.vercel.app)",
+      "Bash(cd \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\\\\app\" && npm run build 2>&1)"
     ]
   }
 }

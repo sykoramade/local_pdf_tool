@@ -133,7 +133,6 @@ export default function PdfViewer({
         }
 
         if (cancelled) return
-        docRef.current = doc
         setPages(pageData)
         setLoading(false)
         onTextItems?.(allItems)
@@ -145,26 +144,43 @@ export default function PdfViewer({
     }
 
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      docRef.current?.destroy()
+      docRef.current = null
+    }
   }, [pdfBytes, scale, onTextItems])
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        <div className="text-center">
-          <div className="text-3xl mb-3 animate-pulse">📄</div>
-          <p className="text-sm">Loading PDF...</p>
-        </div>
+      <div className="flex flex-col items-center gap-6 py-6 px-4">
+        {/* Skeleton pages — A4 proportions at default scale */}
+        {[1, 2].map(i => (
+          <div
+            key={i}
+            className="bg-white shadow-lg rounded-sm animate-pulse"
+            style={{ width: 'min(816px, calc(100vw - 2rem))', aspectRatio: '1 / 1.414' }}
+          >
+            <div className="p-8 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-3/4" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-4 bg-gray-200 rounded w-5/6" />
+              <div className="h-4 bg-gray-200 rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+        <p className="text-xs text-gray-400">Loading PDF…</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64 text-red-400">
-        <div className="text-center">
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center max-w-xs">
           <div className="text-3xl mb-2">⚠️</div>
-          <p className="text-sm max-w-xs">{error}</p>
+          <p className="text-sm text-red-500 mb-3">{error}</p>
+          <p className="text-xs text-gray-400">Use the ← Back button in the toolbar to try another file.</p>
         </div>
       </div>
     )
@@ -172,33 +188,45 @@ export default function PdfViewer({
 
   return (
     <div className="flex flex-col items-center gap-6 py-6 px-4">
-      {pages.map(({ pageNum, width, height, items }) => (
-        <div
-          key={pageNum}
-          className="relative shadow-lg bg-white"
-          style={{ width, height }}
-        >
-          <canvas
-            ref={el => {
-              if (el) canvasRefs.current.set(pageNum, el)
-              else canvasRefs.current.delete(pageNum)
-            }}
-            width={width}
-            height={height}
-            className="block"
-          />
-          <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
-            <div style={{ position: 'relative', width, height, pointerEvents: 'all' }}>
-              <PdfTextLayer
-                items={items}
-                editMap={editMap}
-                onEdit={onEdit}
-                scale={scale}
+      {pages.map(({ pageNum, width, height, items }) => {
+        const pageEditCount = items.filter(
+          item => editMap.has(item.id) && editMap.get(item.id) !== item.str
+        ).length
+
+        return (
+          <div key={pageNum} className="flex flex-col items-center gap-1 w-full" style={{ maxWidth: width }}>
+            {pageEditCount > 0 && (
+              <div className="self-end text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                {pageEditCount} edit{pageEditCount !== 1 ? 's' : ''} on p.{pageNum}
+              </div>
+            )}
+            <div
+              className="relative shadow-lg bg-white"
+              style={{ width, height }}
+            >
+              <canvas
+                ref={el => {
+                  if (el) canvasRefs.current.set(pageNum, el)
+                  else canvasRefs.current.delete(pageNum)
+                }}
+                width={width}
+                height={height}
+                className="block"
               />
+              <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+                <div style={{ position: 'relative', width, height, pointerEvents: 'all' }}>
+                  <PdfTextLayer
+                    items={items}
+                    editMap={editMap}
+                    onEdit={onEdit}
+                    scale={scale}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

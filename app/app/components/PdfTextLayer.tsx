@@ -29,12 +29,15 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
         const currentText = editMap.get(item.id) ?? item.str
         const isEdited = editMap.has(item.id) && editMap.get(item.id) !== item.str
 
+        // Minimum tap target height of 28px for mobile usability
+        const tapHeight = Math.max(item.canvasFontSize * 1.2, 28)
+
         const style: React.CSSProperties = {
           position: 'absolute',
           left: item.canvasX,
           top: item.canvasY - item.canvasFontSize * 0.2, // small offset to align baseline
-          minWidth: Math.max(item.canvasWidth, 4),
-          height: item.canvasFontSize * 1.2,
+          minWidth: Math.max(item.canvasWidth, 24),
+          height: tapHeight,
           fontSize: item.canvasFontSize,
           fontFamily: fontMatch.cssFont,
           fontWeight: fontMatch.bold ? 'bold' : 'normal',
@@ -61,6 +64,9 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
         return (
           <div
             key={item.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Edit text: ${currentText}`}
             style={{
               ...style,
               color: isEdited ? 'rgba(79,70,229,0.15)' : 'transparent',
@@ -68,9 +74,15 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
               borderBottom: isEdited ? '1px solid rgba(79,70,229,0.4)' : 'none',
               userSelect: 'none',
             }}
-            className="hover:bg-indigo-50/40 hover:border-b hover:border-indigo-300/50 transition-colors"
+            className="hover:bg-indigo-50/40 hover:border-b hover:border-indigo-300/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
             title={isEdited ? `Edited: "${currentText}"` : 'Click to edit'}
             onClick={() => setActiveId(item.id)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setActiveId(item.id)
+              }
+            }}
           >
             {isEdited ? currentText : item.str}
           </div>
