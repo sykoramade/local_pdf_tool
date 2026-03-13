@@ -1,4 +1,9 @@
-/node_modules 
-.env 
+/node_modules
+.env
 .env.local
 /node/
+
+# Claude Code internals
+.claude/worktrees/
+.claude/settings.local.json
+.clone/
