@@ -111,20 +111,50 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+---
+
+## Sprint 7 — COMPLETE ✅
+**Completed:** 2026-03-13
+**Goal:** Signature tool (privacy-first, mobile-first) + PDF Split lib + SEO guides.
+
+### Done
+- [x] lib/pdf/coords.ts — single source of truth for all coordinate math
+- [x] lib/pdf/signature.ts — embed PNG signature into PDF at pct-based coordinates
+- [x] lib/pdf/grid.ts — extract layout grid (baselines/columns) + snapToGrid utility
+- [x] lib/pdf/split.ts — split PDF into pages or extract a range
+- [x] /sign page + SignTool component
+  - Real PDF.js page rendering (replaced demo placeholder pages)
+  - Draw signature on canvas, drag-to-place overlay, commit + download signed PDF
+  - Mobile-first: bottom sheet modal, touch events with preventDefault, FAB
+  - Usage gate at placement; Pro resize handle; loading spinner + error states
+- [x] NavBar: Sign link added
+- [x] guides/sign-pdf-without-uploading — SEO guide
+- [x] guides/gdpr-pdf-editor — SEO guide
+
+---
+
+## Sprint 8 — COMPLETE ✅
+**Completed:** 2026-03-13
+**Goal:** PDF Split UI + multi-page signing + localized SEO pages
+
+### Done
+- [x] /split page + SplitTool component (wires lib/pdf/split.ts)
+  - All-pages and page-range modes, client-side validation, staggered downloads
+  - Safari-compatible download, usage gate + AuthModal
+- [x] Multi-page signing via IntersectionObserver active-page tracking
+- [x] /guides/hipaa-friendly-pdf-editor — HIPAA-friendly positioning guide with disclaimer
+- [x] /guides/de/datenschutz-pdf-editor — German SEO page (DSGVO/GDPR market)
+- [x] /guides/fr/editeur-pdf-sans-telechargement — French SEO page (RGPD market)
+- [x] NavBar: Split link added; Sitemap: 4 new routes
+
+---
+
 ## Backlog
-- PDF Split (separate pages into individual files)
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
 - Bold/italic preservation in saved PDF (known gap)
 - OCR for scanned documents
 - Bulk processing (Pro feature)
-
----
-
-## Backlog (not this sprint)
-- PDF Split (separate pages into individual files)
-- Word ↔ PDF convert
-- Billing (Stripe) — Sprint 6
-- PDF → JPG, JPG → PDF
-- Bold/italic preservation in saved PDF (known gap)
-- OCR for scanned documents
+- Stripe/Supabase env var setup (MD action — deferred from Sprint 6)
+- Free placement mode (drag signatures off-grid — Pro feature)
+- Encrypted PDF unlock flow
