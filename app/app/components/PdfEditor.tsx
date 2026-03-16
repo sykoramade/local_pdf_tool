@@ -154,7 +154,7 @@ export default function PdfEditor() {
 
     // S9-5: Yield two animation frames so the "Saving…" button state renders
     // before pdf-lib serialisation blocks the main thread.
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
     try {
       let outputBytes = pdfBytes
