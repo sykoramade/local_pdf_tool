@@ -97,7 +97,10 @@ export async function applySignatures(
     page.drawImage(img, { x, y, width, height })
   }
 
-  const saved = await pdfDoc.save()
+  // useObjectStreams: false — prevents font cross-reference corruption in some
+  // PDF viewers (same fix as save.ts). Object streams are a PDF 1.5 feature
+  // that certain viewers misparse when resolving embedded font resources.
+  const saved = await pdfDoc.save({ useObjectStreams: false })
   return new Uint8Array(saved)
 }
 

@@ -63,6 +63,9 @@ export async function applyEditsAndSave(
     })
   }
 
-  const saved = await pdfDoc.save()
+  // useObjectStreams: false — prevents pdf-lib from repacking font resource
+  // cross-references into compressed object streams, which causes some PDF
+  // viewers to fall back to a default sans-serif for unedited text items.
+  const saved = await pdfDoc.save({ useObjectStreams: false })
   return new Uint8Array(saved)
 }

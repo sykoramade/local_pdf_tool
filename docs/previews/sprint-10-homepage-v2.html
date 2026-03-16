@@ -1,0 +1,460 @@
+<!-- PREVIEW ONLY — not production code -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprint 10 Homepage v2 Preview — PDF Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'serif-display': ['DM Serif Display', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['Menlo', 'Monaco', 'Consolas', 'Courier New', 'monospace'],
+          },
+          colors: {
+            navy: '#0c111d',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .font-serif-display { font-family: 'DM Serif Display', Georgia, serif; }
+    .devtools-font { font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace; }
+  </style>
+</head>
+<body class="bg-white text-gray-900">
+
+  <!-- ================================================================
+       PREVIEW BANNER — sticky, dismissable
+  ================================================================ -->
+  <div id="preview-banner" class="bg-yellow-400 text-yellow-900 text-sm font-medium px-4 py-2 flex items-center justify-between sticky top-0 z-50">
+    <span>Sprint 10 Design Preview — not live</span>
+    <button onclick="document.getElementById('preview-banner').remove()" class="text-yellow-900 hover:text-yellow-700 font-bold text-lg leading-none ml-4">&times;</button>
+  </div>
+
+  <!-- ================================================================
+       NAV BAR
+  ================================================================ -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40" style="height:56px;">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+
+      <!-- Wordmark -->
+      <a href="#" class="flex items-center gap-2 no-underline">
+        <span class="devtools-font text-sm font-bold text-gray-900 tracking-tight">PDF</span>
+        <span class="devtools-font text-xs text-gray-400 border border-gray-200 rounded px-1 py-0.5 leading-none">local</span>
+      </a>
+
+      <!-- Nav links — hidden on mobile, shown md+ -->
+      <nav class="hidden md:flex items-center gap-6 text-sm text-gray-600">
+        <a href="#" class="hover:text-gray-900">Editor</a>
+        <a href="#" class="hover:text-gray-900">Compress</a>
+        <a href="#" class="hover:text-gray-900">Sign</a>
+        <a href="#" class="hover:text-gray-900">Merge</a>
+        <a href="#" class="hover:text-gray-900">Split</a>
+        <a href="#" class="hover:text-gray-900">Pricing</a>
+        <a href="#" class="text-gray-900 font-medium border border-gray-300 rounded px-3 py-1 hover:border-gray-400">Sign In</a>
+      </nav>
+
+      <!-- Mobile hamburger placeholder -->
+      <button class="md:hidden text-gray-500 hover:text-gray-900">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================================================================
+       HERO — the upload widget IS the hero
+  ================================================================ -->
+  <section class="bg-white w-full">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 py-20 flex flex-col items-center">
+
+      <!-- Heading block -->
+      <h1 class="font-serif-display text-4xl lg:text-5xl text-gray-900 text-center leading-tight mb-3">
+        Edit PDFs. Your file stays here.
+      </h1>
+      <p class="text-base text-gray-500 text-center mb-10">
+        Processed in your browser. Nothing leaves this tab.
+      </p>
+
+      <!-- Dropzone widget -->
+      <div class="w-full border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-xl bg-gray-50 py-16 flex flex-col items-center cursor-pointer transition-colors">
+        <span class="text-5xl mb-4 select-none" aria-hidden="true">&#128196;</span>
+        <p class="font-medium text-gray-700 mb-1">Drop a PDF here</p>
+        <p class="text-sm text-gray-400 mb-6">or click to choose a file</p>
+        <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+          Open PDF &mdash; no account
+        </button>
+      </div>
+
+      <!-- Trust badge row -->
+      <div class="flex flex-wrap justify-center gap-6 mt-6">
+        <span class="text-xs text-gray-400 flex items-center gap-1">
+          <span class="text-emerald-500">&#10003;</span> No upload
+        </span>
+        <span class="text-xs text-gray-400 flex items-center gap-1">
+          <span class="text-emerald-500">&#10003;</span> No account
+        </span>
+        <span class="text-xs text-gray-400 flex items-center gap-1">
+          <span class="text-emerald-500">&#10003;</span> No server
+        </span>
+        <span class="text-xs text-gray-400 flex items-center gap-1">
+          <span class="text-emerald-500">&#10003;</span> Works offline
+        </span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       DARK NAVY TRUST BAND
+  ================================================================ -->
+  <div class="w-full" style="background:#0c111d;">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
+      <span class="text-xs text-white flex items-center gap-1.5 whitespace-nowrap">
+        <span class="text-emerald-400 font-bold">&#10003;</span> No file upload
+      </span>
+      <span class="text-xs text-white flex items-center gap-1.5 whitespace-nowrap">
+        <span class="text-emerald-400 font-bold">&#10003;</span> No account required
+      </span>
+      <span class="text-xs text-white flex items-center gap-1.5 whitespace-nowrap">
+        <span class="text-emerald-400 font-bold">&#10003;</span> No server ever sees your document
+      </span>
+      <span class="text-xs text-white flex items-center gap-1.5 whitespace-nowrap">
+        <span class="text-emerald-400 font-bold">&#10003;</span> GDPR Art. 25
+      </span>
+      <span class="text-xs text-white flex items-center gap-1.5 whitespace-nowrap">
+        <span class="text-emerald-400 font-bold">&#10003;</span> Open source
+      </span>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       TOOL GRID
+  ================================================================ -->
+  <section class="bg-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <!-- Section label -->
+      <p class="devtools-font text-xs uppercase tracking-widest text-gray-400 text-center mb-12">
+        Five tools. All in your browser.
+      </p>
+
+      <!-- 6-card grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- 1. Edit text — Live -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-indigo-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#9999;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Edit text</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Fix typos, update dates, change names. Fonts matched automatically.</p>
+        </div>
+
+        <!-- 2. Sign — Live -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-purple-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#9997;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Sign</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Draw your signature. Place it anywhere. Client-side only.</p>
+        </div>
+
+        <!-- 3. Compress — Live -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-green-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#128230;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Compress</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Reduce file size without quality loss.</p>
+        </div>
+
+        <!-- 4. Merge & Split — Live -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#128279;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Merge &amp; Split</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Combine documents or extract pages.</p>
+        </div>
+
+        <!-- 5. Annotate & highlight — Coming soon -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-yellow-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#128394;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Annotate &amp; highlight</span>
+            <span class="devtools-font text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 uppercase leading-none" style="font-size:10px;">Coming soon</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Mark up papers, highlight clauses, add notes.</p>
+        </div>
+
+        <!-- 6. Permanent redaction — Coming soon -->
+        <div class="rounded-xl border border-gray-100 p-6 bg-white">
+          <div class="w-7 h-7 rounded flex items-center justify-center bg-amber-50 text-base leading-none mb-4" style="min-width:28px; min-height:28px;">
+            &#11035;
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-semibold text-gray-900">Permanent redaction</span>
+            <span class="devtools-font text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 uppercase leading-none" style="font-size:10px;">Coming soon</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Content deleted, not hidden. GDPR + FOI ready.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       FOR THE SKEPTIC — DevTools proof section
+  ================================================================ -->
+  <section class="bg-gray-50 py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+
+        <!-- Left: copy -->
+        <div>
+          <p class="devtools-font text-xs uppercase tracking-widest text-gray-400 mb-4">THE PROOF</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4" style="font-family:'Inter',sans-serif;">
+            Open DevTools. Watch the network tab.
+          </h2>
+          <p class="text-sm text-gray-600 leading-relaxed mb-5">
+            While you work, the network tab shows 0 XHR or Fetch requests. Your file is loaded from disk, processed in WebAssembly, and saved back to disk. No server is involved.
+          </p>
+          <a href="#" class="text-sm text-indigo-600 underline underline-offset-2 hover:text-indigo-700">
+            How to verify this yourself &rarr;
+          </a>
+        </div>
+
+        <!-- Right: DevTools mock panel -->
+        <div class="w-full">
+          <div class="rounded-md overflow-hidden border" style="background:#1e2433; border-color:#2d3748;">
+
+            <!-- Window chrome dots -->
+            <div class="flex items-center gap-1.5 px-3 pt-3 pb-0">
+              <span class="w-3 h-3 rounded-full bg-red-500 opacity-80"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400 opacity-80"></span>
+              <span class="w-3 h-3 rounded-full bg-green-500 opacity-80"></span>
+            </div>
+
+            <!-- DevTools tabs -->
+            <div class="devtools-font text-xs px-3 pt-2 pb-0 flex items-end gap-0 border-b" style="border-color:#2d3748;">
+              <span class="px-3 py-1.5 text-gray-400 cursor-pointer">Elements</span>
+              <span class="px-3 py-1.5 text-gray-400 cursor-pointer">Console</span>
+              <span class="px-3 py-1.5 border-b-2 border-blue-400 text-blue-300 cursor-pointer">Network</span>
+              <span class="px-3 py-1.5 text-gray-400 cursor-pointer">Sources</span>
+              <span class="px-3 py-1.5 text-gray-400 cursor-pointer">&hellip;</span>
+            </div>
+
+            <!-- Toolbar row -->
+            <div class="devtools-font text-xs flex items-center gap-3 px-3 py-2 border-b" style="border-color:#2d3748; background:#1a1f2e;">
+              <span class="w-3 h-3 rounded-full bg-red-500"></span>
+              <span class="w-3 h-3 rounded-full bg-gray-600"></span>
+              <span class="w-3 h-3 rounded-full bg-gray-600"></span>
+              <span class="ml-2 text-gray-500">|</span>
+              <span class="text-gray-400 border rounded px-1.5 py-0.5" style="border-color:#3a4255;">Filter</span>
+              <span class="text-gray-300">All</span>
+              <span class="text-gray-400">Fetch/XHR</span>
+              <span class="text-gray-400">Doc</span>
+              <span class="text-gray-400">JS</span>
+              <span class="text-gray-400">&hellip;</span>
+            </div>
+
+            <!-- Column headers -->
+            <div class="devtools-font text-xs grid px-3 py-1.5 border-b" style="background:#252b3b; border-color:#2d3748; grid-template-columns: 1fr 60px 70px 70px;">
+              <span class="text-gray-400">Name</span>
+              <span class="text-gray-400">Status</span>
+              <span class="text-gray-400">Type</span>
+              <span class="text-gray-400">Size</span>
+            </div>
+
+            <!-- Row: app.js -->
+            <div class="devtools-font text-xs grid px-3 py-1 border-b" style="border-color:#2d3748; grid-template-columns: 1fr 60px 70px 70px;">
+              <span class="text-blue-300 truncate">app.js</span>
+              <span class="text-green-400">200</span>
+              <span class="text-gray-400">Script</span>
+              <span class="text-gray-400">344 KB</span>
+            </div>
+
+            <!-- Row: pdf.worker.min.js -->
+            <div class="devtools-font text-xs grid px-3 py-1 border-b" style="border-color:#2d3748; grid-template-columns: 1fr 60px 70px 70px;">
+              <span class="text-blue-300 truncate">pdf.worker.min.js</span>
+              <span class="text-green-400">200</span>
+              <span class="text-gray-400">Script</span>
+              <span class="text-gray-400">1.2 MB</span>
+            </div>
+
+            <!-- Empty state rows -->
+            <div class="px-3 py-1 border-b" style="border-color:#2d3748; height:24px;"></div>
+            <div class="px-3 py-1 border-b" style="border-color:#2d3748; height:24px;"></div>
+
+            <!-- Trust footer -->
+            <div class="px-3 py-3 border-t" style="border-color:#2d3748; background:#1a1f2e;">
+              <div class="devtools-font text-xs flex items-center gap-2 mb-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
+                <span class="text-emerald-400">0 requests while your document is open</span>
+              </div>
+              <div class="devtools-font text-xs text-gray-500 pl-4">Your PDF never left this tab</div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       PRICING
+  ================================================================ -->
+  <section class="bg-white py-16">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-2">Honest pricing</h2>
+      <p class="text-sm text-gray-500 text-center mb-10">The free tier is actually free.</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+        <!-- Free card -->
+        <div class="rounded-xl border border-gray-200 p-8">
+          <h3 class="text-xl font-bold text-gray-900 mb-1">Free</h3>
+          <p class="text-2xl font-bold text-gray-900 mt-3 mb-0.5">$0</p>
+          <p class="text-xs text-gray-400 mb-6">forever</p>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Edit, sign, compress, merge, split
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              3 uses per day
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              No watermarks, ever
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              No card required
+            </li>
+          </ul>
+          <a href="#" class="text-sm text-indigo-600 font-medium hover:text-indigo-700 underline underline-offset-2">
+            Start for free &rarr;
+          </a>
+        </div>
+
+        <!-- Pro card -->
+        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-8">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="text-xl font-bold text-gray-900">Pro</h3>
+          </div>
+          <p class="text-2xl font-bold text-gray-900 mt-3 mb-0.5">$9 <span class="text-sm font-normal text-gray-500">/ month</span></p>
+          <p class="text-xs text-gray-400 mb-6">Cancel any time.</p>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Everything in Free, unlimited
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Annotate &amp; highlight <span class="devtools-font text-gray-400 bg-gray-200 rounded-full px-1.5 py-0.5 uppercase ml-1" style="font-size:9px;">soon</span>
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Permanent redaction <span class="devtools-font text-gray-400 bg-gray-200 rounded-full px-1.5 py-0.5 uppercase ml-1" style="font-size:9px;">soon</span>
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Batch processing
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>
+              Priority support
+            </li>
+          </ul>
+          <a href="#"
+             class="inline-flex items-center justify-center bg-indigo-600 text-white text-sm font-semibold px-5 hover:bg-indigo-700 transition-colors rounded-lg"
+             style="height:40px;">
+            Get Pro &rarr;
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       FOOTER
+  ================================================================ -->
+  <footer style="background:#0c111d;" class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">
+
+        <!-- Tools -->
+        <div>
+          <p class="devtools-font text-xs uppercase text-gray-500 tracking-widest mb-4">Tools</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Editor</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Compress</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Merge</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Split</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Sign</a></li>
+          </ul>
+        </div>
+
+        <!-- Privacy -->
+        <div>
+          <p class="devtools-font text-xs uppercase text-gray-500 tracking-widest mb-4">Privacy</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">How it works</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Privacy architecture</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">GDPR statement</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Open source</a></li>
+          </ul>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <p class="devtools-font text-xs uppercase text-gray-500 tracking-widest mb-4">Company</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">About</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Pricing</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white">Contact</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="border-t pt-6" style="border-color:#1e2433;">
+        <p class="devtools-font text-xs text-gray-600">
+          &copy; 2026 &middot; All processing is local. Always.
+        </p>
+      </div>
+
+    </div>
+  </footer>
+
+</body>
+</html>

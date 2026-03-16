@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprint 10 Homepage v4 — PDF Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            navy: '#0c111d',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .font-display { font-family: 'DM Serif Display', Georgia, serif; }
+    .devtools-font { font-family: 'Menlo', 'Monaco', 'Consolas', monospace; }
+
+    .hero-h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(52px, 8vw, 80px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .dropzone-card {
+      transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+    }
+    .dropzone-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body class="bg-white">
+
+  <!-- ============================================================ -->
+  <!-- 1. PREVIEW BANNER -->
+  <!-- ============================================================ -->
+  <div id="preview-banner" class="sticky top-0 z-50 bg-yellow-400 flex items-center justify-between px-4 py-2">
+    <span class="text-yellow-900 text-sm font-medium">Sprint 10 Design Preview v4 — not live</span>
+    <button
+      onclick="document.getElementById('preview-banner').remove()"
+      class="text-yellow-900 hover:text-yellow-700 text-lg font-bold leading-none ml-4"
+      aria-label="Dismiss banner"
+    >×</button>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 2. NAV BAR -->
+  <!-- ============================================================ -->
+  <nav class="sticky top-0 z-40 bg-white border-b border-gray-200" style="height:56px;">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+
+      <!-- Wordmark -->
+      <a href="#" class="flex items-center gap-2">
+        <span class="devtools-font font-bold text-sm text-gray-900">PDF</span>
+        <span class="devtools-font text-xs text-gray-400 border border-gray-200 rounded px-1 py-0.5">local</span>
+      </a>
+
+      <!-- Desktop nav links -->
+      <div class="hidden md:flex items-center gap-6">
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Editor</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Compress</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Merge</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Split</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+        <a href="#" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 transition-colors">Sign in</a>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button class="md:hidden p-2 text-gray-600 hover:text-gray-900" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ============================================================ -->
+  <!-- 3. HERO — DARK NAVY -->
+  <!-- ============================================================ -->
+  <section style="background-color: #0c111d; min-height: 600px;" class="py-24 lg:py-32">
+    <div class="max-w-2xl mx-auto px-4 flex flex-col items-center">
+
+      <!-- H1 -->
+      <h1 class="hero-h1">Edit PDFs. Your file stays here.</h1>
+
+      <!-- Subtext -->
+      <p class="text-gray-400 text-lg text-center mb-10">
+        Processed in your browser. Nothing leaves this tab.
+      </p>
+
+      <!-- Dropzone card -->
+      <div class="dropzone-card bg-white rounded-2xl p-10 w-full max-w-lg mx-auto flex flex-col items-center cursor-pointer">
+        <!-- PDF icon -->
+        <div class="text-5xl text-gray-300 mb-5 select-none">&#128196;</div>
+
+        <p class="font-semibold text-gray-800 text-base mb-1">Drop a PDF here</p>
+        <p class="text-sm text-gray-400 mb-7">or click to choose a file</p>
+
+        <!-- CTA -->
+        <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-8 py-3 rounded-lg transition-colors w-full text-center cursor-pointer">
+          Open PDF — no account required
+        </button>
+      </div>
+
+      <!-- Trust badges -->
+      <div class="mt-6 flex flex-wrap justify-center gap-6">
+        <span class="text-xs text-gray-500 flex items-center gap-1.5">
+          <span class="text-emerald-400 font-bold text-sm">✓</span> No upload
+        </span>
+        <span class="text-xs text-gray-500 flex items-center gap-1.5">
+          <span class="text-emerald-400 font-bold text-sm">✓</span> No account
+        </span>
+        <span class="text-xs text-gray-500 flex items-center gap-1.5">
+          <span class="text-emerald-400 font-bold text-sm">✓</span> No server
+        </span>
+        <span class="text-xs text-gray-500 flex items-center gap-1.5">
+          <span class="text-emerald-400 font-bold text-sm">✓</span> Works offline
+        </span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 4. INTERACTIVE TOOL SWITCHER -->
+  <!-- ============================================================ -->
+  <section class="bg-white py-20">
+    <div class="max-w-4xl mx-auto px-4">
+
+      <!-- Section heading -->
+      <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 text-center mb-10">
+        FIVE TOOLS. ALL IN YOUR BROWSER.
+      </p>
+
+      <!-- Tab row -->
+      <div class="flex gap-2 overflow-x-auto pb-1 justify-center flex-wrap">
+
+        <button data-tab="edit"
+          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap bg-indigo-600 text-white hover:bg-indigo-700">
+          ✏️ Edit text
+        </button>
+
+        <button data-tab="sign"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap">
+          ✍️ Sign
+        </button>
+
+        <button data-tab="compress"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap">
+          📦 Compress
+        </button>
+
+        <button data-tab="merge"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap">
+          🔗 Merge &amp; Split
+        </button>
+
+        <button data-tab="annotate"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap">
+          🖊️ Annotate
+          <span class="text-[9px] uppercase tracking-wide font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 ml-1.5 align-middle">soon</span>
+        </button>
+
+        <button data-tab="redaction"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap">
+          ⬛ Redaction
+          <span class="text-[9px] uppercase tracking-wide font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 ml-1.5 align-middle">soon</span>
+        </button>
+
+      </div>
+
+      <!-- Preview panels -->
+      <div class="mt-8">
+
+        <!-- Panel: Edit text (default visible) -->
+        <div data-panel="edit" class="rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl mb-5">✏️</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Edit text</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Click any text in your PDF and edit it directly. Fonts matched automatically — no reformatting, no layout shift.
+              </p>
+              <a href="#" class="text-emerald-400 font-semibold text-sm hover:text-emerald-300">Open the editor →</a>
+            </div>
+
+            <!-- Right col: editor mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <div class="h-2 bg-gray-600 rounded mb-4" style="width:82%"></div>
+                <div class="h-2 bg-gray-600 rounded mb-4" style="width:68%"></div>
+                <div class="h-2 bg-gray-600 rounded mb-4" style="width:90%"></div>
+                <div class="flex items-center mb-4">
+                  <div class="h-2 rounded bg-indigo-400" style="width:72%"></div>
+                  <div class="w-0.5 h-4 bg-indigo-300 ml-0.5"></div>
+                </div>
+                <div class="h-2 bg-gray-600 rounded mb-4" style="width:88%"></div>
+                <div class="h-2 bg-gray-600 rounded" style="width:45%"></div>
+              </div>
+              <p class="text-xs text-gray-500 text-center mt-4">Click any text to edit it</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel: Sign (hidden by default) -->
+        <div data-panel="sign" class="hidden rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-2xl mb-5">✍️</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Sign</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Draw your signature on a canvas, then drag it onto any page. Everything stays in your browser.
+              </p>
+              <a href="#" class="text-emerald-400 font-semibold text-sm hover:text-emerald-300">Open the sign tool →</a>
+            </div>
+
+            <!-- Right col: signature mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <!-- PDF page mock -->
+                <div class="h-2 bg-gray-600 rounded mb-3 w-full"></div>
+                <div class="h-2 bg-gray-600 rounded mb-3" style="width:70%"></div>
+                <div class="h-2 bg-gray-600 rounded mb-3" style="width:85%"></div>
+                <!-- Divider -->
+                <div class="mt-4 mb-4 border-t border-white border-opacity-10"></div>
+                <!-- Signature area -->
+                <p class="text-xs text-gray-500 mb-2">Your signature</p>
+                <div class="h-16 rounded-lg border border-dashed border-gray-600 flex items-center justify-center">
+                  <svg viewBox="0 0 160 40" fill="none" class="w-full h-full px-4">
+                    <path d="M10 30 C30 10 50 35 70 20 C90 5 110 30 140 15" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none"/>
+                  </svg>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center">Drag to place on your document</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel: Compress (hidden by default) -->
+        <div data-panel="compress" class="hidden rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl mb-5">📦</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Compress</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Reduce file size without quality loss. Works on any PDF — scanned documents, forms, presentations.
+              </p>
+              <a href="#" class="text-emerald-400 font-semibold text-sm hover:text-emerald-300">Open the compressor →</a>
+            </div>
+
+            <!-- Right col: before/after mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <!-- Before -->
+                <p class="text-xs text-gray-500 mb-1">Before</p>
+                <div class="h-3 bg-gray-600 rounded w-full"></div>
+                <p class="text-xs text-gray-400 mt-1">2.4 MB</p>
+
+                <!-- Divider -->
+                <div class="my-4 text-center text-gray-500 text-xs">↓ compressed</div>
+
+                <!-- After -->
+                <p class="text-xs text-gray-500 mb-1">After</p>
+                <div class="h-3 bg-emerald-500 rounded w-1/5"></div>
+                <p class="text-xs text-emerald-400 mt-1">480 KB — 80% smaller</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel: Merge & Split (hidden by default) -->
+        <div data-panel="merge" class="hidden rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-2xl mb-5">🔗</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Merge &amp; Split</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Combine multiple PDFs into one, or extract a range of pages. Instant, no quality loss.
+              </p>
+              <a href="#" class="text-emerald-400 font-semibold text-sm hover:text-emerald-300">Open merge / split →</a>
+            </div>
+
+            <!-- Right col: merge mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <div class="flex flex-row items-center gap-3">
+                  <!-- Doc 1 -->
+                  <div>
+                    <div class="w-16 h-20 rounded border border-gray-600 flex flex-col items-center justify-center gap-1 px-2">
+                      <div class="h-1 bg-gray-600 rounded w-full"></div>
+                      <div class="h-1 bg-gray-600 rounded" style="width:70%"></div>
+                      <div class="h-1 bg-gray-600 rounded" style="width:85%"></div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 text-center mt-1">doc1.pdf</p>
+                  </div>
+
+                  <span class="text-gray-500 text-lg">+</span>
+
+                  <!-- Doc 2 -->
+                  <div>
+                    <div class="w-16 h-20 rounded border border-gray-600 flex flex-col items-center justify-center gap-1 px-2">
+                      <div class="h-1 bg-gray-600 rounded w-full"></div>
+                      <div class="h-1 bg-gray-600 rounded" style="width:70%"></div>
+                      <div class="h-1 bg-gray-600 rounded" style="width:85%"></div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 text-center mt-1">doc2.pdf</p>
+                  </div>
+
+                  <span class="text-gray-500 text-sm">→</span>
+
+                  <!-- Merged -->
+                  <div>
+                    <div class="w-20 h-24 rounded border-2 border-emerald-500 border-opacity-60 flex flex-col items-center justify-center gap-1 px-2">
+                      <div class="h-1 bg-gray-500 rounded w-full"></div>
+                      <div class="h-1 bg-gray-500 rounded" style="width:80%"></div>
+                      <div class="h-1 bg-gray-500 rounded" style="width:65%"></div>
+                      <div class="h-1 bg-gray-500 rounded w-full"></div>
+                      <div class="h-1 bg-gray-500 rounded" style="width:75%"></div>
+                    </div>
+                    <p class="text-[10px] text-emerald-400 text-center mt-1">merged.pdf</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel: Annotate (hidden by default) -->
+        <div data-panel="annotate" class="hidden rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center text-2xl mb-5">🖊️</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Annotate &amp; highlight</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Mark up research papers, highlight contract clauses, add sticky notes. Coming to Pro and Free tiers.
+              </p>
+              <span class="text-gray-400 text-sm">Coming soon — <a href="#" class="text-indigo-400 underline hover:text-indigo-300">Get notified</a></span>
+            </div>
+
+            <!-- Right col: highlight mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <!-- Line 1: plain -->
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <!-- Line 2: highlighted -->
+                <div class="relative mb-4">
+                  <div class="h-2 bg-gray-600 rounded w-full"></div>
+                  <div class="absolute top-0 left-0 h-2 rounded bg-yellow-400 bg-opacity-50 w-3/5"></div>
+                </div>
+                <!-- Line 3: plain -->
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <!-- Line 4: highlighted -->
+                <div class="relative mb-4">
+                  <div class="h-2 bg-gray-600 rounded w-full"></div>
+                  <div class="absolute top-0 left-0 h-2 rounded bg-yellow-400 bg-opacity-50 w-2/5"></div>
+                </div>
+                <!-- Comment bubble -->
+                <div class="mt-4 inline-flex items-center gap-2">
+                  <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-80"></div>
+                  <span class="text-[10px] text-gray-400">Needs review</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel: Redaction (hidden by default) -->
+        <div data-panel="redaction" class="hidden rounded-2xl bg-[#0c111d] p-10 lg:p-14">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+
+            <!-- Left col -->
+            <div class="flex-1 mb-8 lg:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl mb-5">⬛</div>
+              <h2 class="text-2xl font-bold text-white mb-3">Permanent redaction</h2>
+              <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                Black out sensitive content permanently — not just visually. The data is gone. GDPR Art. 17 and FOI compliant.
+              </p>
+              <span class="text-gray-400 text-sm">Coming soon — <a href="#" class="text-indigo-400 underline hover:text-indigo-300">Get notified</a></span>
+            </div>
+
+            <!-- Right col: redaction mock -->
+            <div class="flex-1 lg:max-w-sm">
+              <div class="rounded-xl p-6" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <!-- Line 1: plain -->
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <!-- Redaction bar -->
+                <div class="h-4 rounded bg-gray-900 border border-gray-800 mb-4 w-4/5"></div>
+                <!-- Line 3: plain -->
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <!-- Another redaction -->
+                <div class="h-4 rounded bg-gray-900 border border-gray-800 mb-4 w-2/5"></div>
+                <!-- Line 5: plain -->
+                <div class="h-2 bg-gray-600 rounded mb-4 w-full"></div>
+                <p class="text-[10px] text-gray-500 mt-3">Content deleted. Not just hidden.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 5. FOR THE SKEPTIC -->
+  <!-- ============================================================ -->
+  <section class="bg-gray-50 py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:gap-20">
+
+        <!-- Left: copy -->
+        <div class="flex-1 mb-12 lg:mb-0">
+          <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">The proof</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Open DevTools. Watch the network tab.</h2>
+          <p class="text-sm text-gray-600 leading-relaxed mb-5">
+            While you work, the network tab shows 0 XHR or Fetch requests. Your file is loaded from disk,
+            processed in WebAssembly, and saved back to disk. No server is involved.
+          </p>
+          <a href="#" class="text-sm text-indigo-600 underline underline-offset-2 hover:text-indigo-700 transition-colors">
+            How to verify this yourself →
+          </a>
+        </div>
+
+        <!-- Right: DevTools panel mock -->
+        <div class="flex-1 lg:max-w-xl">
+          <div class="rounded-xl overflow-hidden" style="background:#1e2433;">
+
+            <!-- Chrome window chrome dots -->
+            <div class="flex items-center gap-1.5 px-4 py-3 border-b border-white border-opacity-5">
+              <div class="w-3 h-3 rounded-full bg-red-500 opacity-80"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500 opacity-80"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500 opacity-80"></div>
+              <span class="devtools-font text-xs text-gray-400 ml-3">DevTools — Network</span>
+            </div>
+
+            <!-- Tab bar -->
+            <div class="flex gap-4 px-4 pt-3 pb-0 border-b border-white border-opacity-5">
+              <span class="devtools-font text-xs text-gray-500 pb-2">Elements</span>
+              <span class="devtools-font text-xs text-white border-b-2 border-indigo-400 pb-2">Network</span>
+              <span class="devtools-font text-xs text-gray-500 pb-2">Console</span>
+              <span class="devtools-font text-xs text-gray-500 pb-2">Sources</span>
+            </div>
+
+            <!-- Column headers -->
+            <div class="devtools-font text-xs text-gray-500 grid px-4 py-2 border-b border-white border-opacity-5" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+              <span>Name</span>
+              <span>Status</span>
+              <span>Type</span>
+              <span>Size</span>
+            </div>
+
+            <!-- File rows -->
+            <div class="devtools-font text-xs text-gray-300 grid px-4 py-1.5 hover:bg-white hover:bg-opacity-5 cursor-default" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+              <span class="text-blue-400 truncate">app.js</span>
+              <span class="text-green-400">200</span>
+              <span class="text-gray-400">Script</span>
+              <span>344 KB</span>
+            </div>
+            <div class="devtools-font text-xs text-gray-300 grid px-4 py-1.5 hover:bg-white hover:bg-opacity-5 cursor-default" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+              <span class="text-blue-400 truncate">pdf.worker.min.js</span>
+              <span class="text-green-400">200</span>
+              <span class="text-gray-400">Script</span>
+              <span>1.2 MB</span>
+            </div>
+
+            <!-- Empty rows -->
+            <div class="devtools-font text-xs text-gray-600 grid px-4 py-1.5" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+              <span>—</span><span></span><span></span><span></span>
+            </div>
+            <div class="devtools-font text-xs text-gray-600 grid px-4 py-1.5" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+              <span>—</span><span></span><span></span><span></span>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-white border-opacity-5 px-4 py-3">
+              <p class="devtools-font text-xs text-emerald-400">0 requests while your document is open</p>
+              <p class="devtools-font text-xs text-gray-500 mt-0.5">Your PDF never left this tab</p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 6. PRICING -->
+  <!-- ============================================================ -->
+  <section class="bg-white py-20">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <h2 class="text-3xl font-bold text-gray-900 text-center mb-2">Honest pricing.</h2>
+      <p class="text-gray-500 text-sm text-center mb-12">
+        The free tier is actually free. No card, no watermarks, no bait.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+        <!-- Free card -->
+        <div class="rounded-2xl border-2 border-gray-200 p-8">
+          <p class="text-lg font-bold text-gray-900 mb-1">Free</p>
+          <div class="flex items-baseline mt-4 mb-6">
+            <span class="text-4xl font-bold text-gray-900">$0</span>
+            <span class="text-sm font-normal text-gray-400 ml-1">forever</span>
+          </div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              Edit, sign, compress, merge, split
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              3 uses per day
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              No watermarks, ever
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              No card required
+            </li>
+          </ul>
+          <a href="#" class="text-sm text-indigo-600 font-semibold hover:text-indigo-700 underline underline-offset-2 transition-colors">
+            Start free →
+          </a>
+        </div>
+
+        <!-- Pro card -->
+        <div class="rounded-2xl border-2 border-indigo-500 bg-indigo-50 p-8">
+          <div class="flex items-center">
+            <p class="text-lg font-bold text-gray-900 mb-1">Pro</p>
+            <span class="inline-block ml-2 text-xs font-semibold text-indigo-700 bg-indigo-100 border border-indigo-200 rounded-full px-2 py-0.5 mb-1">$9 / month</span>
+          </div>
+          <div class="flex items-baseline mt-4 mb-1">
+            <span class="text-4xl font-bold text-gray-900">$9</span>
+            <span class="text-sm font-normal text-gray-500 ml-1">/ month</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-6">Cancel any time.</p>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              Everything in Free, unlimited
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              <span>
+                Annotate &amp; highlight
+                <span class="text-[10px] uppercase font-medium tracking-wide text-indigo-500 bg-indigo-100 rounded-full px-1.5 py-0.5 ml-1">soon</span>
+              </span>
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              <span>
+                Permanent redaction
+                <span class="text-[10px] uppercase font-medium tracking-wide text-indigo-500 bg-indigo-100 rounded-full px-1.5 py-0.5 ml-1">soon</span>
+              </span>
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              Batch processing
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+              Priority support
+            </li>
+          </ul>
+          <button class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-6 py-3 rounded-lg transition-colors w-full">
+            Get Pro →
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 7. FOOTER -->
+  <!-- ============================================================ -->
+  <footer class="bg-[#0c111d] py-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-10 mb-10">
+
+        <!-- Tools -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Tools</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Edit PDF</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Compress PDF</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Sign PDF</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Merge PDF</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Split PDF</a></li>
+          </ul>
+        </div>
+
+        <!-- Privacy -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Privacy</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">How it works</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Privacy policy</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">GDPR</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Verify yourself</a></li>
+          </ul>
+        </div>
+
+        <!-- Company (GitHub link removed) -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Company</p>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">About</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+            <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="border-t border-[#1e2433] pt-6">
+        <p class="text-xs text-gray-600">© 2026 · All processing is local. Always.</p>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Tab switcher JavaScript -->
+  <script>
+    (function() {
+      const tabs = document.querySelectorAll('[data-tab]');
+      const panels = document.querySelectorAll('[data-panel]');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.tab;
+
+          // Update tab styles
+          tabs.forEach(t => {
+            t.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+            t.classList.add('text-gray-500', 'hover:text-gray-900', 'hover:bg-gray-50');
+          });
+          tab.classList.add('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+          tab.classList.remove('text-gray-500', 'hover:text-gray-900', 'hover:bg-gray-50');
+
+          // Show target panel
+          panels.forEach(p => p.classList.add('hidden'));
+          document.querySelector('[data-panel="' + target + '"]').classList.remove('hidden');
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

@@ -25,7 +25,21 @@
       "Read(//c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/sign/**)",
       "Read(//c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/app/guides/sign-pdf-without-uploading/**)",
       "Bash(cp \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.claude/worktrees/agent-af3a7022/app/lib/pdf/grid.ts\" \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/pdf/grid.ts\" && cp \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.claude/worktrees/agent-af3a7022/app/lib/pdf/split.ts\" \"/c/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/app/lib/pdf/split.ts\" && echo \"copied\")",
-      "Bash(cd \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/hipaa-friendly-pdf-editor/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/hipaa-friendly-pdf-editor/page.tsx'\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/de/datenschutz-pdf-editor/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/de/datenschutz-pdf-editor/page.tsx'\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/fr/editeur-pdf-sans-telechargement/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/fr/editeur-pdf-sans-telechargement/page.tsx'\")"
+      "Bash(cd \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/hipaa-friendly-pdf-editor/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/hipaa-friendly-pdf-editor/page.tsx'\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/de/datenschutz-pdf-editor/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/de/datenschutz-pdf-editor/page.tsx'\" && \\\\\n  powershell -Command \"\\(Get-Content 'app/app/guides/fr/editeur-pdf-sans-telechargement/page.tsx'\\) -replace 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2\\\\.5 rounded-lg transition-colors inline-block text-sm', 'bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-lg transition-colors inline-block text-sm min-h-[44px]' | Set-Content 'app/app/guides/fr/editeur-pdf-sans-telechargement/page.tsx'\")",
+      "Bash(ls \"C:\\\\Users\\\\MobilePC\\\\Documents\\\\GitHub_Repos\\\\local_pdf_tool\\\\docs\\\\messages\\\\\" 2>/dev/null && echo \"exists\" || echo \"not yet\")",
+      "Bash(cp -r agency-agents/* ~/.claude/agents/)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//tmp/**)",
+      "Read(//c/Users/MobilePC/AppData/Local/Temp/agency-agents//**)",
+      "Bash(xargs -I{} cp {} ~/.claude/agents/)",
+      "Read(//c/Users/MobilePC/.claude/**)",
+      "Read(//c/Users/MobilePC/Documents/GitHub_Repos/**)",
+      "Read(//c/Users/MobilePC/Documents/**)",
+      "Bash(find \"C:/Users/MobilePC/Documents/GitHub_Repos/local_pdf_tool/.claude/worktrees\" -name \"*.tsx\" 2>&1 | xargs grep -l \"insérer\\\\|Supprimer\\\\|Ouverture\\\\|Nouveau Document\" 2>/dev/null | grep -v \"guides/fr\\\\|guides/de\")",
+      "WebFetch(domain:impeccable.style)",
+      "Read(//c/Users/MobilePC/.agents/skills/critique/**)",
+      "Read(//c/Users/MobilePC/.agents/skills/audit/**)"
     ]
   }
 }

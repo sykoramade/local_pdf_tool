@@ -149,6 +149,53 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+---
+
+## Sprint 9 — IN PROGRESS 🔧
+**Goal:** Bug clearance + privacy audit
+
+### Done
+- [x] S9-1: Privacy audit — confirmed 100% client-side, logged in decisions.md
+- [x] S9-2: French UI strings — none found in codebase, closed
+- [x] S9-3: Undo state freeze — undo stack + document Ctrl+Z handler added to PdfEditor.tsx
+- [x] S9-5: Main thread block on save — double-rAF yield before pdf-lib serialisation
+- [x] S9-7: Font regression — useObjectStreams: false applied to save.ts, signature.ts, merge.ts, split.ts
+
+### Deferred (not applicable to this project yet)
+- S9-4: Bold bleed — revisit when bold/italic preservation is tackled (backlog)
+- S9-6: French encoding bug — revisit when i18n/translation work begins
+
+---
+
+## Sprint 10 — COMPLETE ✅
+**Completed:** 2026-03-16
+**Goal:** Trust design + homepage overhaul
+
+### Done
+- [x] .impeccable.md — design context + brand brief (4 mockup iterations, v4 approved)
+- [x] S10-1: Homepage redesign — dark navy hero, tool switcher (6 tabs, inline SVG icons), DevTools proof, pricing
+- [x] S10-2: DevTools proof panel inlined in PdfEditor idle state (component extraction → backlog)
+- [x] S10-3: /privacy-architecture page — technical explanation + GDPR Art. 25 + verification steps
+- [x] S10-4: GDPR Art. 25 statements on /about + /privacy-architecture
+- [x] S10-5: Brand name resolved — LocalPDF (confirmed, already in codebase)
+- [x] S10-6: Sign page consistency — max-w-4xl → max-w-2xl
+- [x] DM Serif Display font via next/font/google (--font-display CSS variable)
+- [x] Heroicons-style inline SVG icons — no new npm dependency
+- [x] sitemap.ts — /privacy-architecture added
+
+---
+
+## Sprint 11 — QUEUED
+**Goal:** Annotation + highlighting (the daily-use feature gap)
+
+### Queue
+- [ ] S11-1: lib/pdf/annotate.ts — annotation data model + applyAnnotations()
+- [ ] S11-2: Highlight tool — text selection + color overlay (gate: free=3 colors, pro=unlimited)
+- [ ] S11-3: Sticky note / comment tool (gate: free=5/doc, pro=unlimited)
+- [ ] S11-4: /guides/annotate-pdf-free — SEO guide page
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
