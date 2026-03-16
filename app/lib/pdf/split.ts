@@ -87,7 +87,7 @@ export async function splitPdf(
     const copied = await outDoc.copyPages(srcDoc, indices)
     copied.forEach(page => outDoc.addPage(page))
 
-    const saved = await outDoc.save()
+    const saved = await outDoc.save({ useObjectStreams: false })
     const name =
       start === end ? `page-${start}.pdf` : `pages-${start}-${end}.pdf`
 
@@ -102,7 +102,7 @@ export async function splitPdf(
     const [copied] = await outDoc.copyPages(srcDoc, [i])
     outDoc.addPage(copied)
 
-    const saved = await outDoc.save()
+    const saved = await outDoc.save({ useObjectStreams: false })
     files.push({
       name: `page-${i + 1}.pdf`,
       bytes: new Uint8Array(saved),

@@ -45,9 +45,29 @@ export default function About() {
             You can verify this yourself: open your browser&apos;s network inspector (F12 → Network tab), load
             a PDF, make some edits, and download. You&apos;ll see zero outbound requests containing your file.
           </p>
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-gray-600 leading-relaxed mb-4">
             The only external requests are to load the app itself (standard website resources — JavaScript,
             CSS). Your PDF never leaves your computer.
+          </p>
+          <p className="text-gray-600 leading-relaxed">
+            <Link href="/privacy-architecture" className="text-indigo-600 hover:text-indigo-800 underline">
+              Full technical details and verification steps →
+            </Link>
+          </p>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-gray-800 mb-3">GDPR compliance by architecture</h2>
+          <p className="text-gray-600 leading-relaxed mb-4">
+            LocalPDF is built in compliance with GDPR Article 25 — Data Protection by Design. Because no file
+            content ever leaves your browser, LocalPDF does not require a Data Processing Agreement for document
+            processing. Healthcare workers, legal professionals, and anyone handling sensitive documents can
+            use LocalPDF without triggering data transfer obligations.
+          </p>
+          <p className="text-gray-600 leading-relaxed">
+            <Link href="/privacy-architecture" className="text-indigo-600 hover:text-indigo-800 underline">
+              Read the full technical explanation →
+            </Link>
           </p>
         </section>
 

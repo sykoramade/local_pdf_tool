@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalPDF — Master Strategic Brief</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --ink: #0d0f14;
+  --ink2: #3a3f4a;
+  --ink3: #6b7280;
+  --rule: #e5e7eb;
+  --rule2: #f3f4f6;
+  --surface: #ffffff;
+  --surface2: #f9fafb;
+  --surface3: #f3f4f6;
+  --accent: #1a56db;
+  --accent-light: #eff6ff;
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --purple: #7c3aed;
+  --purple-light: #f5f3ff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Layout ── */
+.page { max-width: 980px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── Masthead ── */
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 40px 0 32px;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.masthead-left {}
+.doc-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 10px;
+}
+.doc-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.doc-sub {
+  font-size: 15px;
+  color: var(--ink2);
+  max-width: 520px;
+  line-height: 1.6;
+}
+.masthead-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.meta-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  color: var(--ink3);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+/* ── Section headers ── */
+.section {
+  margin-bottom: 40px;
+}
+.section-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink3);
+  letter-spacing: .06em;
+  min-width: 24px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.section-rule-line {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* ── Panel eval cards ── */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.panelist {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.panelist-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.panelist-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.panelist-meta { flex: 1; }
+.panelist-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.panelist-role { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.panelist-score-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.score-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.score-high { background: var(--green-light); color: #065f46; }
+.score-mid { background: var(--amber-light); color: #92400e; }
+.score-low { background: var(--red-light); color: #991b1b; }
+.bar-track { height: 3px; border-radius: 2px; background: var(--rule); overflow: hidden; margin-top: 4px; }
+.bar-fill { height: 100%; border-radius: 2px; }
+.panelist-verdict {
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.55;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule2);
+}
+.panelist-key {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink3);
+  margin-bottom: 3px;
+}
+
+/* ── Gap analysis table ── */
+.gap-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-bottom: 16px;
+}
+.gap-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink3);
+  background: var(--surface2);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+.gap-table td {
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule2);
+  vertical-align: top;
+}
+.gap-table tr:last-child td { border-bottom: none; }
+.gap-table td:first-child { font-weight: 500; white-space: nowrap; }
+.status-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.s-done { background: var(--green-light); color: #065f46; }
+.s-partial { background: var(--amber-light); color: #92400e; }
+.s-missing { background: var(--red-light); color: #991b1b; }
+.s-risk { background: var(--purple-light); color: #5b21b6; }
+
+/* ── Feature priority matrix ── */
+.feat-matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.quadrant {
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  padding: 16px;
+  background: var(--surface);
+}
+.q-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+.q-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule2);
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.4;
+}
+.q-item:last-child { border-bottom: none; }
+.q-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.q-name { font-weight: 600; color: var(--ink); }
+
+/* ── Sprint cards ── */
+.sprint-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.sprint-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sprint-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--rule2);
+  cursor: pointer;
+  user-select: none;
+}
+.sprint-head:hover { background: var(--surface2); }
+.sprint-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink3);
+  min-width: 60px;
+}
+.sprint-name { font-size: 14px; font-weight: 600; color: var(--ink); flex: 1; }
+.sprint-goal { font-size: 12px; color: var(--ink3); }
+.sprint-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.sb-now { background: #fef3c7; color: #92400e; }
+.sb-next { background: var(--accent-light); color: #1e40af; }
+.sb-later { background: var(--surface3); color: var(--ink3); }
+.sprint-body { padding: 16px 18px; }
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--rule2);
+}
+.task-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink3);
+  min-width: 52px;
+  padding-top: 1px;
+}
+.task-content { flex: 1; }
+.task-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.task-desc { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+.task-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.t-bug { background: var(--red-light); color: #991b1b; }
+.t-feat { background: var(--green-light); color: #065f46; }
+.t-trust { background: var(--purple-light); color: #5b21b6; }
+.t-seo { background: var(--amber-light); color: #92400e; }
+.t-ux { background: var(--accent-light); color: #1e40af; }
+
+/* ── Design direction ── */
+.design-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.design-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 16px;
+}
+.dc-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--ink); }
+.dc-body { font-size: 12px; color: var(--ink2); line-height: 1.6; }
+.dc-list { font-size: 12px; color: var(--ink2); line-height: 1.7; padding-left: 16px; }
+
+/* ── Landing page wireframe ── */
+.lp-wire {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.lp-wire-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink3);
+  padding: 10px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--rule);
+}
+.wire-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--rule);
+  background: #0c111d;
+}
+.wire-logo {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e5e7eb;
+  letter-spacing: .04em;
+}
+.wire-nav-links { display: flex; gap: 20px; font-size: 12px; color: #6b7280; }
+.wire-hero {
+  padding: 48px 32px 36px;
+  background: #0c111d;
+  color: white;
+}
+.wire-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #6ee7b7;
+  margin-bottom: 14px;
+}
+.wire-h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 30px;
+  line-height: 1.2;
+  color: #f9fafb;
+  margin-bottom: 14px;
+}
+.wire-sub {
+  font-size: 14px;
+  color: #9ca3af;
+  line-height: 1.65;
+  max-width: 520px;
+  margin-bottom: 24px;
+}
+.wire-cta-row { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+.wire-cta-p {
+  padding: 11px 20px;
+  border-radius: 8px;
+  background: #10b981;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+}
+.wire-cta-s {
+  padding: 11px 20px;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #374151;
+}
+.wire-devtools {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 440px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #6b7280;
+}
+.dt-tabs { display: flex; gap: 14px; border-bottom: 1px solid #1f2937; padding-bottom: 6px; margin-bottom: 8px; }
+.dt-tab { font-size: 10px; color: #4b5563; }
+.dt-tab.on { color: #60a5fa; border-bottom: 1.5px solid #60a5fa; }
+.dt-empty-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #10b981;
+  margin-top: 8px;
+}
+.wire-trust-bar {
+  display: flex;
+  gap: 20px;
+  padding: 14px 32px;
+  background: #111827;
+  border-top: 1px solid #1f2937;
+  flex-wrap: wrap;
+}
+.wire-trust-item { font-size: 11px; color: #6b7280; display: flex; align-items: center; gap: 5px; }
+.wire-trust-item span { color: #10b981; }
+.wire-feats {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 14px;
+  padding: 28px 32px;
+  background: #f9fafb;
+}
+.wire-feat {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+}
+.wire-feat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wire-feat-name { font-size: 12px; font-weight: 600; color: #111827; margin-bottom: 3px; }
+.wire-feat-desc { font-size: 11px; color: #6b7280; line-height: 1.5; }
+.wire-certs {
+  display: flex;
+  gap: 10px;
+  padding: 20px 32px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+  flex-wrap: wrap;
+}
+.wire-cert {
+  padding: 8px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  text-align: center;
+}
+.cert-name { font-size: 11px; font-weight: 600; color: #111827; }
+.cert-sub { font-size: 10px; color: #9ca3af; }
+
+/* ── Messaging ── */
+.msg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.msg-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.msg-audience { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); margin-bottom: 6px; }
+.msg-headline { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; line-height: 1.3; }
+.msg-sub { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+.msg-privacy { font-size: 11px; color: var(--purple); margin-top: 6px; font-style: italic; }
+
+/* ── Alert boxes ── */
+.alert {
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.alert-body { font-size: 13px; line-height: 1.55; }
+.alert-title { font-weight: 600; margin-bottom: 3px; }
+.alert-red { background: var(--red-light); border: 1px solid #fca5a5; }
+.alert-red .alert-title { color: #991b1b; }
+.alert-red .alert-body { color: #7f1d1d; }
+.alert-amber { background: var(--amber-light); border: 1px solid #fcd34d; }
+.alert-amber .alert-title { color: #92400e; }
+.alert-amber .alert-body { color: #78350f; }
+.alert-green { background: var(--green-light); border: 1px solid #6ee7b7; }
+.alert-green .alert-title { color: #065f46; }
+.alert-green .alert-body { color: #064e3b; }
+.alert-purple { background: var(--purple-light); border: 1px solid #c4b5fd; }
+.alert-purple .alert-title { color: #5b21b6; }
+.alert-purple .alert-body { color: #4c1d95; }
+
+/* ── Reddit signal ── */
+.reddit-quotes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.rq {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.rq-icon { font-size: 13px; flex-shrink: 0; opacity: .5; }
+.rq-text { font-size: 13px; color: var(--ink2); line-height: 1.55; flex: 1; }
+.rq-signal { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+.sig-confirm { background: var(--green-light); color: #065f46; }
+.sig-bug { background: var(--red-light); color: #991b1b; }
+.sig-want { background: var(--accent-light); color: #1e40af; }
+.sig-risk { background: var(--purple-light); color: #5b21b6; }
+
+/* ── Summary verdict ── */
+.verdict-box {
+  background: var(--ink);
+  color: white;
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  margin-bottom: 16px;
+}
+.vb-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: white;
+  margin-bottom: 12px;
+}
+.vb-body { font-size: 14px; color: #9ca3af; line-height: 1.7; margin-bottom: 20px; }
+.vb-scores { display: flex; gap: 8px; flex-wrap: wrap; }
+.vs { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.vs-g { background: #064e3b; color: #6ee7b7; }
+.vs-a { background: #78350f; color: #fcd34d; }
+.vs-r { background: #7f1d1d; color: #fca5a5; }
+
+/* ── Tabs ── */
+.tab-nav { display: flex; gap: 2px; border-bottom: 2px solid var(--rule); margin-bottom: 24px; }
+.tnav { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--ink3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tnav:hover { color: var(--ink); }
+.tnav.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Misc ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.prose { font-size: 14px; color: var(--ink2); line-height: 1.7; margin-bottom: 16px; }
+.prose strong { color: var(--ink); }
+code { font-family: 'DM Mono', monospace; font-size: 12px; background: var(--surface3); padding: 2px 5px; border-radius: 3px; color: var(--ink); }
+.note { font-size: 12px; color: var(--ink3); border-left: 3px solid var(--rule); padding-left: 12px; margin-bottom: 12px; line-height: 1.6; }
+
+/* ── Font architecture tab ── */
+.font-option { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; margin-bottom: 10px; }
+.font-option.winner { border-color: var(--green); background: #f0fdf9; }
+.fo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.fo-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.fo-win { background: var(--green-light); color: #065f46; }
+.fo-mid { background: var(--amber-light); color: #92400e; }
+.fo-no { background: var(--red-light); color: #991b1b; }
+.fo-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.fo-conf { font-size: 11px; color: var(--ink3); margin-left: auto; font-family: 'DM Mono', monospace; }
+.fo-body { font-size: 13px; color: var(--ink2); line-height: 1.65; margin-bottom: 10px; }
+.fo-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fo-col-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.fo-list { font-size: 12px; color: var(--ink2); line-height: 1.8; padding-left: 14px; }
+
+.font-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); margin-bottom: 16px; }
+.font-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink3); background: var(--surface2); padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--rule); }
+.font-table td { padding: 9px 14px; font-size: 12px; color: var(--ink); border-bottom: 1px solid var(--rule2); vertical-align: top; }
+.font-table tr:last-child td { border-bottom: none; }
+.font-table td:first-child { font-family: 'DM Mono', monospace; font-weight: 500; }
+.font-table td.covered { color: var(--green); font-weight: 600; }
+.font-table td.partial { color: var(--amber); }
+
+.msg-block { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; margin-bottom: 10px; }
+.mb-context { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); margin-bottom: 6px; }
+.mb-headline { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 6px; line-height: 1.35; }
+.mb-body { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.mb-copy { background: var(--surface2); border-left: 3px solid var(--green); padding: 10px 14px; margin-top: 10px; border-radius: 0 6px 6px 0; font-size: 13px; color: var(--ink); font-style: italic; line-height: 1.6; }
+
+.impl-steps { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); margin-bottom: 16px; }
+.impl-step { display: flex; gap: 0; border-bottom: 1px solid var(--rule2); }
+.impl-step:last-child { border-bottom: none; }
+.impl-num { width: 48px; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 14px; font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--ink3); border-right: 1px solid var(--rule2); }
+.impl-content { flex: 1; padding: 12px 16px; }
+.impl-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.impl-desc { font-size: 12px; color: var(--ink2); line-height: 1.55; }
+.impl-code { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--surface2); border: 1px solid var(--rule); border-radius: 5px; padding: 8px 12px; margin-top: 8px; color: var(--ink); line-height: 1.7; white-space: pre-wrap; }
+.impl-tag { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; margin: 14px 14px 0 0; align-self: flex-start; white-space: nowrap; }
+.it-green { background: var(--green-light); color: #065f46; }
+.it-blue { background: var(--accent-light); color: #1e40af; }
+.it-amber { background: var(--amber-light); color: #92400e; }
+
+@media (max-width: 640px) {
+  .feat-matrix, .design-grid, .two-col, .msg-grid { grid-template-columns: 1fr; }
+  .wire-feats { grid-template-columns: 1fr; }
+  .doc-title { font-size: 28px; }
+  .panel-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-left">
+    <div class="doc-type">Master Strategic Brief · For AI Builder</div>
+    <div class="doc-title">LocalPDF<br>Where We Stand.<br>Where We Go.</div>
+    <div class="doc-sub">Full panel evaluation of the project against 8 sprints of actual build work, real Reddit validation data, and a prioritised path forward — written for the agent continuing development.</div>
+  </div>
+  <div class="masthead-meta">
+    <div class="meta-pill">Sprint 8 complete</div>
+    <div class="meta-pill">Reddit: 165 upvotes · 97 comments</div>
+    <div class="meta-pill">Stack: Next.js 14 + pdf-lib + Supabase + Stripe</div>
+    <div class="meta-pill">MRR target: $1,500 (~170 Pro users)</div>
+    <div class="meta-pill">Prepared: 2026-03-15</div>
+  </div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <div class="tnav active" onclick="showTab('eval',this)">Panel Eval</div>
+  <div class="tnav" onclick="showTab('gaps',this)">Gap Analysis</div>
+  <div class="tnav" onclick="showTab('design',this)">Design Direction</div>
+  <div class="tnav" onclick="showTab('features',this)">Feature Priority</div>
+  <div class="tnav" onclick="showTab('roadmap',this)">Sprint Roadmap</div>
+  <div class="tnav" onclick="showTab('messaging',this)">Messaging</div>
+  <div class="tnav" onclick="showTab('fonts',this)">Font Architecture</div>
+</div>
+
+<!-- ═══════════════ TAB 1: PANEL EVAL ═══════════════ -->
+<div class="tab-content active" id="tab-eval">
+
+  <div class="alert alert-green">
+    <div class="alert-icon">✓</div>
+    <div class="alert-body">
+      <div class="alert-title">Validation signal is real</div>
+      The Reddit post (r/SideProject, 6 days old) has 165 upvotes and 97 comments. Real users are using the tool on actual documents, reporting bugs, and bookmarking it. This is not a vanity launch — there is genuine product-market pull. The panel evaluated the project against this signal and against the strategic work done in prior sessions.
+    </div>
+  </div>
+
+  <div class="alert alert-red">
+    <div class="alert-icon">⚠</div>
+    <div class="alert-body">
+      <div class="alert-title">Critical flag: potential privacy claim inconsistency</div>
+      The Reddit post states: <em>"the only backend I have is a custom engine just for the font matching stuff — had to keep that on a server."</em> However, the decisions.md log and executive summary both claim 100% client-side processing. If font matching does use a server call, the "zero uploads, your file never leaves your computer" claim is undermined. This must be resolved before any trust-based marketing is amplified. The builder must audit what, if anything, leaves the browser during a font-matching operation and document the answer in decisions.md.
+    </div>
+  </div>
+
+  <!-- Panel scores -->
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">01</div>
+      <div class="section-title">Expert panel — evaluation against actual project state</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="panel-grid">
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#E1F5EE;color:#085041">PM</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Sarah M. — Product</div>
+            <div class="panelist-role">Senior PM · SaaS tools</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-high">8.5</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:85%;background:#059669"></div></div>
+        <div class="panelist-key">Assessment</div>
+        <div class="panelist-verdict">Eight sprints of focused execution is impressive for a solo/agent-run project. The core differentiator — font-matching text editor — is real and validated. Sprint sequencing (editor → compress → merge → auth → billing → sign → split) was logical. The problem: signing ate Sprint 7–8 while annotation, redaction, and highlighting — which serve daily-use audiences — haven't been started. The backlog has the right ideas (OCR, bulk processing) but the highest-frequency feature for retention is missing: <strong>annotation and highlighting</strong>. Fix the Reddit-reported bugs before adding anything new.</div>
+      </div>
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#E6F1FB;color:#0C447C">UX</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Chloe D. — Design</div>
+            <div class="panelist-role">Trust design · legaltech/fintech</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-mid">6.5</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:65%;background:#d97706"></div></div>
+        <div class="panelist-key">Assessment</div>
+        <div class="panelist-verdict">The trust design work hasn't happened yet, and it's the highest-leverage thing you can do right now without writing a line of feature code. The competitive analysis says "100% local, verifiable, check the network tab" — but the landing page doesn't show a DevTools proof element, doesn't surface the GDPR Article 25 claim, and the product name "PDFNoLimit" signals the wrong thing entirely (it sounds like a clone of the scammy tools you're competing against). The visual identity needs to earn the trust the architecture deserves. Score is 6.5 — trust design is your biggest unrealised asset.</div>
+      </div>
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#FAEEDA;color:#633806">SEO</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Arjun S. — SEO Growth</div>
+            <div class="panelist-role">Multi-market English SaaS</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-high">8</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:80%;background:#059669"></div></div>
+        <div class="panelist-key">Assessment</div>
+        <div class="panelist-verdict">The SEO foundation is solid — sitemap, robots.txt, guide pages, German and French localisation pages, GSC setup instructions. The "mybestpdf alternative" content strategy is exactly right. The gap: audience-specific landing pages haven't been built yet. The guides target search intent ("edit pdf text free") but there are no pages that convert specific professional audiences (healthcare workers, researchers, HR teams). These are easier to build and convert at higher rates than generic guides. Priority SEO tasks: annotation landing page, redaction landing page, "pdf editor no account" conversion page with the DevTools proof element.</div>
+      </div>
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#FCEBEB;color:#791F1F">BUG</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Reddit signal analysis</div>
+            <div class="panelist-role">165 upvotes · 97 comments · real users</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-mid">—</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%;background:#dc2626"></div></div>
+        <div class="panelist-key">Confirmed bugs from user reports</div>
+        <div class="panelist-verdict">
+          <strong>Must fix before any marketing:</strong><br>
+          1. French UI strings in English UI (insérer page, Supprimer, "Ouverture du PDF")<br>
+          2. Bold text bleeding to adjacent paragraphs on edit<br>
+          3. Undo state freeze — cannot interact after undo<br>
+          4. Main thread blocking on PDF save (page freeze)<br>
+          5. "r" → "rv" encoding bug on French PDFs<br>
+          6. Color picker sampling slightly off on some PDFs<br>
+          7. Recent update broke font rendering on previously correct PDFs (reported 21h ago)
+        </div>
+      </div>
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#EAF3DE;color:#27500A">MRR</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Ravi K. — Revenue</div>
+            <div class="panelist-role">SaaS MRR growth · freemium to paid</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-high">7.5</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:75%;background:#059669"></div></div>
+        <div class="panelist-key">Assessment</div>
+        <div class="panelist-verdict">Stripe and Supabase are wired. $9/month is the right price point. The usage gate (3 free/day) is correctly placed at action, not modal open. The missing conversion lever: the paid gate needs to trigger at the right moment for the right features. Currently it gates on download/merge count — but the highest-conversion trigger for professional users is <strong>signature certification</strong> (eIDAS-certified vs simple) and <strong>PDF save without watermark</strong>. Daily-use feature gates (annotation export, redaction batch) are where power users hit the wall and pay. The 3-free-uses-per-day gate is too coarse — it will frustrate legitimate free users before they build the habit.</div>
+      </div>
+
+      <div class="panelist">
+        <div class="panelist-header">
+          <div class="panelist-av" style="background:#EEEDFE;color:#3C3489">AUD</div>
+          <div class="panelist-meta">
+            <div class="panelist-name">Dr. Lena F. — Verticals</div>
+            <div class="panelist-role">B2B legal, healthcare, education</div>
+          </div>
+          <div class="panelist-score-wrap">
+            <div class="score-box score-mid">7</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:70%;background:#d97706"></div></div>
+        <div class="panelist-key">Assessment</div>
+        <div class="panelist-verdict">The German and French SEO pages are a start but they're generic. The healthcare, education, and legal verticals identified in our strategic sessions have zero dedicated landing pages. More critically: <strong>permanent redaction</strong> — the feature that makes this tool legally usable in healthcare and government — is completely absent. Every other PDF tool's redaction is a visual overlay (black rectangle on top of text that can be removed). Proper redaction permanently deletes the underlying content. This is technically achievable client-side and would be a genuine first for free browser-based tools. It's also the feature that unlocks the highest-compliance verticals.</div>
+      </div>
+
+    </div>
+
+    <!-- Reddit signal quotes -->
+    <div class="section-rule" style="margin-top:24px">
+      <div class="section-num">—</div>
+      <div class="section-title">What real users actually said</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="reddit-quotes">
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">"The font mapping approach is really smart. Most PDF editors just overlay new text and the original structure gets wrecked." — multiple users, independently</div>
+        <div class="rq-signal sig-confirm">Differentiator confirmed</div>
+      </div>
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">"Running it locally is a huge plus. I've dealt with too many situations where uploading sensitive contracts to random cloud services wasn't an option."</div>
+        <div class="rq-signal sig-confirm">Privacy value confirmed</div>
+      </div>
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">"Converting fonts to curves would be a very useful option — this can currently only be done in Acrobat Pro."</div>
+        <div class="rq-signal sig-want">Pro feature request</div>
+      </div>
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">"Bold text bleeding to adjacent paragraphs. Undo breaks the entire editor. French strings in English UI."</div>
+        <div class="rq-signal sig-bug">Active bugs — fix first</div>
+      </div>
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">The font-matching server comment: "the only backend I have is a custom engine just for the font matching." This conflicts with the 100% local claim in docs.</div>
+        <div class="rq-signal sig-risk">Audit required</div>
+      </div>
+      <div class="rq">
+        <div class="rq-icon">▲</div>
+        <div class="rq-text">"Batch processing would be killer for people who need to make the same edit across multiple files."</div>
+        <div class="rq-signal sig-want">Pro feature — already in backlog</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 2: GAP ANALYSIS ═══════════════ -->
+<div class="tab-content" id="tab-gaps">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">02</div>
+      <div class="section-title">Strategy vs reality — where we are</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">The following table maps every strategic recommendation from the expert panel sessions against the actual project state after Sprint 8. Green = done and done well. Amber = partial or present but weak. Red = missing. Purple = architectural risk requiring audit.</div>
+
+    <table class="gap-table">
+      <thead>
+        <tr>
+          <th>Strategic item</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Local-first architecture (100% in-browser)</td>
+          <td><span class="status-pill s-risk">Audit needed</span></td>
+          <td>Decisions.md says client-side. Reddit post mentions a font-matching server. Resolve before marketing the privacy claim heavily. The core editor may be clean — the font matching step needs verification.</td>
+        </tr>
+        <tr>
+          <td>Core text editor with font matching</td>
+          <td><span class="status-pill s-done">Done</span></td>
+          <td>85% coverage confirmed in spike. Validated by real users on Reddit. Font rendering regression introduced in recent update — fix immediately.</td>
+        </tr>
+        <tr>
+          <td>Compress, merge, split tools</td>
+          <td><span class="status-pill s-done">Done</span></td>
+          <td>All three shipped. These are the right daily-use tools for ops/admin and SMB audiences. Good decision.</td>
+        </tr>
+        <tr>
+          <td>Signing tool</td>
+          <td><span class="status-pill s-done">Done</span></td>
+          <td>Shipped in Sprint 7–8. Correct to build, but over-weighted relative to strategic value. Signing is a low-frequency feature. The investment was disproportionate — 2 full sprints.</td>
+        </tr>
+        <tr>
+          <td>Annotation / highlighting</td>
+          <td><span class="status-pill s-missing">Missing</span></td>
+          <td>The highest-frequency PDF action for students, researchers, and professionals. Zero implementation. This is the biggest gap between strategy and build. Should be Sprint 9 priority.</td>
+        </tr>
+        <tr>
+          <td>Permanent redaction</td>
+          <td><span class="status-pill s-missing">Missing</span></td>
+          <td>Critical for healthcare, government, legal. Most tools do visual-only redaction. True permanent redaction (content deletion, not overlay) is technically achievable with pdf-lib and would be a genuine market differentiator.</td>
+        </tr>
+        <tr>
+          <td>Metadata stripping</td>
+          <td><span class="status-pill s-missing">Missing</span></td>
+          <td>Author name, edit history, GPS coordinates embedded in PDFs. Critical for journalists, healthcare, government. Fast to implement with pdf-lib. High trust signal to add to the landing page.</td>
+        </tr>
+        <tr>
+          <td>Trust design overhaul</td>
+          <td><span class="status-pill s-missing">Missing</span></td>
+          <td>DevTools proof element, GDPR Art. 25 statement, cert row, "why free?" transparency section — none present. This is the highest-leverage non-code work. See Design Direction tab.</td>
+        </tr>
+        <tr>
+          <td>Auth (Supabase) + billing (Stripe)</td>
+          <td><span class="status-pill s-done">Done</span></td>
+          <td>Shipped Sprint 5–6. Schema, RLS, webhook handling all correct. Env var setup deferred to MD — still outstanding before billing can go live.</td>
+        </tr>
+        <tr>
+          <td>Usage gate</td>
+          <td><span class="status-pill s-partial">Partial</span></td>
+          <td>3 uses/day for anon is too coarse. Gates on the wrong features. Should gate on high-value professional actions (certified signature, redaction export, annotation save) not on raw use count.</td>
+        </tr>
+        <tr>
+          <td>English SEO foundation</td>
+          <td><span class="status-pill s-done">Done</span></td>
+          <td>Sitemap, robots.txt, multiple guide pages, competitor alternatives pages. Correct targets (mybestpdf alternative, pdf editor no upload). GSC setup docs written.</td>
+        </tr>
+        <tr>
+          <td>German + French SEO pages</td>
+          <td><span class="status-pill s-partial">Partial</span></td>
+          <td>Two pages exist (DE: DSGVO, FR: editeur sans telechargement). Good start. Need expansion into feature-specific and audience-specific pages in both languages.</td>
+        </tr>
+        <tr>
+          <td>Audience-specific landing pages</td>
+          <td><span class="status-pill s-missing">Missing</span></td>
+          <td>No pages targeting healthcare, students, HR, accountants, designers. These convert at significantly higher rates than generic tool pages because they answer the professional audience's specific objection.</td>
+        </tr>
+        <tr>
+          <td>Product branding / name</td>
+          <td><span class="status-pill s-risk">Risk</span></td>
+          <td>"PDFNoLimit" positions this as a quantity/paywall tool (like the scammy competitors). The strategy recommends a name that signals trust, privacy, and professional use. This is a fixable problem but it affects every SEO page, landing page, and trust signal.</td>
+        </tr>
+        <tr>
+          <td>Stripe/Supabase env var setup</td>
+          <td><span class="status-pill s-partial">Pending</span></td>
+          <td>Code is ready. MD action required: create Supabase project, run schema.sql, configure Stripe product, add webhook. Nothing can be monetised until this is done.</td>
+        </tr>
+        <tr>
+          <td>Bug backlog from Reddit</td>
+          <td><span class="status-pill s-missing">Unresolved</span></td>
+          <td>7 confirmed bugs including a recent font regression, undo freeze, bold bleed, French encoding bug. Some reported as active and unpatched. These must be resolved before any paid marketing begins.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Summary verdict -->
+    <div class="verdict-box">
+      <div class="vb-title">Panel verdict on current state</div>
+      <div class="vb-body">Eight sprints of well-executed, correctly scoped work. The core product works and has real user validation. The strategic gaps are not execution failures — they're sequencing choices that can be corrected. The three most important next moves are: fix the bug backlog (trust and retention), build annotation/highlighting (daily-use feature gap), and overhaul the trust design layer (the privacy claim needs to be proven, not asserted). Everything else is secondary to these three.</div>
+      <div class="vb-scores">
+        <div class="vs vs-g">Core product: strong ✓</div>
+        <div class="vs vs-g">SEO foundation: solid ✓</div>
+        <div class="vs vs-g">Auth/billing: ready ✓</div>
+        <div class="vs vs-a">Bug backlog: needs sprint ⚠</div>
+        <div class="vs vs-a">Usage gate: rethink ⚠</div>
+        <div class="vs vs-r">Trust design: not started ✗</div>
+        <div class="vs vs-r">Annotation: missing ✗</div>
+        <div class="vs vs-r">Redaction: missing ✗</div>
+        <div class="vs vs-r">Privacy audit: required ✗</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 3: DESIGN DIRECTION ═══════════════ -->
+<div class="tab-content" id="tab-design">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">03</div>
+      <div class="section-title">Design direction — trust as the visual language</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="alert alert-purple">
+      <div class="alert-icon">◈</div>
+      <div class="alert-body">
+        <div class="alert-title">The single most important design principle</div>
+        Trust is not communicated by words. It's communicated by what the visual language, the proof elements, and the product name all say before anyone reads a single sentence. "PDFNoLimit" currently signals the same category as the tools it's competing against. The architecture deserves better representation.
+      </div>
+    </div>
+
+    <div class="design-grid">
+      <div class="design-card">
+        <div class="dc-title">Visual language: institutional restraint</div>
+        <div class="dc-body">Dark navy or deep slate background on the hero — not startup blue, not tech teal. This reads as "serious software" to the professional audiences we're targeting. White space is generous. Typography is editorial. No shield icons, no padlock animations — those are so overused they signal insecurity rather than security. The palette should feel like a financial institution or a law firm's web presence: calm, precise, unhurried.</div>
+      </div>
+      <div class="design-card">
+        <div class="dc-title">The proof element: DevTools, not badges</div>
+        <div class="dc-body">The highest-trust element on the landing page is not an ISO badge. It's a DevTools Network tab showing zero requests during document processing. This is an auditable, verifiable claim — not a marketing assertion. Place it prominently above the fold. It tells a technically literate person "this tool is making a claim it can prove, not a promise you can't verify." For non-technical visitors, the caption does the work: "0 network requests — your file never left this tab."</div>
+      </div>
+      <div class="design-card">
+        <div class="dc-title">Name recommendation</div>
+        <div class="dc-body">"PDFNoLimit" positions the product as competing on quantity/paywall removal — which is half the story. The privacy angle is the differentiating claim and should be in the name or tagline. Suggestions: <strong>LocalPDF</strong> (exact match to the repo name, descriptive, honest), <strong>VaultDraft</strong>, <strong>Clearform</strong>, <strong>Folio</strong>, <strong>Privadoc</strong>. The name should answer "what does it do differently" in one word. LocalPDF is the strongest because it literally describes the architecture.</div>
+      </div>
+      <div class="design-card">
+        <div class="dc-title">Above-the-fold hierarchy</div>
+        <div class="dc-body">
+          1. The claim: "Edit, sign, and annotate PDFs. Your file never leaves this browser."<br>
+          2. The proof: DevTools network tab (zero requests)<br>
+          3. The CTA: "Open a PDF — no account needed"<br>
+          4. The secondary CTA: "How to verify this yourself →"<br>
+          5. Trust bar: No upload · No account · EU-built · Open source
+          <br><br>
+          Features come below the fold. Certifications come below features. The conversion logic: trust earns the click, features justify the upgrade.
+        </div>
+      </div>
+    </div>
+
+    <!-- Landing page wireframe -->
+    <div class="lp-wire">
+      <div class="lp-wire-label">Landing page concept — trust-first hierarchy</div>
+      <div class="wire-nav">
+        <div class="wire-logo">LocalPDF</div>
+        <div class="wire-nav-links">
+          <span>Editor</span><span>Tools</span><span>Privacy</span><span>Pricing</span>
+        </div>
+      </div>
+      <div class="wire-hero">
+        <div class="wire-eyebrow">100% local · zero uploads · open source verifiable</div>
+        <div class="wire-h1">Edit, sign, and annotate PDFs.<br>Nothing leaves your browser.</div>
+        <div class="wire-sub">Every other online PDF tool uploads your file to a server. LocalPDF processes everything in your browser. Verifiable — open DevTools and watch the network tab stay silent while you work.</div>
+        <div class="wire-cta-row">
+          <button class="wire-cta-p">Open a PDF — no account</button>
+          <button class="wire-cta-s">How to verify →</button>
+        </div>
+        <div class="wire-devtools">
+          <div class="dt-tabs">
+            <span class="dt-tab">Elements</span>
+            <span class="dt-tab">Console</span>
+            <span class="dt-tab on">Network</span>
+            <span class="dt-tab">Sources</span>
+          </div>
+          <div style="font-size:10px;color:#374151;margin-bottom:6px">Filter · XHR · Fetch · Doc</div>
+          <div style="font-size:11px;color:#374151;padding:3px 0;border-bottom:1px solid #1f2937">app.js · GET · 200 · 342 KB</div>
+          <div class="dt-empty-msg">
+            <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;flex-shrink:0"></span>
+            0 requests while processing your document
+          </div>
+          <div style="font-size:10px;color:#4b5563;margin-top:4px">Your PDF never left this tab</div>
+        </div>
+      </div>
+      <div class="wire-trust-bar">
+        <div class="wire-trust-item"><span>✓</span> No file upload</div>
+        <div class="wire-trust-item"><span>✓</span> No account required</div>
+        <div class="wire-trust-item"><span>✓</span> No server ever receives your document</div>
+        <div class="wire-trust-item"><span>✓</span> EU-built · GDPR Art. 25</div>
+        <div class="wire-trust-item"><span>✓</span> Open source · auditable</div>
+      </div>
+      <div class="wire-feats">
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#ecfdf5">✏️</div>
+          <div class="wire-feat-name">Edit text</div>
+          <div class="wire-feat-desc">Edit inline, fonts preserved. Your contracts, not a template.</div>
+        </div>
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#eff6ff">🖊️</div>
+          <div class="wire-feat-name">Annotate & highlight</div>
+          <div class="wire-feat-desc">Mark up papers, flag clauses, add margin notes.</div>
+        </div>
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#fef3c7">⬛</div>
+          <div class="wire-feat-name">Permanent redaction</div>
+          <div class="wire-feat-desc">Content deleted, not just hidden. Suitable for GDPR and FOI.</div>
+        </div>
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#f5f3ff">✍️</div>
+          <div class="wire-feat-name">Sign</div>
+          <div class="wire-feat-desc">Draw or type. eIDAS-compliant. Valid across the EU.</div>
+        </div>
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#ecfdf5">🗜️</div>
+          <div class="wire-feat-name">Compress & merge</div>
+          <div class="wire-feat-desc">Reduce file size. Combine documents. Instantly.</div>
+        </div>
+        <div class="wire-feat">
+          <div class="wire-feat-icon" style="background:#fff1f2">🔎</div>
+          <div class="wire-feat-name">Strip metadata</div>
+          <div class="wire-feat-desc">Remove author name, edit history, GPS data before sharing.</div>
+        </div>
+      </div>
+      <div class="wire-certs">
+        <div class="wire-cert"><div class="cert-name">eIDAS compliant</div><div class="cert-sub">EU e-signatures</div></div>
+        <div class="wire-cert"><div class="cert-name">GDPR Art. 25</div><div class="cert-sub">Privacy by design</div></div>
+        <div class="wire-cert"><div class="cert-name">Open source</div><div class="cert-sub">MIT licence · GitHub</div></div>
+        <div class="wire-cert"><div class="cert-name">Zero telemetry</div><div class="cert-sub">No analytics on docs</div></div>
+      </div>
+    </div>
+
+    <div class="note">The wireframe above is a concept direction, not a pixel-perfect spec. The key structural decisions: (1) DevTools proof element sits inside the hero, not below the fold. (2) Features list only appears after trust is established. (3) Certification row is at the bottom — it amplifies trust already built, not establishes it. (4) Dark hero with light feature section creates natural visual hierarchy between "the promise" and "the proof."</div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 4: FEATURE PRIORITY ═══════════════ -->
+<div class="tab-content" id="tab-features">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">04</div>
+      <div class="section-title">Feature priority matrix</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">Mapped against two axes: <strong>frequency of use</strong> (how often a target user needs this feature) and <strong>strategic value</strong> (how much it differentiates the product and drives conversion). The signing tool sits in the lower-left — it was built first but it's not the daily habit driver. Annotation is the missing high-frequency feature.</div>
+
+    <div class="feat-matrix">
+      <div class="quadrant" style="border-color:#059669;background:var(--green-light)">
+        <div class="q-label" style="color:#065f46">Build now — high freq, high strategic value</div>
+        <div class="q-item"><div class="q-dot" style="background:#059669"></div><div><div class="q-name">Annotation & highlighting</div>Students, researchers, healthcare workers use this daily. Biggest gap.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#059669"></div><div><div class="q-name">Permanent redaction</div>Healthcare and government unlock. No other free tool does it properly.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#059669"></div><div><div class="q-name">Metadata stripping</div>Quick to implement. High trust signal. Journalists and healthcare critical.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#059669"></div><div><div class="q-name">Bug fixes (7 confirmed)</div>Users are already here. Don't lose them to unresolved bugs.</div></div>
+      </div>
+
+      <div class="quadrant" style="border-color:#d97706;background:var(--amber-light)">
+        <div class="q-label" style="color:#92400e">Build next — lower freq, high strategic value</div>
+        <div class="q-item"><div class="q-dot" style="background:#d97706"></div><div><div class="q-name">Trust design overhaul</div>DevTools proof, cert row, GDPR statement, name change. High conversion impact.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#d97706"></div><div><div class="q-name">Audience landing pages</div>Healthcare, researchers, HR, accountants. Each converts at 3–5× generic pages.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#d97706"></div><div><div class="q-name">Fillable form creation</div>HR, education, government. Create blank fields on PDF. High professional value.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#d97706"></div><div><div class="q-name">Revised usage gate</div>Gate on professional features, not raw count. Improves conversion and reduces churn.</div></div>
+      </div>
+
+      <div class="quadrant" style="border-color:#6366f1;background:#eef2ff">
+        <div class="q-label" style="color:#4338ca">Build later — high freq, lower strategic diff</div>
+        <div class="q-item"><div class="q-dot" style="background:#6366f1"></div><div><div class="q-name">Comment threads</div>Supervisor/peer review workflow. Useful but complex to implement well.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#6366f1"></div><div><div class="q-name">PDF search</div>Find text across open documents. High freq for researchers. Complex to do locally.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#6366f1"></div><div><div class="q-name">Batch processing</div>Already in backlog. Pro feature — multiple users requested it on Reddit.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#6366f1"></div><div><div class="q-name">Word ↔ PDF convert</div>In backlog. High demand but technically complex client-side.</div></div>
+      </div>
+
+      <div class="quadrant" style="border-color:var(--rule)">
+        <div class="q-label" style="color:var(--ink3)">Backlog — low freq, lower diff</div>
+        <div class="q-item"><div class="q-dot" style="background:#9ca3af"></div><div><div class="q-name">Signing (done)</div>Correct to have. Wrong to have led with. Already shipped — leave it.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#9ca3af"></div><div><div class="q-name">PDF → JPG / JPG → PDF</div>In backlog. Large audience, minimal differentiation.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#9ca3af"></div><div><div class="q-name">OCR</div>In backlog. Technically very heavy client-side. Defer until WASM solution matures.</div></div>
+        <div class="q-item"><div class="q-dot" style="background:#9ca3af"></div><div><div class="q-name">Dark mode</div>Requested on Reddit. Low effort, low strategic value. Nice-to-have.</div></div>
+      </div>
+    </div>
+
+    <!-- Usage gate rethink -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">Usage gate redesign</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <table class="gap-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Free tier</th>
+          <th>Pro tier ($9/mo)</th>
+          <th>Conversion trigger</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Text editing</td>
+          <td>Up to 5 pages</td>
+          <td>Unlimited pages</td>
+          <td>User opens a 10-page lease</td>
+        </tr>
+        <tr>
+          <td>Annotation / highlight</td>
+          <td>View only, basic highlight</td>
+          <td>Full markup + export annotations</td>
+          <td>Researcher tries to save annotated paper</td>
+        </tr>
+        <tr>
+          <td>Redaction</td>
+          <td>3 redactions/document</td>
+          <td>Unlimited, batch, metadata strip</td>
+          <td>Healthcare worker needs to redact full record</td>
+        </tr>
+        <tr>
+          <td>Signature</td>
+          <td>Simple e-signature, up to 3/mo</td>
+          <td>eIDAS-certified + audit trail</td>
+          <td>Professional needs legally certified signature</td>
+        </tr>
+        <tr>
+          <td>Compress / merge / split</td>
+          <td>Unlimited (core retention driver)</td>
+          <td>Unlimited + batch</td>
+          <td>Batch processing on 10+ files</td>
+        </tr>
+        <tr>
+          <td>Metadata stripping</td>
+          <td>Single document</td>
+          <td>Batch + auto-strip on save</td>
+          <td>User processing multiple sensitive documents</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">The principle: gate on professional-grade features, not on basic usage count. The 3-uses-per-day gate punishes the exact users you want — people using the tool frequently enough to pay for it. Remove the raw usage counter. Gate on features that signal professional intent.</div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 5: SPRINT ROADMAP ═══════════════ -->
+<div class="tab-content" id="tab-roadmap">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">05</div>
+      <div class="section-title">Sprint roadmap — instructions for the AI builder</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="alert alert-amber">
+      <div class="alert-icon">◉</div>
+      <div class="alert-body">
+        <div class="alert-title">Before writing any feature code: three prerequisite tasks</div>
+        1. <strong>Privacy audit:</strong> Determine definitively whether font matching or any other operation makes a network request. Add the result to decisions.md. If any request exists, either eliminate it or document exactly what is transmitted and update all privacy copy accordingly.<br>
+        2. <strong>MD action:</strong> Supabase project creation + schema.sql + Stripe product + env vars. Billing cannot go live without this.<br>
+        3. <strong>Bug sprint:</strong> All 7 confirmed bugs from Reddit must be closed before any new feature work begins.
+      </div>
+    </div>
+
+    <div class="sprint-stack">
+
+      <!-- SPRINT 9 -->
+      <div class="sprint-card">
+        <div class="sprint-head" onclick="toggleSprint(this)">
+          <div class="sprint-num">Sprint 9</div>
+          <div class="sprint-name">Bug clearance + privacy audit</div>
+          <div class="sprint-goal">Fix what's broken. Verify the core claim.</div>
+          <div class="sprint-badge sb-now">Do first</div>
+          <div style="color:#9ca3af;font-size:14px;margin-left:auto">▾</div>
+        </div>
+        <div class="sprint-body">
+          <div class="task-list">
+            <div class="task">
+              <div class="task-id">S9-1</div>
+              <div class="task-content">
+                <div class="task-title">Privacy audit — document network behaviour</div>
+                <div class="task-desc">Open DevTools Network tab. Process a document through the full edit → save flow. Document every request made. Font matching specifically: does any part of the font-matching process send document content, font data, or text samples to a server? Write findings to decisions.md. This is the foundation of the entire product claim.</div>
+              </div>
+              <div class="task-tag t-bug">Audit</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-2</div>
+              <div class="task-content">
+                <div class="task-title">Fix: French UI strings in English mode</div>
+                <div class="task-desc">Hunt all hardcoded French strings: "insérer page", "Supprimer", "Ouverture du PDF...", "Nouveau Document.pdf". Replace with i18n keys or English constants. Check all components. The PDF editor tool breakdown doc lists the affected UI elements — use it as a checklist.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-3</div>
+              <div class="task-content">
+                <div class="task-title">Fix: Undo state freeze</div>
+                <div class="task-desc">After pressing undo, the editor becomes non-interactive. Debug the undo state manager — likely a stale ref or broken history stack. After undo, all text items must remain clickable and editable. Add a regression test case: edit → undo → re-edit the same item.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-4</div>
+              <div class="task-content">
+                <div class="task-title">Fix: Bold text bleeding to adjacent paragraphs</div>
+                <div class="task-desc">Editing a text item that begins with bold causes adjacent text blocks to inherit bold styling. Root cause: style state not scoped per text item. Each text item must maintain its own independent style state. See lessons-learned.md — bold preservation is noted as a known gap.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-5</div>
+              <div class="task-content">
+                <div class="task-title">Fix: Main thread block during PDF save</div>
+                <div class="task-desc">PDF save/download freezes the browser UI. Move the pdf-lib serialisation to a Web Worker. The worker receives the document data, processes it off the main thread, and posts the result back. This also improves performance on large documents. See lessons-learned.md: setTimeout for DOM sync is wrong — use proper worker message passing.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-6</div>
+              <div class="task-content">
+                <div class="task-title">Fix: French PDF encoding bug ("r" → "rv")</div>
+                <div class="task-desc">PDFs with French content produce extra characters during text extraction. Root cause: ligature or encoding mapping issue in the text stream parser. Specifically investigate ToUnicode CMap handling for PDFs using Windows-1252 or custom encoding. French PDFs use ligature glyphs (fi, fl, ff) that some CMap tables map incorrectly.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S9-7</div>
+              <div class="task-content">
+                <div class="task-title">Fix: Font regression from recent update</div>
+                <div class="task-desc">A recent push broke font rendering on previously working PDFs — unedited text rendering as sans-serif on download. Bisect the recent commit history to find the change. Likely a font embedding or fallback change in save.ts or the text layer. Restore the previous behaviour for unedited text items.</div>
+              </div>
+              <div class="task-tag t-bug">Bug</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPRINT 10 -->
+      <div class="sprint-card">
+        <div class="sprint-head" onclick="toggleSprint(this)">
+          <div class="sprint-num">Sprint 10</div>
+          <div class="sprint-name">Trust design + landing page overhaul</div>
+          <div class="sprint-goal">Make the architecture visible. Build the trust layer.</div>
+          <div class="sprint-badge sb-now">Do second</div>
+          <div style="color:#9ca3af;font-size:14px;margin-left:auto">▾</div>
+        </div>
+        <div class="sprint-body">
+          <div class="task-list">
+            <div class="task">
+              <div class="task-id">S10-1</div>
+              <div class="task-content">
+                <div class="task-title">Homepage redesign — trust-first hierarchy</div>
+                <div class="task-desc">Implement the dark-hero landing page design per the wireframe in the Design Direction tab. Key elements: (1) Dark navy hero section with headline and DevTools proof element, (2) Feature grid with annotation and redaction included, (3) Trust bar below hero, (4) Certification row. Replace current homepage entirely. The redesign encodes the privacy architecture visually before the user reads a word.</div>
+              </div>
+              <div class="task-tag t-trust">Trust</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S10-2</div>
+              <div class="task-content">
+                <div class="task-title">Add interactive DevTools proof element</div>
+                <div class="task-desc">Build an animated component that simulates the Chrome DevTools Network panel. Shows a single static asset (app.js), then shows "0 requests" with a green indicator while "a document is being processed." This is not a fake — it mirrors what actually happens. Add a "verify yourself" CTA that links to a guide explaining how to open DevTools and confirm the claim. File: components/DevToolsProof.tsx</div>
+              </div>
+              <div class="task-tag t-trust">Trust</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S10-3</div>
+              <div class="task-content">
+                <div class="task-title">Add /privacy-architecture page</div>
+                <div class="task-desc">A dedicated technical explanation page: how the in-browser processing works, what WebAssembly does, what pdf-lib does, what data (if any) is transmitted during font matching, how to verify the claim in DevTools. This page serves two purposes: trust-building for skeptical professionals, and SEO for "pdf editor no upload" and "private pdf editor" queries. Written in plain language with a technical section at the bottom.</div>
+              </div>
+              <div class="task-tag t-trust">Trust</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S10-4</div>
+              <div class="task-content">
+                <div class="task-title">GDPR Article 25 compliance statement</div>
+                <div class="task-desc">Add a GDPR compliance section to the /about page and /privacy-architecture page. State explicitly that the architecture satisfies Art. 25 (Privacy by Design) by not processing personal data at all. Include: "No data processing agreement required because no data is processed." This is a procurement objection-ender for HR, healthcare, and legal buyers. Have a lawyer review the language (or note it's self-attested).</div>
+              </div>
+              <div class="task-tag t-trust">Trust</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S10-5</div>
+              <div class="task-content">
+                <div class="task-title">Consider domain/name change to LocalPDF</div>
+                <div class="task-desc">"PDFNoLimit" positions against paywalls (a valid competitor angle) but misses the privacy differentiator. "LocalPDF" or "localpdf.app" is already referenced in the GSC setup docs, is descriptive, SEO-friendly, and honest. Evaluate: does the current domain have any SEO equity worth preserving? If the site is new with minimal backlinks, this is a low-cost change with high-value positioning benefit. Flag to MD for decision.</div>
+              </div>
+              <div class="task-tag t-ux">Decision</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPRINT 11 -->
+      <div class="sprint-card">
+        <div class="sprint-head" onclick="toggleSprint(this)">
+          <div class="sprint-num">Sprint 11</div>
+          <div class="sprint-name">Annotation + highlighting</div>
+          <div class="sprint-goal">The daily-use feature gap. Highest retention impact.</div>
+          <div class="sprint-badge sb-next">Sprint 3</div>
+          <div style="color:#9ca3af;font-size:14px;margin-left:auto">▾</div>
+        </div>
+        <div class="sprint-body">
+          <div class="task-list">
+            <div class="task">
+              <div class="task-id">S11-1</div>
+              <div class="task-content">
+                <div class="task-title">lib/pdf/annotate.ts — annotation data model</div>
+                <div class="task-desc">Define the annotation data structure: highlight (text range + color), freehand draw (path), sticky note (position + text), box/circle (shape + position). Store as percentage coordinates (same contract as signatures — use pctToPdfCoords from lib/pdf/coords.ts). Export: AnnotationLayer interface, applyAnnotations(pdfBytes, annotations[]) function.</div>
+              </div>
+              <div class="task-tag t-feat">Backend</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S11-2</div>
+              <div class="task-content">
+                <div class="task-title">Highlight tool — text selection + color overlay</div>
+                <div class="task-desc">Allow user to select text on the PDF canvas and apply a colored highlight (yellow, green, pink, blue). The highlight is stored as a PDF annotation (not a visual overlay on the canvas) so it survives zoom and page rerender. Use pdf-lib's page.drawRectangle() with opacity for the highlight region. Gate: free tier = 3 highlight colors. Pro = unlimited + custom colors.</div>
+              </div>
+              <div class="task-tag t-feat">Feature</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S11-3</div>
+              <div class="task-content">
+                <div class="task-title">Sticky note / comment tool</div>
+                <div class="task-desc">Click anywhere on the page to place a note icon. Clicking the icon opens a text input. The note is embedded as a PDF annotation (PDF spec: /Annot type /Text). Rendered as a small icon on the page with a tooltip/popup on hover. Gate: free = 5 notes/document. Pro = unlimited.</div>
+              </div>
+              <div class="task-tag t-feat">Feature</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S11-4</div>
+              <div class="task-content">
+                <div class="task-title">SEO: /annotate-pdf-free guide page</div>
+                <div class="task-desc">New guide page targeting "annotate pdf free", "highlight pdf without uploading", "add comments to pdf online". This keyword cluster has high volume, moderate competition, and directly addresses student and researcher audiences. Include the DevTools proof element on this page — the audience is technically literate enough to care.</div>
+              </div>
+              <div class="task-tag t-seo">SEO</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPRINT 12 -->
+      <div class="sprint-card">
+        <div class="sprint-head" onclick="toggleSprint(this)">
+          <div class="sprint-num">Sprint 12</div>
+          <div class="sprint-name">Permanent redaction + metadata stripping</div>
+          <div class="sprint-goal">Healthcare, government, legal unlock.</div>
+          <div class="sprint-badge sb-next">Sprint 4</div>
+          <div style="color:#9ca3af;font-size:14px;margin-left:auto">▾</div>
+        </div>
+        <div class="sprint-body">
+          <div class="task-list">
+            <div class="task">
+              <div class="task-id">S12-1</div>
+              <div class="task-content">
+                <div class="task-title">lib/pdf/redact.ts — permanent redaction</div>
+                <div class="task-desc">NOT a visual overlay. Implement true content deletion: (1) User selects a region to redact. (2) The underlying text content operators in the PDF content stream are removed for that region. (3) A filled black rectangle is drawn over the region. (4) The PDF is saved and re-parsed to verify the text is unrecoverable. This is the critical distinction from every other free tool. Document the approach in decisions.md.</div>
+              </div>
+              <div class="task-tag t-feat">Backend</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S12-2</div>
+              <div class="task-content">
+                <div class="task-title">lib/pdf/metadata.ts — strip document metadata</div>
+                <div class="task-desc">Remove: author, creator, producer, creation date, modification date, XMP metadata, embedded GPS in images, custom document properties. Expose as: stripMetadata(pdfBytes: Uint8Array): Promise&lt;Uint8Array&gt;. Add a UI toggle: "Strip metadata before download" checkbox in the save flow. Show the user what was found and removed — this is a trust/transparency moment.</div>
+              </div>
+              <div class="task-tag t-feat">Backend</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S12-3</div>
+              <div class="task-content">
+                <div class="task-title">Redaction UI — select, confirm, apply</div>
+                <div class="task-desc">Rectangle selection tool on the PDF canvas. User draws a box over text to redact. "Confirm redaction" button turns it black and permanently removes the content. Warning dialog: "This cannot be undone. The text under this redaction will be permanently deleted from the PDF." Gate: free = 3 redactions/document, Pro = unlimited + batch redaction.</div>
+              </div>
+              <div class="task-tag t-feat">Feature</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S12-4</div>
+              <div class="task-content">
+                <div class="task-title">Audience landing pages: healthcare + government</div>
+                <div class="task-desc">Two new pages: /for/healthcare and /for/government. Healthcare page: "Handle patient records without a GDPR problem." Government page: "Redact documents properly — content deleted, not hidden." Each page has the DevTools proof element, relevant feature highlights, and a GDPR/compliance section. Both are SEO-optimised for professional audience search terms identified in the feature/audience matrix.</div>
+              </div>
+              <div class="task-tag t-seo">SEO + Landing</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPRINT 13 -->
+      <div class="sprint-card">
+        <div class="sprint-head" onclick="toggleSprint(this)">
+          <div class="sprint-num">Sprint 13</div>
+          <div class="sprint-name">Audience pages + revised usage gate</div>
+          <div class="sprint-goal">Conversion infrastructure for professional segments.</div>
+          <div class="sprint-badge sb-later">Sprint 5</div>
+          <div style="color:#9ca3af;font-size:14px;margin-left:auto">▾</div>
+        </div>
+        <div class="sprint-body">
+          <div class="task-list">
+            <div class="task">
+              <div class="task-id">S13-1</div>
+              <div class="task-content">
+                <div class="task-title">Revised usage gate — feature-based, not count-based</div>
+                <div class="task-desc">Remove the 3-uses/day raw counter. Replace with feature-level gates per the matrix in Feature Priority tab. Free tier remains genuinely free for core tools. Pro tier gates on: certified signatures, unlimited annotations, unlimited redactions, batch processing, metadata auto-strip. Update lib/usage.ts and all gate check points. Update the /pricing page to reflect the new gate structure clearly.</div>
+              </div>
+              <div class="task-tag t-feat">Gate</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S13-2</div>
+              <div class="task-content">
+                <div class="task-title">Audience landing pages: students + HR</div>
+                <div class="task-desc">/for/students: "Annotate research papers. Your unpublished work stays off every server." /for/hr: "Employee documents handled properly. No data processing agreement required." Each page has: specific feature list for the audience, a relevant use-case example, DevTools proof, and a CTA to the free tier. SEO-targeted at the audience-specific keywords identified in the feature/audience matrix sessions.</div>
+              </div>
+              <div class="task-tag t-seo">Landing</div>
+            </div>
+            <div class="task">
+              <div class="task-id">S13-3</div>
+              <div class="task-content">
+                <div class="task-title">Supabase/Stripe env var setup (MD action + verification)</div>
+                <div class="task-desc">Billing cannot go live without this. MD must: (1) Create Supabase project, (2) Run docs/supabase/schema.sql, (3) Create Stripe product at $9/mo, (4) Set all env vars in Vercel. Builder: add a /admin/health page that checks all required env vars are present and all external connections (Supabase, Stripe) are responding. This makes the setup verifiable without inspecting env files.</div>
+              </div>
+              <div class="task-tag t-feat">Infra</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 6: MESSAGING ═══════════════ -->
+<div class="tab-content" id="tab-messaging">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">06</div>
+      <div class="section-title">Messaging by audience — copy for landing pages</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">Each audience needs a specific headline that speaks to their professional context. The privacy claim is always present but its <em>framing</em> changes. The same architecture answers different questions for different people.</div>
+
+    <div class="msg-grid">
+      <div class="msg-card">
+        <div class="msg-audience">Students & researchers</div>
+        <div class="msg-headline">"Annotate research papers. Your unpublished work stays off every server."</div>
+        <div class="msg-sub">Sub: No upload. No account. Highlight, comment, and mark up any PDF — entirely in your browser. Your pre-publication data never leaves your machine.</div>
+        <div class="msg-privacy">Privacy frame: pre-publication IP protection, not GDPR</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-audience">Healthcare workers</div>
+        <div class="msg-headline">"Handle patient documents without a GDPR problem waiting to happen."</div>
+        <div class="msg-sub">Sub: Redact, annotate, and process patient records locally. No PHI ever reaches our servers — architecturally impossible. No data processing agreement required.</div>
+        <div class="msg-privacy">Privacy frame: GDPR Art. 9 special category data compliance</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-audience">HR / people ops</div>
+        <div class="msg-headline">"Employee documents handled the way your DPO actually requires."</div>
+        <div class="msg-sub">Sub: Offer letters, contracts, onboarding packs — signed and processed locally. Employee personal data never reaches our servers. No DPA required.</div>
+        <div class="msg-privacy">Privacy frame: No DPA required = procurement objection answered</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-audience">Ops / admin professionals</div>
+        <div class="msg-headline">"All the PDF tools you use every day. None of the uploads."</div>
+        <div class="msg-sub">Sub: Merge, compress, split, and edit — entirely in your browser. No file size limits. No waiting for uploads. Instant, private, and completely free to start.</div>
+        <div class="msg-privacy">Privacy frame: iLovePDF replacement positioning</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-audience">Journalists / NGOs</div>
+        <div class="msg-headline">"Your sources stay off every server. Provably."</div>
+        <div class="msg-sub">Sub: Redact, strip metadata, and process sensitive documents locally. Open the source code. Check the network tab. Verify the claim yourself — no promises, just proof.</div>
+        <div class="msg-privacy">Privacy frame: source protection + open source verifiability</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-audience">Designers / agencies</div>
+        <div class="msg-headline">"PDF tools for designers who sign NDAs."</div>
+        <div class="msg-sub">Sub: Compress, annotate, and deliver client proofs. Unreleased brand work never hits a third-party server. Your client's rebrand stays off iLovePDF's logs.</div>
+        <div class="msg-privacy">Privacy frame: IP protection and NDA compliance, not GDPR</div>
+      </div>
+    </div>
+
+    <!-- Universal claim -->
+    <div class="alert alert-purple">
+      <div class="alert-icon">◈</div>
+      <div class="alert-body">
+        <div class="alert-title">The universal proof statement — use on every page</div>
+        "We are the only PDF tool that doesn't need a data processing agreement — because we process nothing. Open DevTools → Network → process a document → watch the tab stay silent. That's not a privacy policy. It's a verifiable fact."
+      </div>
+    </div>
+
+    <!-- SEO keyword clusters -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">SEO keyword priorities</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <table class="gap-table">
+      <thead>
+        <tr><th>Keyword</th><th>Intent</th><th>Status</th><th>Target page</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>pdf editor no upload</td><td>Privacy-first tool search</td><td><span class="status-pill s-done">Guide exists</span></td><td>/guides/pdf-editor-no-upload</td></tr>
+        <tr><td>mybestpdf alternative</td><td>Competitor displacement</td><td><span class="status-pill s-done">Guide exists</span></td><td>/guides/mybestpdf-alternative</td></tr>
+        <tr><td>edit pdf text free</td><td>Core tool search</td><td><span class="status-pill s-done">Guide exists</span></td><td>/guides/edit-pdf-text-free</td></tr>
+        <tr><td>annotate pdf free</td><td>Feature search — high volume</td><td><span class="status-pill s-missing">Missing</span></td><td>/guides/annotate-pdf-free (Sprint 11)</td></tr>
+        <tr><td>redact pdf online free</td><td>Professional / compliance search</td><td><span class="status-pill s-missing">Missing</span></td><td>/guides/redact-pdf-free (Sprint 12)</td></tr>
+        <tr><td>strip pdf metadata</td><td>Technical / privacy search</td><td><span class="status-pill s-missing">Missing</span></td><td>/guides/remove-pdf-metadata (Sprint 12)</td></tr>
+        <tr><td>GDPR compliant pdf editor</td><td>Professional compliance</td><td><span class="status-pill s-partial">Partial</span></td><td>/for/healthcare, /for/hr (Sprint 12–13)</td></tr>
+        <tr><td>ilovepdf alternative no upload</td><td>Competitor + privacy</td><td><span class="status-pill s-missing">Missing</span></td><td>/guides/ilovepdf-alternative</td></tr>
+        <tr><td>PDF bearbeiten ohne Upload (DE)</td><td>German privacy search</td><td><span class="status-pill s-partial">Partial</span></td><td>Expand DE guide hub</td></tr>
+        <tr><td>highlight pdf without uploading</td><td>Feature + privacy</td><td><span class="status-pill s-missing">Missing</span></td><td>/guides/annotate-pdf-free (Sprint 11)</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 7: FONT ARCHITECTURE ═══════════════ -->
+<div class="tab-content" id="tab-fonts">
+
+  <div class="section">
+    <div class="section-rule">
+      <div class="section-num">07</div>
+      <div class="section-title">Font architecture — the decision and the message</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">The font server is currently the only thing preventing a clean "zero network requests during document processing" claim — which is the single most important trust proof the product has. The question isn't whether to fix it, but how. Three options were evaluated; one is clearly correct.</div>
+
+    <div class="alert alert-purple">
+      <div class="alert-icon">◈</div>
+      <div class="alert-body">
+        <div class="alert-title">Why this decision is load-bearing for the entire product strategy</div>
+        Every landing page, every trust badge, every "verify it yourself in DevTools" CTA, every healthcare/legal/government audience pitch — all of it depends on the network tab staying silent while a document is processed. If the font server is sending anything during an active editing session, the core claim is compromised. This is architectural, not cosmetic.
+      </div>
+    </div>
+
+    <!-- Three options -->
+    <div class="section-rule" style="margin-top:24px">
+      <div class="section-num">—</div>
+      <div class="section-title">The three options evaluated</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="font-option winner">
+      <div class="fo-header">
+        <span class="fo-badge fo-win">Recommended · 9/10</span>
+        <div class="fo-title">Option A — Full local font bundle</div>
+        <div class="fo-conf">Confidence: 9/10</div>
+      </div>
+      <div class="fo-body">Curate a pack of ~18 fonts covering 95%+ of real-world PDFs. Lazy-load them from your own Vercel CDN edge on first use, cache in IndexedDB, and never request them again. During document editing: zero network requests. The font files are fetched once as a resource — equivalent to fetching a stylesheet — not transmitted with any document content. After first visit, the network tab is permanently silent.</div>
+      <div class="fo-cols">
+        <div>
+          <div class="fo-col-title" style="color:var(--green)">Advantages</div>
+          <ul class="fo-list">
+            <li>Network tab is genuinely silent during editing</li>
+            <li>Claim is architecturally true, not just framed</li>
+            <li>Works offline after first load</li>
+            <li>No server to maintain, no costs, no attack surface</li>
+            <li>Cached fonts load instantly on return visits</li>
+            <li>The story is clean: "everything runs locally"</li>
+          </ul>
+        </div>
+        <div>
+          <div class="fo-col-title" style="color:var(--amber)">One-time cost</div>
+          <ul class="fo-list">
+            <li>~80–120KB font fetch on first use (noise vs. PDF size)</li>
+            <li>5% edge case: heavily subsetted custom fonts fall back to Arial</li>
+            <li>Needs subsetting to keep individual font files small</li>
+            <li>One sprint to implement cleanly</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="font-option">
+      <div class="fo-header">
+        <span class="fo-badge fo-mid">Acceptable short-term · 7/10</span>
+        <div class="fo-title">Option B — Font name only to server (no document content)</div>
+        <div class="fo-conf">Confidence: 7/10</div>
+      </div>
+      <div class="fo-body">The server receives only the detected font name (e.g. <code>MyriadPro-Regular</code>) and returns a font file. No document text, no pages, no content. This is architecturally equivalent to fetching a font from Google Fonts. Defensible, but it still triggers a network request during document processing — meaning the DevTools proof element cannot be used as-is, and the claim requires careful wording. Acceptable as a bridge while Option A is built, but not a permanent position.</div>
+    </div>
+
+    <div class="font-option">
+      <div class="fo-header">
+        <span class="fo-badge fo-no">Not recommended · 4/10</span>
+        <div class="fo-title">Option C — Current server (if document content transmits)</div>
+        <div class="fo-conf">Confidence: 4/10</div>
+      </div>
+      <div class="fo-body">If the font server receives any document text, font samples extracted from the document, or any user-generated content — this cannot coexist with the privacy claim. The claim must either be removed, heavily qualified, or the server must be eliminated. Do not try to position around this. Audit first (Sprint 9 task S9-1) to confirm which option you're currently on.</div>
+    </div>
+
+    <!-- Font bundle — what to include -->
+    <div class="section-rule" style="margin-top:28px">
+      <div class="section-num">—</div>
+      <div class="section-title">What to bundle — the 18 fonts that cover 95% of real-world PDFs</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">The coverage breakdown from the spike (85% confirmed) came from matching standard named fonts handled by pdf-lib natively — zero KB. The remaining ~10–15% coverage gap is closed by the fonts below. Total lazy-load weight with Latin subsetting: under 1MB for the full set, typically one font file per document.</div>
+
+    <table class="font-table">
+      <thead>
+        <tr>
+          <th>Font</th>
+          <th>Coverage method</th>
+          <th>Bundle size (subset)</th>
+          <th>Real-world prevalence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Helvetica / Arial</td>
+          <td class="covered">pdf-lib native — zero KB</td>
+          <td>0 KB</td>
+          <td>~40% of documents</td>
+        </tr>
+        <tr>
+          <td>Times New Roman</td>
+          <td class="covered">pdf-lib native — zero KB</td>
+          <td>0 KB</td>
+          <td>~20% of documents</td>
+        </tr>
+        <tr>
+          <td>Courier</td>
+          <td class="covered">pdf-lib native — zero KB</td>
+          <td>0 KB</td>
+          <td>~10% of documents</td>
+        </tr>
+        <tr>
+          <td>Calibri (Regular, Bold, Italic)</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~95 KB each</td>
+          <td>~15% — dominant in Word-exported PDFs</td>
+        </tr>
+        <tr>
+          <td>Open Sans</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~75 KB</td>
+          <td>~8% — common in web-generated PDFs</td>
+        </tr>
+        <tr>
+          <td>Georgia</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~60 KB</td>
+          <td>~5% — legal and editorial documents</td>
+        </tr>
+        <tr>
+          <td>Roboto / Roboto Bold</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~70 KB each</td>
+          <td>~6% — Google Docs exported PDFs</td>
+        </tr>
+        <tr>
+          <td>Garamond</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~55 KB</td>
+          <td>~3% — academic and legal</td>
+        </tr>
+        <tr>
+          <td>Montserrat, Lato, Source Sans</td>
+          <td class="partial">Lazy CDN fetch + cache</td>
+          <td>~65 KB each</td>
+          <td>~4% — modern business documents</td>
+        </tr>
+        <tr>
+          <td>Custom / subsetted corporate fonts</td>
+          <td>Graceful fallback to Arial</td>
+          <td>0 KB</td>
+          <td>~5% — shown with visible indicator to user</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">Implementation note: fonts should be hosted on your own Vercel CDN, not pulled from Google Fonts. Google Fonts would log the request (and the IP address making it), which creates a privacy optic problem even if no document content is involved. Self-host the font files at <code>/fonts/[fontname]-[weight].woff2</code> and serve them with aggressive cache headers (<code>max-age=31536000, immutable</code>). A user who edits a PDF with Calibri on Tuesday will load that font once and never request it again.</div>
+
+    <!-- Implementation sprint task -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">Sprint task — lib/fonts/fontPack.ts</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="impl-steps">
+      <div class="impl-step">
+        <div class="impl-num">1</div>
+        <div class="impl-content">
+          <div class="impl-title">Audit current server payload (S9-1 prerequisite)</div>
+          <div class="impl-desc">Before writing any font code: open DevTools Network during a document edit session. Confirm exactly what the font server receives. Log the finding to <code>docs/decisions.md</code>. This determines whether you're implementing Option A from scratch or migrating from Option B.</div>
+        </div>
+        <div class="impl-tag it-amber">Audit first</div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-num">2</div>
+        <div class="impl-content">
+          <div class="impl-title">Create lib/fonts/fontPack.ts — font name → URL map</div>
+          <div class="impl-desc">Map of normalised font names to self-hosted woff2 URLs. Include common aliases (e.g. <code>ArialMT</code>, <code>Arial,Bold</code>, <code>Arial-BoldMT</code> all resolve to the same file). The map is the single source of truth — no inline font resolution logic anywhere else.</div>
+          <div class="impl-code">export const FONT_PACK: Record&lt;string, string&gt; = {
+  'calibri':         '/fonts/calibri-regular.woff2',
+  'calibri-bold':    '/fonts/calibri-bold.woff2',
+  'calibri-italic':  '/fonts/calibri-italic.woff2',
+  'opensans':        '/fonts/opensans-regular.woff2',
+  'georgia':         '/fonts/georgia-regular.woff2',
+  'roboto':          '/fonts/roboto-regular.woff2',
+  // ... full map
+}</div>
+        </div>
+        <div class="impl-tag it-green">Backend</div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-num">3</div>
+        <div class="impl-content">
+          <div class="impl-title">resolveFont(fontName) — detect, fetch, cache</div>
+          <div class="impl-desc">Normalise the font name from the PDF (lowercase, strip suffixes, strip spaces). Check IndexedDB cache first. If miss: fetch from <code>/fonts/</code>, store in IndexedDB keyed by font name, return ArrayBuffer. If not in pack: return <code>null</code> (triggers graceful fallback). The cache means a return user editing any Calibri document never makes a font request.</div>
+          <div class="impl-code">export async function resolveFont(
+  rawFontName: string
+): Promise&lt;ArrayBuffer | null&gt; {
+  const key = normaliseFontName(rawFontName)
+  const cached = await fontCache.get(key)
+  if (cached) return cached
+  const url = FONT_PACK[key]
+  if (!url) return null  // graceful fallback
+  const buf = await fetch(url).then(r =&gt; r.arrayBuffer())
+  await fontCache.set(key, buf)
+  return buf
+}</div>
+        </div>
+        <div class="impl-tag it-green">Backend</div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-num">4</div>
+        <div class="impl-content">
+          <div class="impl-title">Font match indicator in the editor UI</div>
+          <div class="impl-desc">Show a small status indicator per text item: "Font: Calibri · Exact match" (green) or "Font: SomeCorpFont · Closest: Arial" (amber with tooltip). This transparency is a trust signal, not a liability — it shows the user exactly what the tool found and what it used. It also pre-empts the support ticket "my font looks slightly different."</div>
+        </div>
+        <div class="impl-tag it-blue">UI</div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-num">5</div>
+        <div class="impl-content">
+          <div class="impl-title">Retire the font server</div>
+          <div class="impl-desc">Once <code>resolveFont()</code> covers the same font surface as the server, the server becomes redundant. Shut it down. Update <code>docs/decisions.md</code> with: "Font server retired [date]. All font matching now runs client-side via lib/fonts/fontPack.ts. Coverage: 95%+ of real-world PDFs. Edge case: custom subsetted fonts fall back to Arial with visible indicator." This decision log entry is also publishable on the /privacy-architecture page as proof of the architectural commitment.</div>
+        </div>
+        <div class="impl-tag it-amber">Infra</div>
+      </div>
+    </div>
+
+    <!-- Messaging section -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">How to message the font architecture — copy for landing pages</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">The font architecture is actually a <em>feature story</em>, not just a technical detail. Most PDF editors either destroy fonts (replace everything with Arial) or upload your document to match fonts server-side. You do neither. Once Option A is built, you have a genuinely differentiated claim about font handling that no other free tool can make. Here is how to message it at each level of the page.</div>
+
+    <div class="msg-block">
+      <div class="mb-context">Homepage hero — one line, maximum trust signal</div>
+      <div class="mb-headline">Use under the headline or in the trust bar</div>
+      <div class="mb-copy">"Font matching runs locally. Your document never leaves your browser — not even to identify your fonts."</div>
+      <div class="mb-body" style="margin-top:10px">This is the sharpest possible version of the claim. It proactively answers the skeptic who thinks "but font detection must phone home." It doesn't require the user to know what a font server is — it just reassures them that even the technical parts happen locally.</div>
+    </div>
+
+    <div class="msg-block">
+      <div class="mb-context">Feature section — one paragraph explaining how it works</div>
+      <div class="mb-headline">Font matching that doesn't read your document</div>
+      <div class="mb-copy">"Most PDF tools match fonts by uploading your document to a server. LocalPDF detects the fonts in your PDF, finds the closest match from a locally cached library, and applies your edit — without sending a single byte of your content anywhere. The font files live in your browser cache after the first load. After that, even the fonts load locally."</div>
+      <div class="mb-body" style="margin-top:10px">This paragraph is also an SEO asset — it answers "how does pdf font matching work without uploading" which is a real search query from technically curious users who are exactly your target audience.</div>
+    </div>
+
+    <div class="msg-block">
+      <div class="mb-context">/privacy-architecture page — full technical explanation for DPOs and skeptics</div>
+      <div class="mb-headline">For professionals who need to verify the claim before trusting the product</div>
+      <div class="mb-copy">"Font matching is fully local. LocalPDF ships with a curated library of ~18 fonts covering over 95% of documents seen in the wild. These font files are fetched once from our CDN on first use and cached in your browser's local storage — they are never re-requested. During any editing session, open DevTools → Network and confirm: zero requests are made while you type, annotate, or sign. The font library is self-hosted on our own infrastructure, not Google Fonts or any third-party service that could log your IP address. For the 5% of documents using heavily customised or proprietary corporate fonts: we display a visible indicator ('Closest match: Arial') so you always know exactly what font is being used in your edited text."</div>
+      <div class="mb-body" style="margin-top:10px">This level of detail is exactly what a DPO at a hospital or a legal team at a law firm needs to see before approving the tool for use. It removes every objection. It is also the kind of content that earns backlinks from privacy-focused blogs and developers who share it.</div>
+    </div>
+
+    <div class="msg-block">
+      <div class="mb-context">Comparison page vs iLovePDF / Smallpdf — the competitive angle</div>
+      <div class="mb-headline">Use in the feature comparison table</div>
+      <div class="mb-copy">"iLovePDF and Smallpdf upload your document to their servers to process it — including for font detection. LocalPDF matches fonts locally using a cached font library. Same result. No upload."</div>
+      <div class="mb-body" style="margin-top:10px">Short, factual, verifiable. This is the comparison table row under "Font matching." No legal language needed — it's a description of how each product works architecturally.</div>
+    </div>
+
+    <!-- The fallback transparency section -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">Messaging the 5% fallback — transparency as a trust signal</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="prose">The 5% of documents using custom corporate or heavily subsetted fonts is a liability only if you try to hide it. Disclosed proactively, it becomes a trust signal — evidence that the product is honest about its limits rather than quietly substituting fonts without telling you.</div>
+
+    <div class="two-col">
+      <div class="design-card">
+        <div class="dc-title">UI language when a fallback fires</div>
+        <div class="dc-body">In the editor, when a font cannot be matched from the local pack, show a small amber indicator next to that text item: <br><br><em>"Font 'MyriadPro-Regular' not in local library · Using Arial as closest match · <u>Why?</u>"</em><br><br>The "Why?" links to a one-paragraph tooltip explaining that proprietary corporate fonts can't be distributed, and that Arial is the closest available substitute. This turns a limitation into a moment of honesty.</div>
+      </div>
+      <div class="design-card">
+        <div class="dc-title">Landing page language for the fallback</div>
+        <div class="dc-body">On the /privacy-architecture page, include a section titled "What about fonts we don't have?"<br><br><em>"For the small percentage of documents using proprietary or heavily customised fonts that can't be legally distributed, LocalPDF uses the closest publicly available match and tells you exactly what it used. You always know. We never silently substitute."</em><br><br>"Never silently substitute" is a pointed contrast with every competitor's behaviour.</div>
+      </div>
+    </div>
+
+    <!-- Decision log entry for decisions.md -->
+    <div class="section-rule" style="margin-top:8px">
+      <div class="section-num">—</div>
+      <div class="section-title">decisions.md entry to write when Option A is complete</div>
+      <div class="section-rule-line"></div>
+    </div>
+
+    <div class="note">Add this to <code>docs/decisions.md</code> when the font server is retired. This entry is also publishable verbatim on the /privacy-architecture page as proof of the architectural commitment — a technical changelog that shows you made a deliberate decision, not just a claim.</div>
+
+    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 20px;font-family:'DM Mono',monospace;font-size:12px;color:var(--ink2);line-height:1.8;margin-bottom:16px">
+      <span style="color:var(--ink);font-weight:600">**[DATE] DECISION: Retire font server — full local font bundle**</span><br>
+      Context: Font matching previously used a lightweight server to identify and serve font files. While no document content was transmitted, the server still created a network request during document processing, inconsistent with the "zero uploads" claim.<br><br>
+      Options considered:<br>
+      - Keep server, reframe as "font name only" (Option B)<br>
+      - Bundle fonts locally, lazy-load from own CDN (Option A) ← chosen<br>
+      - Keep as-is (unacceptable — conflicts with core trust claim)<br><br>
+      Decision: lib/fonts/fontPack.ts ships a curated map of ~18 fonts. Fonts are fetched once from /fonts/ on our Vercel CDN, cached in IndexedDB, and never re-requested. During any editing session, zero network requests are made. Font server decommissioned [date].<br><br>
+      Coverage: 95%+ of real-world PDFs. Custom/subsetted corporate fonts fall back to Arial with a visible indicator in the editor UI.<br><br>
+      Reasoning: The privacy claim is now architecturally clean. The DevTools proof element on the landing page is accurate. The claim "your file never leaves your browser" is verifiable and true with no caveats.
+    </div>
+
+  </div>
+</div>
+
+</div><!-- end page -->
+
+<script>
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tnav').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+}
+function toggleSprint(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('[style*="font-size:14px"]');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▾';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▸';
+  }
+}
+</script>
+</body>
+</html>

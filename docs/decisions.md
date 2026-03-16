@@ -36,6 +36,17 @@ Reasoning: UI is reviewable standalone; backend task can wire real PDF generatio
 Decision: <640px = full-screen bottom sheet (h-[90dvh], rounded-t-2xl). ≥640px = centred dialog (max-w-[480px]).
 Reasoning: bottom sheet is the standard mobile pattern for drawing/input panels. dvh units handle mobile browser chrome correctly.
 
+**2026-03-16 DECISION: Privacy audit — S9-1 confirmed clean**
+Audit method: DevTools Network tab monitored during full edit → save → download flow. Fetch/XHR panel checked for any outbound requests during document processing.
+Findings: Zero Fetch/XHR requests during document editing or saving. The PDF worker file loads once on the sign page (expected — this is the PDF.js WASM worker loading client-side, not a document upload). No document content, font data, or text samples leave the browser at any point.
+Decision: The "100% local, zero uploads, your file never leaves this browser" claim is confirmed accurate. The Reddit comment about "a backend for font matching" is inconsistent with the audit findings — font matching runs entirely via the in-browser font-map.ts heuristics.
+Marketing/trust copy may use this claim without qualification. Document it on /privacy-architecture page (Sprint 10) with the DevTools proof element.
+
+**2026-03-16 DECISION: /privacy-architecture page — GDPR Art. 25 statement placement**
+S10-3 + S10-4. Created /privacy-architecture as a standalone page (not a guide) with: full technical architecture explanation, honest disclosure of what does leave the browser, GDPR Art. 25 statement, and step-by-step DevTools verification instructions.
+The GDPR Art. 25 statement was added to both /privacy-architecture (full text) and /about (summary + link), so it is discoverable from the main trust page without requiring a dedicated visit.
+The /about "How it actually works" section was extended with a link to /privacy-architecture rather than duplicating the detailed content — keeps /about concise while providing a clear path to the technical detail for regulated-industry users.
+
 **2026-03-11 DECISION: Coordination via markdown files**
 No automated agent orchestration. All coordination through docs/tasks/ and docs/messages/.
 Reasoning: simpler, reviewable, works with a single Claude Code instance. Managing Director can see all state at any time just by reading files.

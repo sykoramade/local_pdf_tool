@@ -257,9 +257,10 @@ interface SignatureOverlayProps {
   isPro: boolean
   onUpdate: (updates: Partial<SignaturePlacement>) => void
   onCommit: () => void
+  onDelete: () => void
 }
 
-function SignatureOverlay({ placement, pageEl, isPro, onUpdate, onCommit }: SignatureOverlayProps) {
+function SignatureOverlay({ placement, pageEl, isPro, onUpdate, onCommit, onDelete }: SignatureOverlayProps) {
   // Shared drag/resize state
   const activeGesture = useRef<'drag' | 'resize' | null>(null)
   const startData = useRef<{
@@ -384,6 +385,17 @@ function SignatureOverlay({ placement, pageEl, isPro, onUpdate, onCommit }: Sign
         aria-label="Place signature"
       >
         ✓
+      </button>
+
+      {/* Delete button */}
+      <button
+        onMouseDown={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        className="absolute -top-3 -left-3 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md text-xs font-bold"
+        aria-label="Delete signature"
+      >
+        ✕
       </button>
 
       {/* Resize handle — Pro only */}
@@ -565,7 +577,7 @@ export default function SignTool({ onSave }: SignToolProps) {
     const id = `sig-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     setPlacements(prev => [
       ...prev,
-      { id, dataUrl, xPct: 50, yPct: 75, widthPct: 30, pageNum: activePage, committed: false },
+      { id, dataUrl, xPct: 50, yPct: 50, widthPct: 30, pageNum: activePage, committed: false },
     ])
     if (!user) incrementUses()
     setPendingSigDataUrl(null)
@@ -596,6 +608,11 @@ export default function SignTool({ onSave }: SignToolProps) {
 
   function handleCommitPlacement(id: string) {
     setPlacements(prev => prev.map(p => p.id === id ? { ...p, committed: true } : p))
+    setStep('viewing')
+  }
+
+  function handleDeletePlacement(id: string) {
+    setPlacements(prev => prev.filter(p => p.id !== id))
     setStep('viewing')
   }
 
@@ -740,6 +757,7 @@ export default function SignTool({ onSave }: SignToolProps) {
                     isPro={isPro}
                     onUpdate={updates => handleUpdatePlacement(placement.id, updates)}
                     onCommit={() => handleCommitPlacement(placement.id)}
+                    onDelete={() => handleDeletePlacement(placement.id)}
                   />
                 )
               })}

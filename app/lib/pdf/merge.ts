@@ -23,7 +23,9 @@ export async function mergePdfs(inputs: Uint8Array[]): Promise<MergeResult> {
     copied.forEach(page => merged.addPage(page))
   }
 
-  const saved = await merged.save()
+  // useObjectStreams: false — prevents font cross-reference corruption in some
+  // PDF viewers (same fix as save.ts).
+  const saved = await merged.save({ useObjectStreams: false })
   return {
     output: new Uint8Array(saved),
     pageCount: merged.getPageCount(),
