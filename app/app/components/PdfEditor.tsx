@@ -389,7 +389,7 @@ export default function PdfEditor() {
             </div>
 
             {/* Trust badges */}
-            <div className="mt-6 flex flex-wrap justify-center gap-6">
+            <div className="mt-8 flex flex-wrap justify-center gap-5">
               {['No upload', 'No account', 'No server', 'Works offline'].map(item => (
                 <span key={item} className="text-xs text-gray-500 flex items-center gap-1.5">
                   <span className="text-emerald-400 font-bold text-sm">✓</span> {item}
