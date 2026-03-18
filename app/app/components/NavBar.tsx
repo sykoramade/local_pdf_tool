@@ -8,7 +8,7 @@ import { usesRemaining, FREE_USES_PER_DAY } from '@/lib/usage'
 import AuthModal from './AuthModal'
 
 interface NavBarProps {
-  current?: 'pricing' | 'about' | 'privacy' | 'blog' | 'account'
+  current?: string
 }
 
 export default function NavBar({ current }: NavBarProps) {

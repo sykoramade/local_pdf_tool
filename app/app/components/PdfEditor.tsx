@@ -300,8 +300,8 @@ export default function PdfEditor() {
       icon: <IconAnnotate />,
       iconBg: 'bg-yellow-100 text-yellow-700',
       desc: 'Mark up research papers, highlight contract clauses, and add sticky notes to any page.',
-      cta: <span className="text-gray-400 text-sm">Coming soon — <a href="/pricing" className="text-indigo-400 underline hover:text-indigo-300 transition-colors">Get notified</a></span>,
-      comingSoon: true,
+      cta: <a href="/annotate" className="text-emerald-400 hover:text-emerald-300 font-semibold text-sm transition-colors">Open the annotate tool →</a>,
+      comingSoon: false,
       mock: (
         <div className="space-y-3">
           <div className="h-2 bg-gray-600 rounded w-full" />
