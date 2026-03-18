@@ -151,7 +151,8 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 9 — IN PROGRESS 🔧
+## Sprint 9 — COMPLETE ✅
+**Completed:** 2026-03-14
 **Goal:** Bug clearance + privacy audit
 
 ### Done
