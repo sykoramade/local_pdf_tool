@@ -21,6 +21,7 @@ export default function MergeTool() {
   const [errorMsg, setErrorMsg] = useState('')
   const [pageCount, setPageCount] = useState(0)
   const [dragging, setDragging] = useState(false)
+  const [hovered, setHovered] = useState(false)
   const outputRef = useRef<Uint8Array | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -111,6 +112,14 @@ export default function MergeTool() {
     if (inputRef.current) inputRef.current.value = ''
   }
 
+  const borderColor = dragging
+    ? 'rgba(99,102,241,.7)'
+    : hovered
+    ? 'rgba(99,102,241,.4)'
+    : 'rgba(255,255,255,.12)'
+
+  const bgColor = dragging ? 'rgba(99,102,241,.07)' : 'rgba(255,255,255,.02)'
+
   return (
     <div className="max-w-xl mx-auto">
       {/* Drop zone — always visible so user can keep adding files */}
@@ -120,13 +129,14 @@ export default function MergeTool() {
         onDrop={e => {
           e.preventDefault()
           setDragging(false)
+          setHovered(false)
           if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files)
         }}
         onClick={() => inputRef.current?.click()}
-        className={`
-          bg-white rounded-2xl border-2 border-dashed cursor-pointer p-8 text-center transition-colors mb-4
-          ${dragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'}
-        `}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="rounded-2xl border-2 border-dashed cursor-pointer p-8 text-center transition-colors mb-4"
+        style={{ background: bgColor, borderColor }}
       >
         <input
           ref={inputRef}
@@ -137,43 +147,56 @@ export default function MergeTool() {
           onChange={e => { if (e.target.files?.length) addFiles(e.target.files) }}
         />
         <div className="text-4xl mb-3">📎</div>
-        <p className="text-base font-medium text-gray-700 mb-1">
+        <p className="text-base font-medium mb-1 text-white">
           {files.length === 0
             ? (dragging ? 'Drop PDFs here!' : 'Drop PDFs here')
             : (dragging ? 'Drop to add more' : 'Drop more PDFs to add')}
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,.35)' }}>
           {files.length === 0 ? 'Select 2 or more PDF files' : `${files.length} file${files.length !== 1 ? 's' : ''} added — click or drop to add more`}
         </p>
       </div>
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4">
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-medium uppercase tracking-wide">
+        <div
+          className="rounded-2xl overflow-hidden mb-4"
+          style={{ border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.03)' }}
+        >
+          <div
+            className="px-4 py-2 text-xs font-medium uppercase tracking-wide"
+            style={{ background: 'rgba(255,255,255,.04)', borderBottom: '1px solid rgba(255,255,255,.08)', color: 'rgba(255,255,255,.4)' }}
+          >
             Merge order
           </div>
-          <ul className="divide-y divide-gray-100">
+          <ul>
             {files.map((f, i) => (
-              <li key={f.id} className="flex items-center gap-2 px-4 py-3">
-                <span className="text-xs text-gray-400 w-5 text-center shrink-0">{i + 1}</span>
-                <span className="flex-1 text-sm text-gray-700 truncate" title={f.name}>{f.name}</span>
+              <li
+                key={f.id}
+                className="flex items-center gap-2 px-4 py-3"
+                style={i > 0 ? { borderTop: '1px solid rgba(255,255,255,.06)' } : undefined}
+              >
+                <span className="text-xs w-5 text-center shrink-0" style={{ color: 'rgba(255,255,255,.3)' }}>{i + 1}</span>
+                <span className="flex-1 text-sm truncate" style={{ color: 'rgba(255,255,255,.8)' }} title={f.name}>{f.name}</span>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => moveUp(i)}
                     disabled={i === 0}
-                    className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                    className="p-1 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    style={{ color: 'rgba(255,255,255,.4)' }}
                     aria-label="Move up"
                   >↑</button>
                   <button
                     onClick={() => moveDown(i)}
                     disabled={i === files.length - 1}
-                    className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                    className="p-1 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    style={{ color: 'rgba(255,255,255,.4)' }}
                     aria-label="Move down"
                   >↓</button>
                   <button
                     onClick={() => removeFile(f.id)}
-                    className="p-1 text-gray-300 hover:text-red-500 transition-colors ml-1"
+                    className="p-1 ml-1 transition-colors hover:text-red-400"
+                    style={{ color: 'rgba(255,255,255,.25)' }}
                     aria-label="Remove"
                   >✕</button>
                 </div>
@@ -185,20 +208,26 @@ export default function MergeTool() {
 
       {/* Status messages */}
       {status === 'error' && (
-        <p className="text-sm text-red-500 text-center mb-4">{errorMsg}</p>
+        <p className="text-sm text-red-400 text-center mb-4">{errorMsg}</p>
       )}
 
       {status === 'done' && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center mb-4">
-          <p className="text-sm font-medium text-green-800">
+        <div
+          className="rounded-xl p-4 text-center mb-4"
+          style={{ background: 'rgba(34,211,160,.08)', border: '1px solid rgba(34,211,160,.2)' }}
+        >
+          <p className="text-sm font-medium" style={{ color: '#22d3a0' }}>
             Merged {files.length} files into {pageCount} page{pageCount !== 1 ? 's' : ''}
           </p>
         </div>
       )}
 
       {status === 'merging' && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 text-center mb-4">
-          <p className="text-sm text-gray-500 animate-pulse">Merging in your browser…</p>
+        <div
+          className="rounded-xl p-4 text-center mb-4"
+          style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}
+        >
+          <p className="text-sm animate-pulse" style={{ color: 'rgba(255,255,255,.5)' }}>Merging in your browser…</p>
         </div>
       )}
 
@@ -214,7 +243,8 @@ export default function MergeTool() {
             </button>
             <button
               onClick={reset}
-              className="px-4 py-3 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors text-sm"
+              className="px-4 py-3 rounded-lg transition-colors text-sm"
+              style={{ border: '1px solid rgba(255,255,255,.12)', color: 'rgba(255,255,255,.6)' }}
             >
               Start over
             </button>
@@ -223,7 +253,7 @@ export default function MergeTool() {
           <button
             onClick={handleMerge}
             disabled={files.length < 2 || status === 'merging'}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors"
           >
             {status === 'merging' ? 'Merging…' : files.length < 2 ? 'Add at least 2 PDFs' : `Merge ${files.length} files`}
           </button>

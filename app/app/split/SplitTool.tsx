@@ -123,27 +123,34 @@ export default function SplitTool() {
   // ----------------------------------------------------------------
   return (
     <div className="max-w-xl mx-auto">
-      {/* Sticky filename bar */}
-      <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-3 mb-4">
+      {/* Filename bar */}
+      <div
+        className="rounded-2xl px-4 py-3 flex items-center gap-3 mb-4"
+        style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}
+      >
         <button
           onClick={reset}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors shrink-0 rounded-lg hover:bg-gray-100"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors shrink-0 rounded-lg hover:bg-white/5"
+          style={{ color: 'rgba(255,255,255,.4)' }}
           aria-label="Back to file selection"
         >
           ←
         </button>
-        <span className="text-sm text-gray-700 truncate flex-1" title={filename}>
+        <span className="text-sm truncate flex-1" style={{ color: 'rgba(255,255,255,.7)' }} title={filename}>
           {filename}
         </span>
       </div>
 
       {/* Mode selector */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-        <p className="text-sm font-medium text-gray-700 mb-3">Split mode</p>
+      <div
+        className="rounded-2xl p-5 mb-4"
+        style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}
+      >
+        <p className="text-sm font-medium mb-3" style={{ color: 'rgba(255,255,255,.7)' }}>Split mode</p>
 
         <div className="space-y-3">
           {/* All pages option */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-3 cursor-pointer">
             <div className="mt-0.5 shrink-0">
               <input
                 type="radio"
@@ -151,19 +158,19 @@ export default function SplitTool() {
                 value="all-pages"
                 checked={mode === 'all-pages'}
                 onChange={() => setMode('all-pages')}
-                className="w-4 h-4 accent-indigo-600"
+                className="w-4 h-4 accent-indigo-500"
               />
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-800 block">All pages</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-sm font-medium text-white block">All pages</span>
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>
                 Split every page into a separate PDF file (page-1.pdf, page-2.pdf, …)
               </span>
             </div>
           </label>
 
           {/* Page range option */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-3 cursor-pointer">
             <div className="mt-0.5 shrink-0">
               <input
                 type="radio"
@@ -171,12 +178,12 @@ export default function SplitTool() {
                 value="range"
                 checked={mode === 'range'}
                 onChange={() => setMode('range')}
-                className="w-4 h-4 accent-indigo-600"
+                className="w-4 h-4 accent-indigo-500"
               />
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-800 block">Page range</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-sm font-medium text-white block">Page range</span>
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>
                 Extract a contiguous range of pages into one PDF
               </span>
             </div>
@@ -187,7 +194,7 @@ export default function SplitTool() {
         {mode === 'range' && (
           <div className="mt-4 flex items-center gap-3 pl-7">
             <div className="flex flex-col gap-1">
-              <label htmlFor="from-page" className="text-xs text-gray-500 font-medium">
+              <label htmlFor="from-page" className="text-xs font-medium" style={{ color: 'rgba(255,255,255,.4)' }}>
                 From page
               </label>
               <input
@@ -196,12 +203,17 @@ export default function SplitTool() {
                 min={1}
                 value={fromPage}
                 onChange={e => setFromPage(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 min-h-[44px] border border-gray-300 rounded-lg px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-20 min-h-[44px] rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                style={{
+                  background: 'rgba(255,255,255,.07)',
+                  border: '1px solid rgba(255,255,255,.15)',
+                  color: 'rgba(255,255,255,.9)',
+                }}
               />
             </div>
-            <span className="text-gray-400 text-sm mt-5">to</span>
+            <span className="text-sm mt-5" style={{ color: 'rgba(255,255,255,.4)' }}>to</span>
             <div className="flex flex-col gap-1">
-              <label htmlFor="to-page" className="text-xs text-gray-500 font-medium">
+              <label htmlFor="to-page" className="text-xs font-medium" style={{ color: 'rgba(255,255,255,.4)' }}>
                 To page
               </label>
               <input
@@ -210,7 +222,12 @@ export default function SplitTool() {
                 min={1}
                 value={toPage}
                 onChange={e => setToPage(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 min-h-[44px] border border-gray-300 rounded-lg px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-20 min-h-[44px] rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                style={{
+                  background: 'rgba(255,255,255,.07)',
+                  border: '1px solid rgba(255,255,255,.15)',
+                  color: 'rgba(255,255,255,.9)',
+                }}
               />
             </div>
           </div>
@@ -219,12 +236,15 @@ export default function SplitTool() {
 
       {/* Status messages */}
       {status === 'error' && (
-        <p className="text-sm text-red-500 text-center mb-4">{errorMsg}</p>
+        <p className="text-sm text-red-400 text-center mb-4">{errorMsg}</p>
       )}
 
       {status === 'done' && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center mb-4">
-          <p className="text-sm font-medium text-green-800">
+        <div
+          className="rounded-xl p-4 text-center mb-4"
+          style={{ background: 'rgba(34,211,160,.08)', border: '1px solid rgba(34,211,160,.2)' }}
+        >
+          <p className="text-sm font-medium" style={{ color: '#22d3a0' }}>
             {resultCount === 1
               ? 'PDF extracted and downloaded.'
               : `Split into ${resultCount} files — downloads started.`}
@@ -237,7 +257,7 @@ export default function SplitTool() {
         <button
           onClick={handleSplit}
           disabled={status === 'splitting'}
-          className="flex-1 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="flex-1 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           {status === 'splitting' ? (
             <>
@@ -261,7 +281,8 @@ export default function SplitTool() {
         {status === 'done' && (
           <button
             onClick={reset}
-            className="px-4 min-h-[44px] border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors text-sm"
+            className="px-4 min-h-[44px] rounded-lg transition-colors text-sm"
+            style={{ border: '1px solid rgba(255,255,255,.12)', color: 'rgba(255,255,255,.6)' }}
           >
             New file
           </button>

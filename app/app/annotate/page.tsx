@@ -21,9 +21,9 @@ const AnnotateTool = dynamic(() => import('./AnnotateTool'), { ssr: false })
 export default function AnnotatePage() {
   return (
     <main className="min-h-screen" style={{ background: '#0b0d14' }}>
-      <NavBar />
+      <NavBar current="annotate" />
 
-      <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="max-w-2xl mx-auto px-4 py-16">
         {/* Page heading */}
         <div className="text-center mb-10">
           <div
@@ -34,7 +34,7 @@ export default function AnnotatePage() {
             Annotation tool
           </div>
           <h1
-            className="text-4xl font-bold text-white mb-3"
+            className="text-4xl font-normal text-white mb-3"
             style={{ fontFamily: 'var(--font-display, serif)', letterSpacing: '-0.02em' }}
           >
             Annotate your PDF

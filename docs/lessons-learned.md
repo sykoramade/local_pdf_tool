@@ -59,3 +59,19 @@ Each entry: what went wrong, what the fix was, and the rule going forward.
 - pdf-lib `embedFont()` accepts standard font name strings directly (e.g. `'Helvetica-Bold'`) — no enum lookup needed
 - Bold preservation is a known gap, NOT a blocker. Tracked in backlog.
 - Font fallback on outliers is acceptable with a visible warning to the user
+
+---
+
+## 2026-03-18 — Sprint Board Not Updated After Autonomous Sessions (CEO Failure)
+
+**What went wrong:** S11 (annotation tool) and S12 (homepage hub) were fully implemented and committed, but `docs/tracking/sprint.md` was never updated. The board still showed S11 as QUEUED and had no S12 entry. When Sprint 13 began in a new session, the incorrect board implied 2 sprints of work had never happened. The Managing Director had zero visibility into what had shipped.
+
+**Root cause:** Context compaction (`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: 50`) + autonomous multi-sprint mode. The "close the sprint" step lives at the tail of working memory and is the first thing dropped when context compacts mid-session. No enforcement mechanism existed.
+
+**Rating:** 4/10 — Code delivered, coordination fidelity failed.
+
+**Rule going forward:**
+- The sprint board MUST be updated to COMPLETE **before** any new sprint begins. This is not optional and not deferrable.
+- After every commit that completes a sprint's last task, immediately update `docs/tracking/sprint.md` — mark the sprint COMPLETE with date and full done list — as part of the same work block, not at end of session.
+- In autonomous multi-sprint mode: treat sprint board update as a hard gate. Do not begin the next sprint until the board reflects the completed state of the current one.
+- If context limits force a stop mid-sprint: write a `docs/messages/` note to self with the pending board update so the next session can recover it.

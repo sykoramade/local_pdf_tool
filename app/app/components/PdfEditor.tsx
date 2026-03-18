@@ -7,6 +7,7 @@ import AuthModal from './AuthModal'
 import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
 import { useUser } from '@/hooks/useUser'
 import { canUse, incrementUses } from '@/lib/usage'
+import { consumePendingFile } from '@/lib/pending-file'
 
 const PdfViewer = dynamic(() => import('./PdfViewer'), { ssr: false })
 
@@ -91,6 +92,14 @@ export default function PdfEditor() {
     historyRef.current = []
     textItemsRef.current = []
     setState('idle')
+  }, [])
+
+  // Auto-load a file pre-selected on the homepage drop zone
+  useEffect(() => {
+    const f = consumePendingFile()
+    if (!f) return
+    f.arrayBuffer().then(buf => handleLoad(new Uint8Array(buf), f.name))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleEdit = useCallback((id: string, text: string) => {
