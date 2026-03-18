@@ -24,3 +24,29 @@ export interface ExtractedTextItem {
 
 // Map of text item id → replacement string
 export type EditMap = Map<string, string>
+
+// ─── Annotation types ────────────────────────────────────────────────────────
+
+/** A highlight over a text item. Coordinates are % of page dimensions (0–100). */
+export interface TextHighlight {
+  type: 'highlight'
+  id: string
+  pageNum: number
+  colorIndex: number  // 0=yellow, 1=green, 2=pink
+  xPct: number
+  yPct: number        // from top of page
+  widthPct: number
+  heightPct: number
+}
+
+/** A sticky note anchored to a point. xPct/yPct are top-left of the note box. */
+export interface StickyNote {
+  type: 'sticky-note'
+  id: string
+  pageNum: number
+  text: string
+  xPct: number
+  yPct: number        // from top of page
+}
+
+export type Annotation = TextHighlight | StickyNote

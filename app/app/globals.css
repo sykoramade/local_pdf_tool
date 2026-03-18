@@ -3,18 +3,60 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --background: #0b0d14;
+  --foreground: #f4f6fc;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Text */
+  --text-primary: #f4f6fc;
+  --text-secondary: rgba(255, 255, 255, 0.5);
+  --text-muted: rgba(255, 255, 255, 0.28);
+  --text-faint: rgba(255, 255, 255, 0.13);
+
+  /* Accent */
+  --accent: #6366f1;
+  --accent-hover: #7274f3;
+  --accent-glow: rgba(99, 102, 241, 0.35);
+
+  /* Fonts */
+  --font-sans: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  --font-display: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  font-family: var(--font-sans);
+  background: var(--background);
   color: var(--foreground);
-  background: #ffffff;
-  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-mono-brand {
+    font-family: var(--font-mono);
   }
 }

@@ -151,7 +151,8 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 9 — IN PROGRESS 🔧
+## Sprint 9 — COMPLETE ✅
+**Completed:** 2026-03-14
 **Goal:** Bug clearance + privacy audit
 
 ### Done
@@ -185,14 +186,61 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 11 — QUEUED
+## Sprint 11 — COMPLETE ✅
+**Completed:** 2026-03-17
 **Goal:** Annotation + highlighting (the daily-use feature gap)
 
-### Queue
-- [ ] S11-1: lib/pdf/annotate.ts — annotation data model + applyAnnotations()
-- [ ] S11-2: Highlight tool — text selection + color overlay (gate: free=3 colors, pro=unlimited)
-- [ ] S11-3: Sticky note / comment tool (gate: free=5/doc, pro=unlimited)
-- [ ] S11-4: /guides/annotate-pdf-free — SEO guide page
+### Done
+- [x] S11-1: lib/pdf/annotate.ts — annotation data model + applyAnnotations() with % coordinates
+- [x] S11-2: Highlight tool — text selection + color overlay (yellow/green/pink, baked into PDF on save)
+- [x] S11-3: Sticky note / comment tool (free=5/doc gate, pro=unlimited) inside AnnotateTool.tsx
+- [x] S11-4: /guides/annotate-pdf-free — SEO guide page
+- [x] /annotate page + AnnotateTool component (564 lines, full highlight + sticky note UI)
+- [x] lib/pdf/types.ts — extended with annotation types
+- [x] sitemap.ts — /annotate + /guides/annotate-pdf-free added
+- [x] NavBar.tsx — current prop widened to accept all tool names
+- [x] PdfEditor.tsx — annotate tab unlocked
+
+---
+
+## Sprint 12 — COMPLETE ✅
+**Completed:** 2026-03-17
+**Goal:** v6 design system foundations + homepage hub
+
+### Done
+- [x] localpdf-v6.html — approved v6 mockup (623 lines)
+- [x] docs/guidelines/design-system.md — full token reference (143 lines)
+- [x] app/app/globals.css — CSS custom properties for all design tokens
+- [x] app/app/layout.tsx — Instrument Serif + DM Sans + JetBrains Mono via next/font/google
+- [x] app/tailwind.config.ts — font utility classes extended
+- [x] components/NavBar.tsx — v6 redesign (Pricing/Privacy/Blog/About links)
+- [x] components/Footer.tsx — new global footer component
+- [x] HomepageHub.tsx — segmented control 6 tabs, animated spring pill (444 lines)
+- [x] /edit page — PDF editor moved from / to /edit
+- [x] / (homepage) — now the hub with tool switcher
+- [x] sitemap.ts — /edit added
+
+---
+
+## Sprint 13 — COMPLETE ✅
+**Completed:** 2026-03-18
+**Goal:** Dark theme unification — convert all remaining light-theme pages to the dark navy `#0b0d14` design system.
+
+### Done
+- [x] /pricing — dark theme
+- [x] /account — dark theme
+- [x] /billing/success — dark theme
+- [x] /guides/pdf-editor-no-upload — dark theme
+- [x] /guides/mybestpdf-alternative — dark theme
+- [x] /guides/edit-pdf-text-free — dark theme
+- [x] /guides/compress-pdf-free — dark theme (green/neutral 2-col card grid, feature list)
+- [x] /guides/merge-pdf-free — dark theme (step circles, `<strong>` emphasis)
+- [x] /guides/sign-pdf-without-uploading — dark theme (step circles, FAQ h3s)
+- [x] /guides/hipaa-friendly-pdf-editor — dark theme (amber disclaimer, multi-link nav separator, 2-col CTA grid)
+- [x] /guides/gdpr-pdf-editor — dark theme (multi-link nav separator, sub-h3s, 2-col CTA grid)
+- [x] /guides/de/datenschutz-pdf-editor — dark theme (multi-link nav separator, sub-h3s, 2-col CTA grid)
+- [x] /guides/fr/editeur-pdf-sans-telechargement — dark theme (multi-link nav separator, sub-h3s, 2-col CTA grid)
+- [x] /privacy-architecture — dark theme (`code` tags, border-left items, footer border, `strong` text)
 
 ---
 
@@ -205,3 +253,24 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 - Stripe/Supabase env var setup (MD action — deferred from Sprint 6)
 - Free placement mode (drag signatures off-grid — Pro feature)
 - Encrypted PDF unlock flow
+
+---
+
+## Sprint 14 — COMPLETE ✅
+**Completed:** 2026-03-18
+**Goal:** V6 design gap closure — eliminate click friction + visual consistency.
+
+### Done
+- [x] S14-1: HomepageHub — ANNOTATE tab activated (Sprint 11 shipped it; hub was still showing it as "soon")
+- [x] S14-2: HomepageHub — drop zone now opens file picker directly; file stored in `lib/pending-file.ts` singleton and consumed by tool components on mount (zero double-drop friction)
+- [x] S14-3: HomepageHub — fadeUp keyframe animations on eyebrow + h1 (matching V6 CSS spec)
+- [x] S14-4: HomepageHub — drop zone hover background `rgba(255,255,255,.04)` + PDF icon opacity lift
+- [x] S14-5: HomepageHub — per-tool `glowColor` on CTA button box-shadow (fixes static indigo for all tools)
+- [x] S14-6: PdfEditor — wired to `consumePendingFile()` on mount
+- [x] S14-7: CompressTool — wired to `consumePendingFile()` on mount
+- [x] S14-8: SignTool — wired to `consumePendingFile()` on mount
+- [x] S14-9: /edit page — added `<Footer />`, V6 per-tool header (indigo badge, Instrument Serif h1, trust row), wrapped in dark `<main>`
+- [x] S14-10: /annotate page — fixed missing `current="annotate"` on NavBar; standardised to `max-w-2xl`
+- [x] S14-11: /blog — new dark-themed stub page (fixes NavBar 404)
+- [x] S14-12: All tool page h1s — changed `font-bold` → `font-normal` (V6 Instrument Serif weight 400 spec)
+- [x] lib/pending-file.ts — module-level singleton for cross-route file passing

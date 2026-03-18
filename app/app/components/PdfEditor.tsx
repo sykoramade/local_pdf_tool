@@ -7,6 +7,7 @@ import AuthModal from './AuthModal'
 import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
 import { useUser } from '@/hooks/useUser'
 import { canUse, incrementUses } from '@/lib/usage'
+import { consumePendingFile } from '@/lib/pending-file'
 
 const PdfViewer = dynamic(() => import('./PdfViewer'), { ssr: false })
 
@@ -93,6 +94,14 @@ export default function PdfEditor() {
     setState('idle')
   }, [])
 
+  // Auto-load a file pre-selected on the homepage drop zone
+  useEffect(() => {
+    const f = consumePendingFile()
+    if (!f) return
+    f.arrayBuffer().then(buf => handleLoad(new Uint8Array(buf), f.name))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleEdit = useCallback((id: string, text: string) => {
     setEditMap(prev => {
       const item = textItemsRef.current.find(t => t.id === id)
@@ -154,7 +163,7 @@ export default function PdfEditor() {
 
     // S9-5: Yield two animation frames so the "Saving…" button state renders
     // before pdf-lib serialisation blocks the main thread.
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
     try {
       let outputBytes = pdfBytes
@@ -300,8 +309,8 @@ export default function PdfEditor() {
       icon: <IconAnnotate />,
       iconBg: 'bg-yellow-100 text-yellow-700',
       desc: 'Mark up research papers, highlight contract clauses, and add sticky notes to any page.',
-      cta: <span className="text-gray-400 text-sm">Coming soon — <a href="/pricing" className="text-indigo-400 underline hover:text-indigo-300 transition-colors">Get notified</a></span>,
-      comingSoon: true,
+      cta: <a href="/annotate" className="text-emerald-400 hover:text-emerald-300 font-semibold text-sm transition-colors">Open the annotate tool →</a>,
+      comingSoon: false,
       mock: (
         <div className="space-y-3">
           <div className="h-2 bg-gray-600 rounded w-full" />
@@ -389,7 +398,7 @@ export default function PdfEditor() {
             </div>
 
             {/* Trust badges */}
-            <div className="mt-6 flex flex-wrap justify-center gap-6">
+            <div className="mt-8 flex flex-wrap justify-center gap-5">
               {['No upload', 'No account', 'No server', 'Works offline'].map(item => (
                 <span key={item} className="text-xs text-gray-500 flex items-center gap-1.5">
                   <span className="text-emerald-400 font-bold text-sm">✓</span> {item}

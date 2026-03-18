@@ -53,13 +53,13 @@ export default function PricingPage() {
   ]
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen" style={{ background: '#0b0d14' }}>
       <NavBar />
 
       <div className="max-w-3xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Simple, honest pricing</h1>
-          <p className="text-gray-600 max-w-lg mx-auto">
+          <h1 className="text-3xl font-bold text-white mb-3">Simple, honest pricing</h1>
+          <p className="max-w-lg mx-auto" style={{ color: 'rgba(255,255,255,.6)' }}>
             The core tools are free — no tricks, no paywall after you&apos;ve done the work.
             Pro is for people who want to support the project and get new tools first.
           </p>
@@ -67,20 +67,20 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Free */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="rounded-2xl p-6" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">Free</p>
-              <p className="text-4xl font-bold text-gray-900">$0</p>
-              <p className="text-sm text-gray-400 mt-1">forever</p>
+              <p className="text-sm font-medium uppercase tracking-wide mb-1" style={{ color: 'rgba(255,255,255,.5)' }}>Free</p>
+              <p className="text-4xl font-bold text-white">$0</p>
+              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,.4)' }}>forever</p>
             </div>
             <ul className="space-y-2 mb-6">
               {freeFeatures.map(f => (
-                <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                  <span className="text-green-500 shrink-0 mt-0.5">✓</span> {f}
+                <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'rgba(255,255,255,.6)' }}>
+                  <span className="text-green-400 shrink-0 mt-0.5">✓</span> {f}
                 </li>
               ))}
             </ul>
-            <div className="bg-gray-50 text-gray-500 text-sm font-medium py-2.5 rounded-lg text-center">
+            <div className="text-sm font-medium py-2.5 rounded-lg text-center" style={{ background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.5)' }}>
               {user ? 'Your current plan' : 'No sign-up needed'}
             </div>
           </div>
@@ -118,11 +118,11 @@ export default function PricingPage() {
         </div>
 
         {upgradeError && (
-          <p className="mt-4 text-sm text-red-500 text-center">{upgradeError}</p>
+          <p className="mt-4 text-sm text-red-400 text-center">{upgradeError}</p>
         )}
 
         <div className="mt-10 text-center">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>
             No contracts. Cancel anytime. Payment processed by Stripe.
             Your PDF files are never sent to our servers — not even on Pro.
           </p>

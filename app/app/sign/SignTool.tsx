@@ -6,6 +6,7 @@ import AuthModal from '@/app/components/AuthModal'
 import { useUser } from '@/hooks/useUser'
 import { canUse, incrementUses } from '@/lib/usage'
 import { applySignatures } from '@/lib/pdf/signature'
+import { consumePendingFile } from '@/lib/pending-file'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,12 +144,13 @@ function SignatureCanvas({ onConfirm, onBack }: SignatureCanvasProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <p className="text-sm text-gray-500 text-center mb-3">Draw your signature below</p>
+      <p className="text-sm text-center mb-3" style={{ color: 'rgba(255,255,255,.5)' }}>Draw your signature below</p>
 
-      {/* Canvas area with lined-paper feel */}
+      {/* Canvas area with lined-paper feel — keep bg-white for ink drawing surface */}
       <div
-        className="flex-1 min-h-0 relative bg-white border border-gray-200 rounded-xl overflow-hidden"
+        className="flex-1 min-h-0 relative bg-white border rounded-xl overflow-hidden"
         style={{
+          borderColor: 'rgba(255,255,255,.15)',
           backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
           backgroundSize: '100% 32px',
         }}
@@ -173,19 +175,21 @@ function SignatureCanvas({ onConfirm, onBack }: SignatureCanvasProps) {
       <div className="mt-4 flex items-center gap-2">
         <button
           onClick={onBack}
-          className="min-h-[44px] px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="min-h-[44px] px-4 py-2 text-sm rounded-lg hover:bg-white/5 transition-colors"
+          style={{ color: 'rgba(255,255,255,.6)', border: '1px solid rgba(255,255,255,.12)' }}
         >
           Back
         </button>
         <button
           onClick={handleClear}
-          className="min-h-[44px] px-4 py-2 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="min-h-[44px] px-4 py-2 text-sm rounded-lg hover:bg-white/5 transition-colors"
+          style={{ color: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.12)' }}
         >
           Clear
         </button>
         <button
           onClick={handleConfirm}
-          className="min-h-[44px] flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 text-sm rounded-lg"
+          className="min-h-[44px] flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 text-sm rounded-lg transition-colors"
         >
           Confirm →
         </button>
@@ -193,9 +197,9 @@ function SignatureCanvas({ onConfirm, onBack }: SignatureCanvasProps) {
 
       {/* Pro upsell hint — locked feature, non-interactive */}
       <div className="mt-3 text-center">
-        <span className="text-xs text-gray-400 inline-flex items-center gap-1 opacity-60 select-none cursor-default">
+        <span className="text-xs inline-flex items-center gap-1 opacity-60 select-none cursor-default" style={{ color: 'rgba(255,255,255,.4)' }}>
           Upload image instead
-          <span className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">Pro</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.15)', color: '#f59e0b' }}>Pro</span>
         </span>
       </div>
     </div>
@@ -219,22 +223,21 @@ function SignatureModal({ onConfirm, onClose }: SignatureModalProps) {
   return (
     // Backdrop — mobile: bottom sheet, desktop: centred dialog
     <div
-      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40"
+      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,.6)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="
-        bg-white w-full rounded-t-2xl sm:rounded-2xl shadow-2xl
-        flex flex-col
-        h-[90dvh] sm:h-auto sm:max-h-[90dvh]
-        sm:max-w-[480px] sm:mx-4
-        p-5 sm:p-6
-      ">
+      <div
+        className="w-full rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] sm:max-w-[480px] sm:mx-4 p-5 sm:p-6"
+        style={{ background: '#141720', border: '1px solid rgba(255,255,255,.1)' }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4 shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">Draw your signature</h2>
+          <h2 className="text-base font-semibold text-white">Draw your signature</h2>
           <button
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg"
+            className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
+            style={{ color: 'rgba(255,255,255,.5)' }}
             aria-label="Close"
           >
             ✕
@@ -409,7 +412,10 @@ function SignatureOverlay({ placement, pageEl, isPro, onUpdate, onCommit, onDele
       )}
 
       {/* Hint */}
-      <p className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[10px] text-gray-400 whitespace-nowrap pointer-events-none">
+      <p
+        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[10px] whitespace-nowrap pointer-events-none"
+        style={{ color: 'rgba(255,255,255,.4)' }}
+      >
         Drag to reposition
       </p>
     </div>
@@ -457,6 +463,14 @@ export default function SignTool({ onSave }: SignToolProps) {
     setPageRefsReady(false)
     setPlacements([])
   }
+
+  // Auto-load a file pre-selected on the homepage drop zone
+  useEffect(() => {
+    const f = consumePendingFile()
+    if (!f) return
+    f.arrayBuffer().then(buf => handleFileLoad(new Uint8Array(buf), f.name))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Load PDF.js and render pages when pdfBytes changes ─────────────────────
   useEffect(() => {
@@ -658,7 +672,7 @@ export default function SignTool({ onSave }: SignToolProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <PdfDropzone onLoad={handleFileLoad} />
-        <p className="mt-4 text-xs text-gray-400 text-center max-w-xs">
+        <p className="mt-4 text-xs text-center max-w-xs" style={{ color: 'rgba(255,255,255,.4)' }}>
           Your PDF never leaves your device. All signing happens in your browser.
         </p>
       </div>
@@ -669,17 +683,24 @@ export default function SignTool({ onSave }: SignToolProps) {
   return (
     <div className="relative pb-28">
       {/* Filename / back bar — sticky */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 sticky top-0 z-20">
+      <div
+        className="flex items-center gap-3 px-4 py-2 sticky top-0 z-20"
+        style={{ background: '#0b0d14', borderBottom: '1px solid rgba(255,255,255,.08)' }}
+      >
         <button
           onClick={() => { setStep('dropzone'); setPlacements([]); setFilename('') }}
-          className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-gray-700 rounded-lg"
+          className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
+          style={{ color: 'rgba(255,255,255,.4)' }}
           aria-label="Change file"
         >
           ←
         </button>
-        <span className="text-sm text-gray-600 truncate flex-1">{filename || 'document.pdf'}</span>
+        <span className="text-sm truncate flex-1" style={{ color: 'rgba(255,255,255,.6)' }}>{filename || 'document.pdf'}</span>
         {committedCount > 0 && (
-          <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full shrink-0">
+          <span
+            className="text-xs px-2 py-1 rounded-full shrink-0"
+            style={{ color: '#a5b4fc', background: 'rgba(99,102,241,.15)' }}
+          >
             {committedCount} placed
           </span>
         )}
@@ -703,7 +724,7 @@ export default function SignTool({ onSave }: SignToolProps) {
                 </div>
               </div>
             ))}
-            <p className="text-xs text-gray-400">Loading PDF…</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>Loading PDF…</p>
           </>
         )}
 
@@ -712,13 +733,13 @@ export default function SignTool({ onSave }: SignToolProps) {
           <div className="flex items-center justify-center h-64">
             <div className="text-center max-w-xs">
               <div className="text-3xl mb-2">⚠️</div>
-              <p className="text-sm text-red-500 mb-3">{pdfError}</p>
-              <p className="text-xs text-gray-400">Use ← to go back and try another file.</p>
+              <p className="text-sm text-red-400 mb-3">{pdfError}</p>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>Use ← to go back and try another file.</p>
             </div>
           </div>
         )}
 
-        {/* Real PDF pages */}
+        {/* Real PDF pages — keep bg-white (PDF rendering surface) */}
         {!pdfLoading && !pdfError && pages.map(({ pageNum, width, height }) => (
           <div
             key={pageNum}
@@ -769,7 +790,7 @@ export default function SignTool({ onSave }: SignToolProps) {
       {(step === 'viewing' || (step === 'placing' && uncommittedCount === 0)) && (
         <button
           onClick={handleFabClick}
-          className="fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-2xl shadow-lg flex items-center justify-center sm:bottom-8 sm:right-8"
+          className="fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-2xl shadow-lg flex items-center justify-center sm:bottom-8 sm:right-8 transition-colors"
           aria-label="Add signature"
         >
           ✍
@@ -778,11 +799,14 @@ export default function SignTool({ onSave }: SignToolProps) {
 
       {/* Save bar — fixed bottom */}
       {totalCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3 sm:px-6">
-          <div className="flex-1 text-sm text-gray-600 min-w-0">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 flex items-center gap-3 sm:px-6"
+          style={{ background: '#0d0f17', borderTop: '1px solid rgba(255,255,255,.08)' }}
+        >
+          <div className="flex-1 text-sm min-w-0" style={{ color: 'rgba(255,255,255,.6)' }}>
             {totalCount} signature{totalCount !== 1 ? 's' : ''}
             {uncommittedCount > 0 && (
-              <span className="ml-2 text-amber-600 text-xs block sm:inline">
+              <span className="ml-2 text-xs block sm:inline" style={{ color: '#f59e0b' }}>
                 ({uncommittedCount} not confirmed — tap ✓ to place)
               </span>
             )}
@@ -790,7 +814,7 @@ export default function SignTool({ onSave }: SignToolProps) {
           <button
             onClick={handleSave}
             disabled={saving || committedCount === 0}
-            className="min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 shrink-0"
+            className="min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 shrink-0 transition-colors"
           >
             {saving ? (
               <>

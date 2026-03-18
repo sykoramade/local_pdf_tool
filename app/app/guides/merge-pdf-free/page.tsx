@@ -10,27 +10,27 @@ export const metadata: Metadata = {
 
 export default function GuideMergePdfFree() {
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <Link href="/merge" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+    <main className="min-h-screen" style={{ background: '#0b0d14' }}>
+      <nav style={{ background: '#0b0d14', borderBottom: '1px solid rgba(255,255,255,.08)' }} className="px-6 py-4">
+        <Link href="/merge" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors">
           ← Merge PDFs free
         </Link>
       </nav>
 
       <article className="max-w-2xl mx-auto px-6 py-16">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-500">Guide</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-400">Guide</div>
+        <h1 className="text-3xl font-bold text-white mb-4">
           How to Merge PDF Files Free (Without Uploading Them)
         </h1>
-        <p className="text-lg text-gray-500 mb-10">
+        <p className="text-lg mb-10" style={{ color: 'rgba(255,255,255,.5)' }}>
           Most online PDF mergers upload your files to a server. If your PDFs contain contracts,
           financial statements, or personal information, that&apos;s a real privacy risk.
           Here&apos;s how to merge PDFs entirely in your browser — nothing leaves your device.
         </p>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">How to merge PDFs on LocalPDF</h2>
-          <ol className="space-y-3 text-gray-600">
+          <h2 className="text-xl font-semibold text-white mb-3">How to merge PDFs on LocalPDF</h2>
+          <ol className="space-y-3" style={{ color: 'rgba(255,255,255,.6)' }}>
             {[
               'Go to the Merge tool (link below).',
               'Drop your PDF files onto the upload zone, or click to browse. You can add as many as you need.',
@@ -40,7 +40,10 @@ export default function GuideMergePdfFree() {
               'Download your merged file. Nothing was uploaded anywhere.',
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
-                <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm flex items-center justify-center shrink-0 mt-0.5">
+                <span
+                  className="w-6 h-6 rounded-full font-bold text-sm flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: 'rgba(99,102,241,.15)', color: '#a5b4fc' }}
+                >
                   {i + 1}
                 </span>
                 <span>{step}</span>
@@ -50,21 +53,21 @@ export default function GuideMergePdfFree() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">Why most PDF mergers upload your files</h2>
-          <p className="text-gray-600 leading-relaxed mb-4">
+          <h2 className="text-xl font-semibold text-white mb-3">Why most PDF mergers upload your files</h2>
+          <p className="leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,.6)' }}>
             PDF merging historically required server software — libraries like Ghostscript, iTextSharp,
             or Acrobat. Running those in a browser wasn&apos;t possible until WebAssembly made it practical
             to run compiled native libraries directly in the browser sandbox.
           </p>
-          <p className="text-gray-600 leading-relaxed">
-            LocalPDF uses <strong>pdf-lib</strong>, a pure JavaScript library that handles all PDF
+          <p className="leading-relaxed" style={{ color: 'rgba(255,255,255,.6)' }}>
+            LocalPDF uses <strong className="text-white">pdf-lib</strong>, a pure JavaScript library that handles all PDF
             manipulation in-browser. Your files are loaded into browser memory, merged, and written
             back out — entirely on your device. The server never sees your documents.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">What the merge tool does and doesn&apos;t do</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">What the merge tool does and doesn&apos;t do</h2>
           <div className="space-y-2">
             {[
               { label: 'Merge unlimited PDFs into one', yes: true },
@@ -75,16 +78,16 @@ export default function GuideMergePdfFree() {
               { label: 'Split individual pages (coming soon)', yes: false },
             ].map(({ label, yes }) => (
               <div key={label} className="flex items-center gap-2 text-sm">
-                <span className={yes ? 'text-green-600' : 'text-gray-400'}>{yes ? '✓' : '○'}</span>
-                <span className={yes ? 'text-gray-700' : 'text-gray-400'}>{label}</span>
+                <span className={yes ? 'text-green-400' : 'text-white/30'}>{yes ? '✓' : '○'}</span>
+                <span style={{ color: yes ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.35)' }}>{label}</span>
               </div>
             ))}
           </div>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">Common use cases</h2>
-          <ul className="space-y-2 text-gray-600 text-sm list-disc list-inside">
+          <h2 className="text-xl font-semibold text-white mb-3">Common use cases</h2>
+          <ul className="space-y-2 text-sm list-disc list-inside" style={{ color: 'rgba(255,255,255,.6)' }}>
             <li>Combining a cover letter and CV into a single submission PDF</li>
             <li>Merging monthly bank statements into one annual document</li>
             <li>Joining scanned pages that came out as separate files</li>
@@ -93,9 +96,9 @@ export default function GuideMergePdfFree() {
           </ul>
         </section>
 
-        <div className="bg-indigo-50 rounded-xl p-6 mt-10">
-          <h3 className="font-semibold text-gray-800 mb-2">Merge your PDFs now</h3>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="rounded-xl p-6 mt-10" style={{ background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.2)' }}>
+          <h3 className="font-semibold text-white mb-2">Merge your PDFs now</h3>
+          <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,.6)' }}>
             Drop in your files. Set the order. Download the merged PDF. No upload, no account.
           </p>
           <Link
