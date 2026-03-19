@@ -188,6 +188,7 @@ export default function HomepageHub() {
         .hub-eyebrow { animation: fadeUp .22s ease .05s both; }
         .hub-h1      { animation: fadeUp .22s ease .1s  both; }
         .hub-body    { animation: fadeUp .22s ease .16s both; }
+        .dz-btn-main { font-family: var(--font-sans); }
         .dz-btn-main:hover { transform: translateY(-1px); }
         .dz-btn-main:active { transform: scale(.98); }
         .more-toggle:hover { opacity: .8; }
@@ -206,39 +207,40 @@ export default function HomepageHub() {
 
       <section
         style={{
-          padding: '44px 0 48px',
+          padding: '72px 0 64px',
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
+          fontFamily: 'var(--font-sans)',
         }}
       >
         {/* Radial glow */}
         <div aria-hidden style={{
           position: 'absolute', top: -60, left: '50%',
           transform: 'translateX(-50%)',
-          width: 560, height: 320,
+          width: 700, height: 400,
           background: 'radial-gradient(ellipse at center, rgba(99,102,241,.07) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
 
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 18px', width: '100%' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 24px', width: '100%' }}>
 
           {/* Eyebrow */}
           <p className="hub-eyebrow" style={{
-            fontFamily: 'var(--font-mono, monospace)',
-            fontSize: 10, letterSpacing: '.14em',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11, letterSpacing: '.14em',
             textTransform: 'uppercase', color: 'rgba(255,255,255,.28)',
-            marginBottom: 12, position: 'relative',
+            marginBottom: 14, position: 'relative',
           }}>
             100% local &nbsp;·&nbsp; zero uploads &nbsp;·&nbsp; works offline
           </p>
 
           {/* H1 */}
           <h1 className="hub-h1" style={{
-            fontFamily: 'var(--font-display, serif)',
-            fontSize: 'clamp(34px, 7vw, 48px)',
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(36px, 7vw, 52px)',
             fontWeight: 400, lineHeight: 1.08, letterSpacing: '-.4px',
-            marginBottom: 28, position: 'relative',
+            marginBottom: 32, position: 'relative',
           }}>
             Edit PDFs.<br />
             <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.28)' }}>Your file stays here.</em>
@@ -281,8 +283,9 @@ export default function HomepageHub() {
                       style={{
                         flex: 1, position: 'relative', zIndex: 1,
                         display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                        gap: 6, padding: '9px 8px 9px 10px',
-                        fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
+                        gap: 6, padding: '10px 8px 10px 12px',
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                         textTransform: 'uppercase',
                         color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
                         cursor: 'pointer', userSelect: 'none',
@@ -325,37 +328,43 @@ export default function HomepageHub() {
             {tool.pro ? (
               /* Redact PRO placeholder */
               <div style={{
-                borderRadius: 14,
+                borderRadius: 16,
                 border: '1.5px dashed rgba(249,112,102,.25)',
                 background: 'rgba(249,112,102,.03)',
-                padding: '40px 24px',
+                padding: '52px 32px',
                 textAlign: 'center',
-                marginBottom: 12,
+                marginBottom: 14,
               }}>
                 <div style={{
-                  width: 44, height: 44, borderRadius: 12,
+                  width: 52, height: 52, borderRadius: 14,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 16px',
+                  margin: '0 auto 18px',
                   background: 'rgba(249,112,102,.12)',
                 }}>
-                  <svg width="22" height="22" viewBox="0 0 16 16" style={{ color: '#f97066' }}>
+                  <svg width="26" height="26" viewBox="0 0 16 16" style={{ color: '#f97066' }}>
                     <use href="#ic-redact" />
                   </svg>
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.55)', marginBottom: 6 }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 17, fontWeight: 500, color: 'rgba(255,255,255,.55)', marginBottom: 8,
+                }}>
                   Permanent redaction
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18 }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 13, color: 'rgba(255,255,255,.28)', marginBottom: 22,
+                }}>
                   GDPR · HIPAA · legal redaction
                 </div>
                 <span style={{
                   display: 'inline-block',
-                  fontFamily: 'var(--font-mono, monospace)',
-                  fontSize: 9, fontWeight: 700, letterSpacing: '.1em',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10, fontWeight: 700, letterSpacing: '.1em',
                   textTransform: 'uppercase', color: '#f97066',
                   background: 'rgba(249,112,102,.1)',
                   border: '1px solid rgba(249,112,102,.2)',
-                  padding: '4px 12px', borderRadius: 20,
+                  padding: '5px 14px', borderRadius: 20,
                 }}>
                   Pro feature — coming soon
                 </span>
@@ -369,36 +378,40 @@ export default function HomepageHub() {
                 onMouseEnter={() => setDzHovered(true)}
                 onMouseLeave={() => { setDzHovered(false); setDzDragging(false) }}
                 style={{
-                  borderRadius: 14,
+                  borderRadius: 16,
                   border: `1.5px ${dzDragging ? 'solid' : 'dashed'} ${dzBorderColor}`,
                   background: dzBg,
-                  padding: '40px 24px',
+                  padding: '52px 32px',
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'border-color .25s, background .25s',
                   position: 'relative', overflow: 'hidden',
-                  marginBottom: 12,
+                  marginBottom: 14,
                 }}
               >
                 {/* Tool color icon */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: 12,
+                  width: 52, height: 52, borderRadius: 14,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 16px',
+                  margin: '0 auto 18px',
                   background: `${tool.color}25`,
                   transition: 'background .25s',
                 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" style={{ color: tool.color }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" style={{ color: tool.color }}>
                     <use href="#ic-upload" />
                   </svg>
                 </div>
                 <div style={{
-                  fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.85)',
-                  marginBottom: 6, letterSpacing: '-.1px',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 17, fontWeight: 500, color: 'rgba(255,255,255,.85)',
+                  marginBottom: 8, letterSpacing: '-.1px',
                 }}>
                   {dzDragging ? 'Drop it!' : 'Drop your PDF here'}
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18 }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 13, color: 'rgba(255,255,255,.28)', marginBottom: 22,
+                }}>
                   {tool.hint}
                 </div>
                 <button
@@ -406,15 +419,15 @@ export default function HomepageHub() {
                   onClick={e => { e.stopPropagation(); openFilePicker() }}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7,
-                    padding: '9px 22px', borderRadius: 8,
-                    fontSize: 12, fontWeight: 600, letterSpacing: '.02em',
+                    padding: '10px 26px', borderRadius: 9,
+                    fontSize: 13, fontWeight: 600, letterSpacing: '.02em',
                     color: active === 'annotate' ? '#0b0d14' : '#fff',
                     background: tool.color,
                     border: 'none', cursor: 'pointer',
                     transition: 'transform .15s',
                   }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" style={{ color: active === 'annotate' ? '#0b0d14' : '#fff' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" style={{ color: active === 'annotate' ? '#0b0d14' : '#fff' }}>
                     <use href="#ic-upload" />
                   </svg>
                   Browse files
@@ -425,15 +438,16 @@ export default function HomepageHub() {
             {/* ── Tool descriptor line ── */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              fontSize: 12, color: 'rgba(255,255,255,.5)',
-              padding: '2px 0 14px', textAlign: 'left',
+              fontFamily: 'var(--font-sans)',
+              fontSize: 13, color: 'rgba(255,255,255,.5)',
+              padding: '2px 0 16px', textAlign: 'left',
             }}>
               <div style={{
-                width: 20, height: 20, borderRadius: 5,
+                width: 22, height: 22, borderRadius: 6,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: `${tool.color}22`, flexShrink: 0,
               }}>
-                <svg width="12" height="12" viewBox="0 0 16 16" style={{ color: tool.color }}>
+                <svg width="13" height="13" viewBox="0 0 16 16" style={{ color: tool.color }}>
                   <use href={`#${TOOL_ICON_IDS[active]}`} />
                 </svg>
               </div>
@@ -454,8 +468,8 @@ export default function HomepageHub() {
               }}
             >
               <span style={{
-                fontFamily: 'var(--font-mono, monospace)',
-                fontSize: 11, fontWeight: 600, letterSpacing: '.14em',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12, fontWeight: 600, letterSpacing: '.14em',
                 color: 'rgba(255,255,255,.55)',
               }}>MORE TOOLS</span>
               <svg
@@ -512,8 +526,9 @@ export default function HomepageHub() {
                         style={{
                           flex: 1, position: 'relative', zIndex: 1,
                           display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                          gap: 6, padding: '9px 8px 9px 10px',
-                          fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
+                          gap: 6, padding: '10px 8px 10px 12px',
+                          fontFamily: 'var(--font-sans)',
+                          fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                           textTransform: 'uppercase',
                           color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
                           cursor: 'pointer', userSelect: 'none',
@@ -544,10 +559,10 @@ export default function HomepageHub() {
                   onMouseEnter={() => setMoreDzHovered(true)}
                   onMouseLeave={() => { setMoreDzHovered(false); setMoreDzDragging(false) }}
                   style={{
-                    borderRadius: 14,
+                    borderRadius: 16,
                     border: `1.5px ${moreDzDragging ? 'solid' : 'dashed'} rgba(96,165,250,${moreDzHovered || moreDzDragging ? '.5' : '.25'})`,
                     background: moreDzBg,
-                    padding: '28px 24px',
+                    padding: '36px 28px',
                     textAlign: 'center',
                     cursor: 'pointer',
                     transition: 'border-color .25s, background .25s',
@@ -555,27 +570,34 @@ export default function HomepageHub() {
                   }}
                 >
                   <div style={{
-                    width: 40, height: 40, borderRadius: 10,
+                    width: 44, height: 44, borderRadius: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 12px',
+                    margin: '0 auto 14px',
                     background: 'rgba(96,165,250,.15)',
                   }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" style={{ color: '#60a5fa' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" style={{ color: '#60a5fa' }}>
                       <use href="#ic-upload" />
                     </svg>
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.75)', marginBottom: 6,
+                  }}>
                     {moreDzDragging ? 'Drop it!' : `Drop PDFs here to ${moreActive}`}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.28)', marginBottom: 14 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18,
+                  }}>
                     {moreTool.hint}
                   </div>
                   <button
                     onClick={e => { e.stopPropagation(); openMoreFilePicker() }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '8px 18px', borderRadius: 8,
-                      fontSize: 11, fontWeight: 600, color: '#fff',
+                      padding: '9px 20px', borderRadius: 8,
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 12, fontWeight: 600, color: '#fff',
                       background: '#60a5fa', border: 'none', cursor: 'pointer',
                     }}
                   >
@@ -589,15 +611,16 @@ export default function HomepageHub() {
                 {/* More descriptor line */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 8,
-                  fontSize: 12, color: 'rgba(255,255,255,.5)',
-                  padding: '6px 0 2px', textAlign: 'left',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 13, color: 'rgba(255,255,255,.5)',
+                  padding: '8px 0 2px', textAlign: 'left',
                 }}>
                   <div style={{
-                    width: 20, height: 20, borderRadius: 5,
+                    width: 22, height: 22, borderRadius: 6,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'rgba(96,165,250,.15)', flexShrink: 0,
                   }}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" style={{ color: '#60a5fa' }}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" style={{ color: '#60a5fa' }}>
                       <use href="#ic-pages" />
                     </svg>
                   </div>
@@ -611,7 +634,7 @@ export default function HomepageHub() {
             {/* ── Trust row ── */}
             <div style={{
               display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
-              gap: '6px 18px', marginTop: 20,
+              gap: '6px 18px', marginTop: 28,
             }}>
               {[
                 ['Files never uploaded', '#22d3a0'],
@@ -622,9 +645,9 @@ export default function HomepageHub() {
                 <span
                   key={text}
                   className="trust-item"
-                  style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', display: 'flex', alignItems: 'center', gap: 5 }}
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(255,255,255,.5)', display: 'flex', alignItems: 'center', gap: 5 }}
                 >
-                  <span style={{ color, fontSize: 11 }}>✓</span>
+                  <span style={{ color, fontSize: 12 }}>✓</span>
                   {text}
                 </span>
               ))}
