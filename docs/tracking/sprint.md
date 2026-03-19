@@ -244,6 +244,19 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 15 — COMPLETE ✅
+**Completed:** 2026-03-19
+**Goal:** Homepage v2 redesign — match v2 home screen: 5-tab selector, dashed drop zone, tool descriptor line, More Tools drawer (Merge/Split), trust row.
+
+### Done
+- [x] S15-1: HomepageHub — replace 6-tab segmented control with 5-tab v2 selector (Edit/Sign/Annotate/Redact PRO/Compress)
+- [x] S15-2: HomepageHub — replace current drop zone with v2 dashed-border style (tool-color icon, title, hint, Browse files button)
+- [x] S15-3: HomepageHub — add tool descriptor line below drop zone
+- [x] S15-4: HomepageHub — add More Tools expandable drawer (Merge/Split sub-selector + drop zone)
+- [x] S15-5: HomepageHub — add trust row at bottom
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF

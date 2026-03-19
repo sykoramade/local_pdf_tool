@@ -4,393 +4,316 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { setPendingFile } from '@/lib/pending-file'
 
-/* ─── Tool definitions ─── */
-type ToolKey = 'edit' | 'sign' | 'compress' | 'pages' | 'annotate' | 'redact'
+/* ─── Types ─── */
+type ToolKey = 'edit' | 'sign' | 'annotate' | 'redact' | 'compress'
+type MoreKey = 'merge' | 'split'
 
-interface ActiveTool {
-  soon?: false
+interface ToolDef {
+  color: string
   name: string
-  label: string
   desc: string
-  dropLabel: string
-  dropSub: string
-  href: string
-  iconBg: string
-  accentColor: string
-  btnColor: string
-  btnHover: string
-  glowColor: string
-  icon: React.ReactNode
+  hint: string
+  href: string | null  // null = PRO gate, no navigation
+  pro?: boolean
 }
 
-interface SoonTool {
-  soon: true
+interface MoreTool {
   name: string
-  label: string
-  soonText: string
-  icon: React.ReactNode
+  desc: string
+  hint: string
+  href: string
 }
 
-type ToolDef = ActiveTool | SoonTool
-
-const EDIT_ICON = (
-  <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-    <path d="M13 2L16 5L7 14H4V11L13 2Z" stroke="#818cf8" strokeWidth="1.5" strokeLinejoin="round"/>
-  </svg>
-)
-const SIGN_ICON = (
-  <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-    <path d="M2 14c2-1.5 3.5-4.5 4-6 .5 1.5 1.5 4.5 3 6 .5-3 1.5-7 3.5-9" stroke="#22d3a0" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-)
-const COMPRESS_ICON = (
-  <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-    <path d="M9 2v14M5.5 11.5l3.5 4 3.5-4" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const PAGES_ICON = (
-  <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-    <rect x="1.5" y="2" width="7" height="9" rx="1.5" stroke="#60a5fa" strokeWidth="1.4"/>
-    <rect x="9.5" y="2" width="7" height="9" rx="1.5" stroke="#60a5fa" strokeWidth="1.4"/>
-    <path d="M9 11v5M6.5 14l2.5 2 2.5-2" stroke="#60a5fa" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const ANNOTATE_ICON = (
-  <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-    <path d="M3 12h12M3 8h9M3 4h11" stroke="#fbbf24" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const REDACT_ICON = (
-  <svg width="17" height="17" viewBox="0 0 13 13" fill="none">
-    <rect x="2" y="4" width="9" height="5" rx="1.5" fill="rgba(255,255,255,.25)" opacity=".55"/>
-  </svg>
-)
-
+/* ─── Tool data (v2 TM spec) ─── */
 const TOOLS: Record<ToolKey, ToolDef> = {
-  edit: {
-    name: 'EDIT',
-    label: 'EDIT',
-    desc: 'Click any text. Edit it directly. Fonts match automatically.',
-    dropLabel: 'Drop your PDF here',
-    dropSub: 'contracts, invoices, forms, CVs',
-    href: '/edit',
-    iconBg: 'rgba(99,102,241,.18)',
-    accentColor: 'rgba(99,102,241,.35)',
-    btnColor: '#6366f1',
-    btnHover: '#7274f3',
-    glowColor: 'rgba(99,102,241,.35)',
-    icon: EDIT_ICON,
-  },
-  sign: {
-    name: 'SIGN',
-    label: 'SIGN',
-    desc: 'Draw, type, or upload your signature. eIDAS-compliant across the EU.',
-    dropLabel: 'Drop your PDF to sign',
-    dropSub: 'contracts, agreements, forms',
-    href: '/sign',
-    iconBg: 'rgba(34,211,160,.13)',
-    accentColor: 'rgba(34,211,160,.35)',
-    btnColor: '#059669',
-    btnHover: '#10b981',
-    glowColor: 'rgba(34,211,160,.3)',
-    icon: SIGN_ICON,
-  },
-  compress: {
-    name: 'COMPRESS',
-    label: 'COMPRESS',
-    desc: 'Reduce file size without visible quality loss. Instant, no size limit.',
-    dropLabel: 'Drop your PDF to compress',
-    dropSub: 'any PDF, any size',
-    href: '/compress',
-    iconBg: 'rgba(245,158,11,.13)',
-    accentColor: 'rgba(245,158,11,.35)',
-    btnColor: '#d97706',
-    btnHover: '#f59e0b',
-    glowColor: 'rgba(245,158,11,.3)',
-    icon: COMPRESS_ICON,
-  },
-  pages: {
-    name: 'PAGES',
-    label: 'PAGES',
-    desc: 'Merge, split, or reorder pages. Drag multiple files to merge.',
-    dropLabel: 'Drop PDFs to merge or split',
-    dropSub: 'multiple files to merge · one to split',
-    href: '/merge',
-    iconBg: 'rgba(96,165,250,.13)',
-    accentColor: 'rgba(96,165,250,.35)',
-    btnColor: '#2563eb',
-    btnHover: '#3b82f6',
-    glowColor: 'rgba(96,165,250,.3)',
-    icon: PAGES_ICON,
-  },
-  annotate: {
-    name: 'ANNOTATE',
-    label: 'ANNOTATE',
-    desc: 'Highlight text in yellow, green, or pink. Add sticky notes. Baked into the PDF.',
-    dropLabel: 'Drop your PDF to annotate',
-    dropSub: 'highlights and sticky notes',
-    href: '/annotate',
-    iconBg: 'rgba(251,191,36,.13)',
-    accentColor: 'rgba(251,191,36,.35)',
-    btnColor: '#d97706',
-    btnHover: '#fbbf24',
-    glowColor: 'rgba(251,191,36,.3)',
-    icon: ANNOTATE_ICON,
-  },
-  redact: {
-    soon: true,
-    name: 'REDACT',
-    label: 'REDACT',
-    soonText: 'Permanent content removal, not just a black box overlay. Built for healthcare and legal teams. Shipping soon.',
-    icon: REDACT_ICON,
-  },
+  edit:     { color: '#818cf8', name: 'Edit',     desc: 'Click any text to edit it directly',       hint: 'contracts · invoices · forms · CVs',         href: '/edit' },
+  sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/sign' },
+  annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/annotate' },
+  redact:   { color: '#f97066', name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
+  compress: { color: '#60a5fa', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/compress' },
 }
 
-const TOOL_ORDER: ToolKey[] = ['edit', 'sign', 'compress', 'pages', 'annotate', 'redact']
+const MORE_TOOLS: Record<MoreKey, MoreTool> = {
+  merge: { name: 'Merge', desc: 'Combine multiple PDFs into one',     hint: 'combine multiple files into one', href: '/merge' },
+  split: { name: 'Split', desc: 'Extract pages or split into parts',  hint: 'extract pages · create sections', href: '/split' },
+}
 
-const SEG_ICONS: Record<ToolKey, React.ReactNode> = {
-  edit: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5L11.5 3.5L4.5 10.5H2.5V8.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>,
-  sign: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><path d="M2 10c1.5-1 2.5-3 3-4 .5 1 1 3 2 4 .5-2 1-5 2.5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
-  compress: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M3.5 8l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  pages: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="2" width="4" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="7.5" y="2" width="4" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M6.5 7v4M4.5 9l2 2 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  annotate: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><path d="M2 9h9M2 6h6M2 3h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
-  redact: <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><rect x="2" y="4" width="9" height="5" rx="1.5" fill="currentColor" opacity=".55"/></svg>,
+const TOOL_ORDER: ToolKey[] = ['edit', 'sign', 'annotate', 'redact', 'compress']
+const MORE_ORDER: MoreKey[] = ['merge', 'split']
+
+/* ─── Inline SVG defs (reusable via <use href="#ic-..."/>) ─── */
+const SVG_DEFS = `
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-edit" viewBox="0 0 16 16"><path d="M11.5 1.5a1.5 1.5 0 0 1 2.12 2.12l-8.5 8.5-2.83.71.71-2.83 8.5-8.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-sign" viewBox="0 0 16 16"><path d="M2 12c2-3 4-5 5-5s1 2 2 2 2-1 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13 12h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ic-annotate" viewBox="0 0 16 16"><rect x="2" y="5" width="8" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="2" y="8" width="10" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="2" y="11" width="6" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="1" y="4" width="3" height="9" rx="1.5" fill="currentColor"/></symbol>
+  <symbol id="ic-redact" viewBox="0 0 16 16"><rect x="2" y="5" width="12" height="6" rx="1.5" fill="currentColor"/><line x1="2" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-compress" viewBox="0 0 16 16"><path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-pages" viewBox="0 0 16 16"><rect x="2" y="3" width="7" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="7" y="4" width="7" height="9" rx="1" fill="currentColor" opacity=".25"/><rect x="7" y="4" width="7" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</svg>
+`
+
+const TOOL_ICON_IDS: Record<ToolKey, string> = {
+  edit: 'ic-edit', sign: 'ic-sign', annotate: 'ic-annotate',
+  redact: 'ic-redact', compress: 'ic-compress',
 }
 
 export default function HomepageHub() {
   const router = useRouter()
   const [active, setActive] = useState<ToolKey>('edit')
+  const [moreActive, setMoreActive] = useState<MoreKey>('merge')
+  const [moreOpen, setMoreOpen] = useState(false)
   const [dzHovered, setDzHovered] = useState(false)
   const [dzDragging, setDzDragging] = useState(false)
-  const [btnHovered, setBtnHovered] = useState(false)
+  const [moreDzHovered, setMoreDzHovered] = useState(false)
+  const [moreDzDragging, setMoreDzDragging] = useState(false)
+
+  // Main selector pill
   const segRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
   const pillRef = useRef<HTMLDivElement>(null)
+
+  // More tools selector pill
+  const moreSegRef = useRef<HTMLDivElement>(null)
+  const moreItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const morePillRef = useRef<HTMLDivElement>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const movePill = useCallback((key: ToolKey) => {
-    const seg = segRef.current
-    const pill = pillRef.current
-    if (!seg || !pill) return
-    const idx = TOOL_ORDER.indexOf(key)
-    const item = itemRefs.current[idx]
-    if (!item) return
-    const sr = seg.getBoundingClientRect()
-    const er = item.getBoundingClientRect()
-    pill.style.width = er.width + 'px'
-    pill.style.transform = `translateX(${er.left - sr.left - 3}px)`
-  }, [])
-
-  useEffect(() => { movePill(active) }, [active, movePill])
-
-  useEffect(() => {
-    const handler = () => movePill(active)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [active, movePill])
+  const moreFileInputRef = useRef<HTMLInputElement>(null)
 
   const tool = TOOLS[active]
-  const isSoon = 'soon' in tool && tool.soon
-  const activeTool = tool as ActiveTool
+  const moreTool = MORE_TOOLS[moreActive]
+
+  const movePill = useCallback((
+    key: string,
+    order: string[],
+    segEl: HTMLDivElement | null,
+    pillEl: HTMLDivElement | null,
+    refs: (HTMLDivElement | null)[],
+  ) => {
+    if (!segEl || !pillEl) return
+    const idx = order.indexOf(key)
+    const item = refs[idx]
+    if (!item) return
+    const sr = segEl.getBoundingClientRect()
+    const er = item.getBoundingClientRect()
+    pillEl.style.width = er.width + 'px'
+    pillEl.style.transform = `translateX(${er.left - sr.left - 3}px)`
+  }, [])
+
+  useEffect(() => {
+    movePill(active, TOOL_ORDER, segRef.current, pillRef.current, itemRefs.current)
+  }, [active, movePill])
+
+  useEffect(() => {
+    if (moreOpen) {
+      setTimeout(() => {
+        movePill(moreActive, MORE_ORDER, moreSegRef.current, morePillRef.current, moreItemRefs.current)
+      }, 50)
+    }
+  }, [moreActive, moreOpen, movePill])
+
+  useEffect(() => {
+    const handler = () => {
+      movePill(active, TOOL_ORDER, segRef.current, pillRef.current, itemRefs.current)
+      if (moreOpen) {
+        movePill(moreActive, MORE_ORDER, moreSegRef.current, morePillRef.current, moreItemRefs.current)
+      }
+    }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [active, moreActive, moreOpen, movePill])
 
   function openFilePicker() {
-    if (!isSoon) fileInputRef.current?.click()
+    if (!tool.pro) fileInputRef.current?.click()
   }
 
-  function handleFileChosen(file: File) {
+  function openMoreFilePicker() {
+    moreFileInputRef.current?.click()
+  }
+
+  function handleFileChosen(file: File, href: string) {
     if (!file.name.toLowerCase().endsWith('.pdf')) return
     setPendingFile(file)
-    router.push(activeTool.href)
+    router.push(href)
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) handleFileChosen(file)
+    if (file && tool.href) handleFileChosen(file, tool.href)
+    e.target.value = ''
+  }
+
+  function handleMoreInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFileChosen(file, moreTool.href)
+    e.target.value = ''
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDzDragging(false)
-    if (isSoon) return
+    if (tool.pro || !tool.href) return
     const file = e.dataTransfer.files[0]
-    if (file) handleFileChosen(file)
+    if (file) handleFileChosen(file, tool.href)
   }
 
-  // V6: dropzone border color
-  const borderColor = dzDragging
-    ? (isSoon ? 'rgba(255,255,255,.18)' : activeTool.accentColor)
-    : (isSoon ? 'rgba(255,255,255,.08)' : activeTool.accentColor)
+  function handleMoreDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setMoreDzDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileChosen(file, moreTool.href)
+  }
 
-  const dzBg = dzHovered && !isSoon
-    ? 'rgba(255,255,255,.04)'
+  // Drop zone border/bg derived from tool color
+  const dzBorderColor = dzDragging
+    ? tool.color
+    : dzHovered ? tool.color : 'rgba(255,255,255,.14)'
+  const dzBg = (dzHovered || dzDragging) && !tool.pro
+    ? `${tool.color}0f`
     : 'rgba(255,255,255,.025)'
 
-  const btnShadow = btnHovered && !isSoon
-    ? `0 4px 16px ${activeTool.glowColor}`
-    : 'none'
+  const moreDzBg = (moreDzHovered || moreDzDragging)
+    ? 'rgba(96,165,250,.07)'
+    : 'rgba(96,165,250,.025)'
 
   return (
     <>
-      {/* V6 fadeUp keyframes — injected once */}
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .hub-eyebrow { animation: fadeUp .4s ease .05s both; }
-        .hub-h1      { animation: fadeUp .4s ease .1s  both; }
-        .hub-body    { animation: fadeUp .4s ease .16s both; }
+        .hub-eyebrow { animation: fadeUp .22s ease .05s both; }
+        .hub-h1      { animation: fadeUp .22s ease .1s  both; }
+        .hub-body    { animation: fadeUp .22s ease .16s both; }
+        .dz-btn-main:hover { transform: translateY(-1px); }
+        .dz-btn-main:active { transform: scale(.98); }
+        .more-toggle:hover { opacity: .8; }
+        .trust-item:nth-child(1) { animation: fadeUp .22s ease .55s both; opacity:0; }
+        .trust-item:nth-child(2) { animation: fadeUp .22s ease .62s both; opacity:0; }
+        .trust-item:nth-child(3) { animation: fadeUp .22s ease .69s both; opacity:0; }
+        .trust-item:nth-child(4) { animation: fadeUp .22s ease .76s both; opacity:0; }
       `}</style>
+
+      {/* SVG icon defs */}
+      <div dangerouslySetInnerHTML={{ __html: SVG_DEFS }} />
+
+      {/* Hidden file inputs */}
+      <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleInputChange} />
+      <input ref={moreFileInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleMoreInputChange} />
 
       <section
         style={{
-          padding: '60px 0 48px',
+          padding: '44px 0 48px',
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Indigo radial glow */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: -60, left: '50%',
-            transform: 'translateX(-50%)',
-            width: 560, height: 320,
-            background: 'radial-gradient(ellipse at center, rgba(99,102,241,.09) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Radial glow */}
+        <div aria-hidden style={{
+          position: 'absolute', top: -60, left: '50%',
+          transform: 'translateX(-50%)',
+          width: 560, height: 320,
+          background: 'radial-gradient(ellipse at center, rgba(99,102,241,.07) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          style={{ display: 'none' }}
-          onChange={handleInputChange}
-        />
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 18px', width: '100%' }}>
 
-        <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 24px', width: '100%' }}>
-
-          {/* Eyebrow — V6 fadeUp */}
-          <p
-            className="hub-eyebrow"
-            style={{
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: 10,
-              letterSpacing: '.12em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,.28)',
-              marginBottom: 14,
-              position: 'relative',
-            }}
-          >
+          {/* Eyebrow */}
+          <p className="hub-eyebrow" style={{
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: 10, letterSpacing: '.14em',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,.28)',
+            marginBottom: 12, position: 'relative',
+          }}>
             100% local &nbsp;·&nbsp; zero uploads &nbsp;·&nbsp; works offline
           </p>
 
-          {/* H1 — V6 fadeUp */}
-          <h1
-            className="hub-h1"
-            style={{
-              fontFamily: 'var(--font-display, serif)',
-              fontSize: 'clamp(38px, 6vw, 62px)',
-              fontWeight: 400,
-              lineHeight: 1.06,
-              letterSpacing: '-.5px',
-              marginBottom: 10,
-              position: 'relative',
-            }}
-          >
+          {/* H1 */}
+          <h1 className="hub-h1" style={{
+            fontFamily: 'var(--font-display, serif)',
+            fontSize: 'clamp(34px, 7vw, 48px)',
+            fontWeight: 400, lineHeight: 1.08, letterSpacing: '-.4px',
+            marginBottom: 28, position: 'relative',
+          }}>
             Edit PDFs.<br />
-            <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.45)' }}>Your file stays here.</em>
+            <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.28)' }}>Your file stays here.</em>
           </h1>
 
-          {/* Segmented control + dropzone — V6 fadeUp container */}
           <div className="hub-body">
 
-            {/* Segmented control */}
-            <div style={{ width: '100%', marginTop: 32, marginBottom: 10 }}>
+            {/* ── 5-tab selector ── */}
+            <div style={{ position: 'relative', marginBottom: 14 }}>
               <div
                 ref={segRef}
                 style={{
                   display: 'flex',
-                  width: '100%',
-                  alignItems: 'stretch',
                   background: 'rgba(255,255,255,.05)',
-                  border: '1px solid rgba(255,255,255,.09)',
-                  borderRadius: 10,
-                  padding: 3,
-                  position: 'relative',
+                  border: '1px solid rgba(255,255,255,.08)',
+                  borderRadius: 11, padding: 3, position: 'relative',
                 }}
               >
                 {/* Animated pill */}
                 <div
                   ref={pillRef}
                   style={{
-                    position: 'absolute',
-                    top: 3, left: 3,
+                    position: 'absolute', top: 3, left: 3,
                     height: 'calc(100% - 6px)',
-                    background: '#fff',
-                    borderRadius: 7,
-                    boxShadow: '0 1px 3px rgba(0,0,0,.3)',
-                    transition: 'transform .26s cubic-bezier(.34,1.56,.64,1), width .26s cubic-bezier(.34,1.56,.64,1)',
-                    pointerEvents: 'none',
-                    willChange: 'transform, width',
+                    background: '#fff', borderRadius: 8,
+                    boxShadow: '0 1px 4px rgba(0,0,0,.22)',
+                    transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
+                    pointerEvents: 'none', zIndex: 0,
                   }}
                 />
 
                 {TOOL_ORDER.map((key, idx) => {
                   const t = TOOLS[key]
-                  const isSoonTool = 'soon' in t && t.soon
                   const isActive = active === key
-
                   return (
                     <div
                       key={key}
                       ref={el => { itemRefs.current[idx] = el }}
-                      onClick={() => {
-                        setActive(key)
-                        setBtnHovered(false)
-                      }}
+                      onClick={() => setActive(key)}
                       style={{
-                        flex: 1,
-                        position: 'relative',
-                        zIndex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 5,
-                        padding: '7px 8px',
-                        cursor: 'pointer',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '.07em',
-                        color: isActive ? '#0b0d14' : 'rgba(255,255,255,.38)',
-                        borderRadius: 7,
-                        whiteSpace: 'nowrap',
-                        transition: 'color .18s',
-                        opacity: isSoonTool ? 0.28 : 1,
-                        userSelect: 'none',
+                        flex: 1, position: 'relative', zIndex: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                        gap: 6, padding: '9px 8px 9px 10px',
+                        fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
+                        textTransform: 'uppercase',
+                        color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+                        cursor: 'pointer', userSelect: 'none',
+                        transition: 'color .18s', whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => {
-                        if (!isActive && !isSoonTool)
-                          (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)'
+                        if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)'
                       }}
                       onMouseLeave={e => {
-                        if (!isActive && !isSoonTool)
-                          (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.38)'
+                        if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.3)'
                       }}
                     >
-                      {SEG_ICONS[key]}
-                      {t.label}
-                      {isSoonTool && (
+                      <svg
+                        width="14" height="14"
+                        viewBox="0 0 16 16"
+                        style={{
+                          flexShrink: 0,
+                          color: isActive ? '#0b0d14' : 'currentColor',
+                          opacity: isActive ? 1 : 0.7,
+                        }}
+                      >
+                        <use href={`#${TOOL_ICON_IDS[key]}`} />
+                      </svg>
+                      {t.name}
+                      {t.pro && (
                         <span style={{
-                          fontSize: 7, fontWeight: 700, letterSpacing: '.05em',
-                          textTransform: 'uppercase',
-                          background: 'rgba(255,255,255,.1)',
-                          padding: '1px 4px', borderRadius: 3,
-                        }}>SOON</span>
+                          fontSize: 7, fontWeight: 700,
+                          background: isActive ? 'rgba(249,112,102,.18)' : 'rgba(249,112,102,.12)',
+                          color: isActive ? '#f97066' : 'rgba(249,112,102,.6)',
+                          padding: '1px 4px', borderRadius: 3, marginLeft: 2,
+                        }}>PRO</span>
                       )}
                     </div>
                   )
@@ -398,130 +321,313 @@ export default function HomepageHub() {
               </div>
             </div>
 
-            {/* Unified drop zone */}
-            <div
-              onClick={openFilePicker}
-              onDragOver={e => { e.preventDefault(); if (!isSoon) setDzDragging(true) }}
-              onDragLeave={() => setDzDragging(false)}
-              onDrop={handleDrop}
-              onMouseEnter={() => setDzHovered(true)}
-              onMouseLeave={() => { setDzHovered(false); setDzDragging(false) }}
-              style={{
-                width: '100%',
-                border: `1.5px solid ${borderColor}`,
-                borderRadius: 12,
-                background: dzBg,
-                overflow: 'hidden',
-                cursor: isSoon ? 'default' : 'pointer',
-                transition: 'border-color .2s, background .2s',
-              }}
-            >
-              {/* Tool identity strip */}
+            {/* ── Drop zone ── */}
+            {tool.pro ? (
+              /* Redact PRO placeholder */
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '16px 20px 14px',
-                borderBottom: '1px solid rgba(255,255,255,.07)',
-                textAlign: 'left',
+                borderRadius: 14,
+                border: '1.5px dashed rgba(249,112,102,.25)',
+                background: 'rgba(249,112,102,.03)',
+                padding: '40px 24px',
+                textAlign: 'center',
+                marginBottom: 12,
               }}>
                 <div style={{
-                  width: 34, height: 34,
-                  borderRadius: 9,
+                  width: 44, height: 44, borderRadius: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                  background: isSoon ? 'rgba(255,255,255,.07)' : activeTool.iconBg,
-                  transition: 'background .2s',
+                  margin: '0 auto 16px',
+                  background: 'rgba(249,112,102,.12)',
                 }}>
-                  {tool.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '.04em', color: '#f4f6fc', lineHeight: 1.1 }}>
-                    {tool.name}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', lineHeight: 1.4, marginTop: 2 }}>
-                    {isSoon ? 'Not available yet' : activeTool.desc}
-                  </div>
-                </div>
-              </div>
-
-              {/* Active tool — drop + CTA */}
-              {!isSoon && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '32px 24px 28px',
-                }}>
-                  <svg
-                    style={{ marginBottom: 4, opacity: dzHovered ? .36 : .22, transition: 'opacity .18s' }}
-                    width="44" height="52" viewBox="0 0 44 52" fill="none"
-                  >
-                    <rect x="1" y="1" width="42" height="50" rx="5" stroke="white" strokeWidth="1.5"/>
-                    <path d="M28 1v12h12" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
-                    <path d="M9 24h16M9 31h12M9 38h8" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/>
+                  <svg width="22" height="22" viewBox="0 0 16 16" style={{ color: '#f97066' }}>
+                    <use href="#ic-redact" />
                   </svg>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,.5)' }}>
-                    {dzDragging ? 'Drop it!' : activeTool.dropLabel}
-                  </p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,.26)' }}>
-                    {activeTool.dropSub}
-                  </p>
-                  <button
-                    onClick={e => { e.stopPropagation(); openFilePicker() }}
-                    onMouseEnter={() => setBtnHovered(true)}
-                    onMouseLeave={() => setBtnHovered(false)}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.55)', marginBottom: 6 }}>
+                  Permanent redaction
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18 }}>
+                  GDPR · HIPAA · legal redaction
+                </div>
+                <span style={{
+                  display: 'inline-block',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 9, fontWeight: 700, letterSpacing: '.1em',
+                  textTransform: 'uppercase', color: '#f97066',
+                  background: 'rgba(249,112,102,.1)',
+                  border: '1px solid rgba(249,112,102,.2)',
+                  padding: '4px 12px', borderRadius: 20,
+                }}>
+                  Pro feature — coming soon
+                </span>
+              </div>
+            ) : (
+              <div
+                onClick={openFilePicker}
+                onDragOver={e => { e.preventDefault(); setDzDragging(true) }}
+                onDragLeave={() => setDzDragging(false)}
+                onDrop={handleDrop}
+                onMouseEnter={() => setDzHovered(true)}
+                onMouseLeave={() => { setDzHovered(false); setDzDragging(false) }}
+                style={{
+                  borderRadius: 14,
+                  border: `1.5px ${dzDragging ? 'solid' : 'dashed'} ${dzBorderColor}`,
+                  background: dzBg,
+                  padding: '40px 24px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'border-color .25s, background .25s',
+                  position: 'relative', overflow: 'hidden',
+                  marginBottom: 12,
+                }}
+              >
+                {/* Tool color icon */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  background: `${tool.color}25`,
+                  transition: 'background .25s',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" style={{ color: tool.color }}>
+                    <use href="#ic-upload" />
+                  </svg>
+                </div>
+                <div style={{
+                  fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.85)',
+                  marginBottom: 6, letterSpacing: '-.1px',
+                }}>
+                  {dzDragging ? 'Drop it!' : 'Drop your PDF here'}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18 }}>
+                  {tool.hint}
+                </div>
+                <button
+                  className="dz-btn-main"
+                  onClick={e => { e.stopPropagation(); openFilePicker() }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    padding: '9px 22px', borderRadius: 8,
+                    fontSize: 12, fontWeight: 600, letterSpacing: '.02em',
+                    color: active === 'annotate' ? '#0b0d14' : '#fff',
+                    background: tool.color,
+                    border: 'none', cursor: 'pointer',
+                    transition: 'transform .15s',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" style={{ color: active === 'annotate' ? '#0b0d14' : '#fff' }}>
+                    <use href="#ic-upload" />
+                  </svg>
+                  Browse files
+                </button>
+              </div>
+            )}
+
+            {/* ── Tool descriptor line ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 12, color: 'rgba(255,255,255,.5)',
+              padding: '2px 0 14px', textAlign: 'left',
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `${tool.color}22`, flexShrink: 0,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" style={{ color: tool.color }}>
+                  <use href={`#${TOOL_ICON_IDS[active]}`} />
+                </svg>
+              </div>
+              <span style={{ fontWeight: 600, color: tool.color }}>{tool.name}</span>
+              <span>— {tool.desc}</span>
+            </div>
+
+            {/* ── More Tools section ── */}
+            <div style={{ height: 1, background: 'rgba(255,255,255,.07)', margin: '4px 0 0' }} />
+
+            <div
+              className="more-toggle"
+              onClick={() => setMoreOpen(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '13px 4px', cursor: 'pointer', userSelect: 'none',
+                transition: 'opacity .15s',
+              }}
+            >
+              <span style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: 11, fontWeight: 600, letterSpacing: '.14em',
+                color: 'rgba(255,255,255,.55)',
+              }}>MORE TOOLS</span>
+              <svg
+                width="16" height="16" viewBox="0 0 14 14"
+                style={{
+                  color: 'rgba(255,255,255,.5)',
+                  transition: 'transform .25s cubic-bezier(.34,1.56,.64,1)',
+                  transform: moreOpen ? 'rotate(180deg)' : 'none',
+                }}
+              >
+                <polyline points="2,4 7,9 12,4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* More Tools drawer */}
+            <div style={{
+              overflow: 'hidden',
+              maxHeight: moreOpen ? '400px' : '0',
+              opacity: moreOpen ? 1 : 0,
+              transition: 'max-height .3s cubic-bezier(.4,0,.2,1), opacity .25s',
+            }}>
+              <div style={{ paddingBottom: 14 }}>
+
+                {/* Merge/Split sub-selector */}
+                <div
+                  ref={moreSegRef}
+                  style={{
+                    display: 'flex',
+                    background: 'rgba(255,255,255,.05)',
+                    border: '1px solid rgba(255,255,255,.08)',
+                    borderRadius: 11, padding: 3, position: 'relative',
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    ref={morePillRef}
                     style={{
-                      marginTop: 6,
-                      padding: '9px 28px',
-                      borderRadius: 7,
-                      background: btnHovered ? activeTool.btnHover : activeTool.btnColor,
-                      color: 'white',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      fontFamily: 'inherit',
-                      letterSpacing: '.02em',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'background .14s, box-shadow .14s',
-                      boxShadow: btnShadow,
+                      position: 'absolute', top: 3, left: 3,
+                      height: 'calc(100% - 6px)',
+                      background: '#fff', borderRadius: 8,
+                      boxShadow: '0 1px 4px rgba(0,0,0,.22)',
+                      transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
+                      pointerEvents: 'none', zIndex: 0,
+                    }}
+                  />
+                  {MORE_ORDER.map((key, idx) => {
+                    const t = MORE_TOOLS[key]
+                    const isActive = moreActive === key
+                    return (
+                      <div
+                        key={key}
+                        ref={el => { moreItemRefs.current[idx] = el }}
+                        onClick={() => setMoreActive(key)}
+                        style={{
+                          flex: 1, position: 'relative', zIndex: 1,
+                          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                          gap: 6, padding: '9px 8px 9px 10px',
+                          fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
+                          textTransform: 'uppercase',
+                          color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+                          cursor: 'pointer', userSelect: 'none',
+                          transition: 'color .18s', whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)'
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.3)'
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
+                          <use href="#ic-pages" />
+                        </svg>
+                        {t.name}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* More Tools drop zone */}
+                <div
+                  onClick={openMoreFilePicker}
+                  onDragOver={e => { e.preventDefault(); setMoreDzDragging(true) }}
+                  onDragLeave={() => setMoreDzDragging(false)}
+                  onDrop={handleMoreDrop}
+                  onMouseEnter={() => setMoreDzHovered(true)}
+                  onMouseLeave={() => { setMoreDzHovered(false); setMoreDzDragging(false) }}
+                  style={{
+                    borderRadius: 14,
+                    border: `1.5px ${moreDzDragging ? 'solid' : 'dashed'} rgba(96,165,250,${moreDzHovered || moreDzDragging ? '.5' : '.25'})`,
+                    background: moreDzBg,
+                    padding: '28px 24px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'border-color .25s, background .25s',
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 12px',
+                    background: 'rgba(96,165,250,.15)',
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" style={{ color: '#60a5fa' }}>
+                      <use href="#ic-upload" />
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>
+                    {moreDzDragging ? 'Drop it!' : `Drop PDFs here to ${moreActive}`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.28)', marginBottom: 14 }}>
+                    {moreTool.hint}
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); openMoreFilePicker() }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '8px 18px', borderRadius: 8,
+                      fontSize: 11, fontWeight: 600, color: '#fff',
+                      background: '#60a5fa', border: 'none', cursor: 'pointer',
                     }}
                   >
-                    Open PDF
+                    <svg width="13" height="13" viewBox="0 0 24 24" style={{ color: '#fff' }}>
+                      <use href="#ic-upload" />
+                    </svg>
+                    Browse files
                   </button>
                 </div>
-              )}
 
-              {/* Soon state */}
-              {isSoon && (
+                {/* More descriptor line */}
                 <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '32px 24px 28px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  fontSize: 12, color: 'rgba(255,255,255,.5)',
+                  padding: '6px 0 2px', textAlign: 'left',
                 }}>
                   <div style={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: 9, fontWeight: 700, letterSpacing: '.1em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,.3)',
-                    background: 'rgba(255,255,255,.06)',
-                    border: '1px solid rgba(255,255,255,.09)',
-                    padding: '3px 9px',
-                    borderRadius: 20,
-                    marginBottom: 4,
+                    width: 20, height: 20, borderRadius: 5,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(96,165,250,.15)', flexShrink: 0,
                   }}>
-                    Coming soon
+                    <svg width="12" height="12" viewBox="0 0 16 16" style={{ color: '#60a5fa' }}>
+                      <use href="#ic-pages" />
+                    </svg>
                   </div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', textAlign: 'center', lineHeight: 1.55, maxWidth: 300 }}>
-                    {(tool as SoonTool).soonText}
-                  </p>
+                  <span style={{ fontWeight: 600, color: '#60a5fa' }}>{moreTool.name}</span>
+                  <span>— {moreTool.desc}</span>
                 </div>
-              )}
+
+              </div>
+            </div>
+
+            {/* ── Trust row ── */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+              gap: '6px 18px', marginTop: 20,
+            }}>
+              {[
+                ['Files never uploaded', '#22d3a0'],
+                ['No account required', '#22d3a0'],
+                ['No watermark',         '#22d3a0'],
+                ['Free to use',          '#22d3a0'],
+              ].map(([text, color]) => (
+                <span
+                  key={text}
+                  className="trust-item"
+                  style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', display: 'flex', alignItems: 'center', gap: 5 }}
+                >
+                  <span style={{ color, fontSize: 11 }}>✓</span>
+                  {text}
+                </span>
+              ))}
             </div>
 
           </div>{/* /hub-body */}
