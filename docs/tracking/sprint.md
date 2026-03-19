@@ -257,21 +257,26 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
-## Sprint 16 — COMPLETE ✅
-**Completed:** 2026-03-19
-**Goal:** WorkspaceShell — full-screen IDE-style app shell at `/workspace`.
+## Sprint 16 — REBUILT ✅
+**Completed:** 2026-03-19 (rebuilt after V2 design failure)
+**Goal:** WorkspaceShell — full-screen workspace at `/workspace` matching V2 HTML spec exactly.
 
 ### Done
 - [x] app/app/workspace/page.tsx — server component wrapper with Suspense (for useSearchParams)
-- [x] app/app/workspace/WorkspaceShell.tsx — full workspace layout:
-  - WorkspaceNav: Logo, tool badge, filename + size + close, Download button
-  - ToolRail (L2): 56px icon rail — Edit/Sign/Annotate/Redact(PRO)/Compress
-  - ContextualPanel (L3): 220px strip, tool name + desc, options placeholder
-  - CanvasArea: empty state with dashed drop zone + file picker; PDF canvas placeholder for S17
-  - PageRail: 92px right strip, page thumbnail placeholders
+- [x] app/app/workspace/WorkspaceShell.tsx — correct V2 layout (789 lines):
+  - Nav (50px): ← back | filename + size (flex:1) | ↓ Download (indigo, dimmed when no file)
+  - L2 bar: `rgba(11,13,20,.92)` + blur(14px) · max-width 600px inner
+  - SelRail: spring pill (cubic-bezier(.34,1.56,.64,1)) · 5 tabs Edit/Sign/Annotate/Redact PRO/Compress · role="tablist" + keyboard nav
+  - L3Strip: per-tool inline strip (edit hint / sign button / annotate sub-rail / redact pro bar / compress toggle)
+  - AnnotateSubRail: nested spring pill (Yellow/Green/Pink/Note/Flag) with keyboard nav
+  - ws-body flex row: PageRail LEFT 64px (border-right, A4 aspect-ratio thumbnails) + CanvasArea RIGHT flex:1
 - [x] ?tool= query param drives initial active tool; URL stays in sync on switch
-- [x] consumePendingFile() on mount — homepage hub file hand-off works immediately
+- [x] consumePendingFile() on mount — homepage hub file hand-off works
 - [x] Drag-and-drop + Browse files opens PDF into workspace
+- [x] ARIA: role="tablist/tab", aria-selected, aria-label, keyboard Enter/Space handlers, aria-hidden on decorative elements
+- [x] Legacy route redirects: /edit /sign /annotate /compress → /workspace?tool=X; /merge /split → /
+- [x] HomepageHub hrefs updated: all tool tabs now navigate to /workspace?tool=X
+- [x] CLAUDE.md updated: 3 mandatory quality gates (read V2 before building, browser verify before COMPLETE, code-reviewer for >300 line files)
 
 ---
 

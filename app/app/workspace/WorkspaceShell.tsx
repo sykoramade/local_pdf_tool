@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { consumePendingFile } from '@/lib/pending-file'
@@ -11,398 +11,408 @@ type ToolKey = 'edit' | 'sign' | 'annotate' | 'redact' | 'compress'
 interface ToolDef {
   key: ToolKey
   label: string
-  color: string
-  desc: string
-  iconId: string
   pro?: boolean
 }
 
-/* ─── Tool definitions ─── */
+/* ─── Tool list — matches V2 order exactly ─── */
 const TOOLS: ToolDef[] = [
-  { key: 'edit',     label: 'Edit',     color: '#818cf8', desc: 'Click any text to edit it directly.',    iconId: 'ws-ic-edit'     },
-  { key: 'sign',     label: 'Sign',     color: '#22d3a0', desc: 'Draw and place your signature.',          iconId: 'ws-ic-sign'     },
-  { key: 'annotate', label: 'Annotate', color: '#fbbf24', desc: 'Highlight text · sticky notes · flags.',  iconId: 'ws-ic-annotate' },
-  { key: 'redact',   label: 'Redact',   color: '#f97066', desc: 'Permanently remove sensitive content.',   iconId: 'ws-ic-redact',   pro: true },
-  { key: 'compress', label: 'Compress', color: '#fb923c', desc: 'Reduce file size without re-uploading.',  iconId: 'ws-ic-compress' },
+  { key: 'edit',     label: 'Edit'     },
+  { key: 'sign',     label: 'Sign'     },
+  { key: 'annotate', label: 'Annotate' },
+  { key: 'redact',   label: 'Redact',  pro: true },
+  { key: 'compress', label: 'Compress' },
 ]
 
-/* ─── Inline SVG symbols ─── */
+/* ─── Inline SVG symbols (V2 icon set) ─── */
 const SVG_DEFS = `
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="ws-ic-edit" viewBox="0 0 16 16">
+  <symbol id="ws-edit" viewBox="0 0 16 16">
     <path d="M11.5 1.5a1.5 1.5 0 0 1 2.12 2.12l-8.5 8.5-2.83.71.71-2.83 8.5-8.5z"
       fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
-  <symbol id="ws-ic-sign" viewBox="0 0 16 16">
+  <symbol id="ws-sign" viewBox="0 0 16 16">
     <path d="M2 12c2-3 4-5 5-5s1 2 2 2 2-1 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
     <path d="M13 12h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
   </symbol>
-  <symbol id="ws-ic-annotate" viewBox="0 0 16 16">
+  <symbol id="ws-annotate" viewBox="0 0 16 16">
     <rect x="2" y="5" width="8" height="1.5" rx=".75" fill="currentColor" opacity=".5"/>
     <rect x="2" y="8" width="10" height="1.5" rx=".75" fill="currentColor" opacity=".5"/>
     <rect x="2" y="11" width="6" height="1.5" rx=".75" fill="currentColor" opacity=".5"/>
     <rect x="1" y="4" width="3" height="9" rx="1.5" fill="currentColor"/>
   </symbol>
-  <symbol id="ws-ic-redact" viewBox="0 0 16 16">
+  <symbol id="ws-redact" viewBox="0 0 16 16">
     <rect x="2" y="5" width="12" height="6" rx="1.5" fill="currentColor"/>
     <line x1="2" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
   </symbol>
-  <symbol id="ws-ic-compress" viewBox="0 0 16 16">
+  <symbol id="ws-compress" viewBox="0 0 16 16">
     <path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4"
       fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
-  <symbol id="ws-ic-pdf" viewBox="0 0 24 24">
-    <rect x="3" y="2" width="13" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-    <path d="M16 2l5 5v13a2 2 0 0 1-2 2H6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="M16 2v5h5" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  </symbol>
-  <symbol id="ws-ic-upload" viewBox="0 0 24 24">
+  <symbol id="ws-upload" viewBox="0 0 24 24">
     <path d="M12 15V3M7 8l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-  </symbol>
-  <symbol id="ws-ic-download" viewBox="0 0 16 16">
-    <path d="M8 2v9M4 8l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M2 13h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-  </symbol>
-  <symbol id="ws-ic-close" viewBox="0 0 16 16">
-    <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
   </symbol>
 </svg>
 `
 
 function SvgIcon({ id, size = 16, style }: { id: string; size?: number; style?: React.CSSProperties }) {
   return (
-    <svg width={size} height={size} style={style} aria-hidden>
+    <svg width={size} height={size} style={style} aria-hidden="true">
       <use href={`#${id}`} />
     </svg>
   )
 }
 
-/* ─── Helpers ─── */
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/* ─── Sub-components ─── */
-
-function WorkspaceNav({
-  fileName,
-  fileSize,
-  activeTool,
-  onClearFile,
-}: {
-  fileName: string | null
-  fileSize: number | null
-  activeTool: ToolDef
-  onClearFile: () => void
-}) {
-  return (
-    <header
-      style={{
-        height: 52,
-        background: '#0e1018',
-        borderBottom: '1px solid rgba(255,255,255,.07)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 16px',
-        gap: 12,
-        flexShrink: 0,
-        fontFamily: 'var(--font-sans)',
-        zIndex: 10,
-      }}
-    >
-      {/* Logo / home link */}
-      <Link
-        href="/"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 7,
-          textDecoration: 'none',
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 15,
-            fontWeight: 400,
-            color: '#f4f6fc',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          LocalPDF
-        </span>
-      </Link>
-
-      {/* Divider */}
-      <span style={{ width: 1, height: 18, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
-
-      {/* Active tool badge */}
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          padding: '2px 8px',
-          borderRadius: 20,
-          background: `${activeTool.color}18`,
-          color: activeTool.color,
-          border: `1px solid ${activeTool.color}30`,
-          flexShrink: 0,
-        }}
-      >
-        {activeTool.label}
-      </span>
-
-      {/* Filename */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-        {fileName ? (
-          <>
-            <SvgIcon id="ws-ic-pdf" size={14} style={{ color: 'rgba(255,255,255,.35)', flexShrink: 0 }} />
-            <span
-              style={{
-                fontSize: 13,
-                color: 'rgba(255,255,255,.7)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {fileName}
-            </span>
-            {fileSize !== null && (
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.28)', flexShrink: 0 }}>
-                {formatBytes(fileSize)}
-              </span>
-            )}
-            <button
-              onClick={onClearFile}
-              title="Close file"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '2px 4px',
-                borderRadius: 4,
-                color: 'rgba(255,255,255,.25)',
-                display: 'flex',
-                alignItems: 'center',
-                flexShrink: 0,
-                transition: 'color .15s',
-              }}
-              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)')}
-              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.25)')}
-            >
-              <SvgIcon id="ws-ic-close" size={12} />
-            </button>
-          </>
-        ) : (
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,.25)', fontStyle: 'italic' }}>
-            No file open
-          </span>
-        )}
-      </div>
-
-      {/* Download button */}
-      <button
-        disabled={!fileName}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 14px',
-          borderRadius: 8,
-          border: 'none',
-          background: fileName ? activeTool.color : 'rgba(255,255,255,.06)',
-          color: fileName ? '#fff' : 'rgba(255,255,255,.2)',
-          fontSize: 13,
-          fontWeight: 600,
-          fontFamily: 'var(--font-sans)',
-          cursor: fileName ? 'pointer' : 'not-allowed',
-          transition: 'opacity .15s',
-          flexShrink: 0,
-        }}
-      >
-        <SvgIcon id="ws-ic-download" size={13} />
-        Download
-      </button>
-    </header>
-  )
-}
-
-function ToolRail({
+/* ─── Spring pill selector rail — matches V2 .sel-rail/.sel-pill ─── */
+function SelRail({
   activeTool,
   onSelect,
 }: {
   activeTool: ToolDef
   onSelect: (key: ToolKey) => void
 }) {
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ left: 0, width: 0 })
+
+  useLayoutEffect(() => {
+    const idx = TOOLS.findIndex(t => t.key === activeTool.key)
+    const el = tabRefs.current[idx]
+    if (el) {
+      setPillStyle({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+      })
+    }
+  }, [activeTool.key])
+
   return (
-    <nav
+    <div
+      role="tablist"
+      aria-label="PDF tool selector"
       style={{
-        width: 56,
-        background: '#0b0d14',
-        borderRight: '1px solid rgba(255,255,255,.06)',
+        position: 'relative',
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: 12,
-        gap: 4,
-        flexShrink: 0,
-        overflowY: 'auto',
+        background: 'rgba(255,255,255,.05)',
+        border: '1px solid rgba(255,255,255,.08)',
+        borderRadius: 11,
+        padding: 3,
       }}
     >
-      {TOOLS.map(tool => {
+      {/* Spring pill */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 3,
+          height: 'calc(100% - 6px)',
+          background: '#fff',
+          borderRadius: 8,
+          boxShadow: '0 1px 4px rgba(0,0,0,.22)',
+          transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
+          transform: `translateX(${(pillStyle.left as number) - 0}px)`,
+          width: pillStyle.width,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
+      {TOOLS.map((tool, idx) => {
         const isActive = tool.key === activeTool.key
         return (
-          <button
+          <div
             key={tool.key}
-            title={tool.pro ? `${tool.label} (Pro)` : tool.label}
+            ref={el => { tabRefs.current[idx] = el }}
+            role="tab"
+            aria-selected={isActive}
+            aria-disabled={tool.pro}
+            tabIndex={tool.pro ? -1 : 0}
             onClick={() => !tool.pro && onSelect(tool.key)}
+            onKeyDown={e => { if (!tool.pro && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(tool.key) } }}
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              border: isActive
-                ? `1px solid ${tool.color}40`
-                : '1px solid transparent',
-              background: isActive ? `${tool.color}15` : 'transparent',
-              color: isActive ? tool.color : 'rgba(255,255,255,.3)',
-              cursor: tool.pro ? 'default' : 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              transition: 'all .15s',
               position: 'relative',
-              padding: 0,
-            }}
-            onMouseEnter={e => {
-              if (!isActive && !tool.pro) {
-                (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.05)'
-                ;(e.currentTarget as HTMLElement).style.color = tool.color
-              }
-            }}
-            onMouseLeave={e => {
-              if (!isActive) {
-                (e.currentTarget as HTMLElement).style.background = 'transparent'
-                ;(e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.3)'
-              }
+              zIndex: 1,
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              gap: 6,
+              padding: '9px 8px 9px 10px',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '.06em',
+              textTransform: 'uppercase',
+              color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+              cursor: tool.pro ? 'default' : 'pointer',
+              userSelect: 'none',
+              transition: 'color .18s',
+              whiteSpace: 'nowrap',
             }}
           >
-            <SvgIcon id={tool.iconId} size={16} />
-            <span style={{ fontSize: 9, fontFamily: 'var(--font-sans)', fontWeight: 500, lineHeight: 1 }}>
-              {tool.label}
-            </span>
+            <SvgIcon
+              id={`ws-${tool.key}`}
+              size={14}
+              style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7, transition: 'opacity .18s' }}
+            />
+            {tool.label}
             {tool.pro && (
               <span
                 style={{
-                  position: 'absolute',
-                  top: 4,
-                  right: 4,
                   fontSize: 7,
                   fontWeight: 700,
+                  background: 'rgba(249,112,102,.18)',
                   color: '#f97066',
-                  lineHeight: 1,
-                  fontFamily: 'var(--font-sans)',
+                  padding: '1px 4px',
+                  borderRadius: 3,
+                  marginLeft: 2,
                 }}
               >
                 PRO
               </span>
             )}
-          </button>
+          </div>
         )
       })}
-    </nav>
+    </div>
   )
 }
 
-function ContextualPanel({ activeTool, hasFile }: { activeTool: ToolDef; hasFile: boolean }) {
-  return (
-    <aside
-      style={{
-        width: 220,
-        background: '#0d0f17',
-        borderRight: '1px solid rgba(255,255,255,.06)',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-        overflowY: 'auto',
-      }}
-    >
-      {/* Panel header */}
-      <div
-        style={{
-          padding: '14px 16px 12px',
-          borderBottom: '1px solid rgba(255,255,255,.06)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: activeTool.color,
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'rgba(255,255,255,.7)',
-              fontFamily: 'var(--font-sans)',
-              letterSpacing: '0.02em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {activeTool.label}
-          </span>
-        </div>
-        <p
+/* ─── L3 contextual strips — one per tool, shown inline below sel-rail ─── */
+function L3Strip({ activeTool }: { activeTool: ToolDef }) {
+  const base: React.CSSProperties = {
+    minHeight: 44,
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 0 11px',
+    gap: 10,
+    flexWrap: 'wrap',
+  }
+
+  if (activeTool.key === 'edit') {
+    return (
+      <div style={base}>
+        <span style={{ fontSize: 12, color: '#818cf8', fontWeight: 500 }}>
+          Click any text to edit inline
+        </span>
+      </div>
+    )
+  }
+
+  if (activeTool.key === 'sign') {
+    return (
+      <div style={base}>
+        <button
           style={{
-            fontSize: 11.5,
-            color: 'rgba(255,255,255,.35)',
-            marginTop: 6,
-            lineHeight: 1.5,
-            fontFamily: 'var(--font-sans)',
+            background: '#22d3a0',
+            color: '#0b0d14',
+            border: 'none',
+            borderRadius: 7,
+            padding: '7px 16px',
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
           }}
         >
-          {activeTool.desc}
-        </p>
+          + Add Signature
+        </button>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>
+          Drag to position
+        </span>
       </div>
+    )
+  }
 
-      {/* Tool options placeholder */}
-      <div style={{ flex: 1, padding: '16px 16px' }}>
-        {!hasFile ? (
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,.2)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
-            Open a PDF to see options.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Placeholder option rows — will be replaced in S17+ */}
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                style={{
-                  height: 32,
-                  borderRadius: 6,
-                  background: 'rgba(255,255,255,.04)',
-                  border: '1px solid rgba(255,255,255,.06)',
-                }}
-              />
-            ))}
-          </div>
-        )}
+  if (activeTool.key === 'annotate') {
+    return (
+      <div style={base}>
+        <AnnotateSubRail />
       </div>
-    </aside>
+    )
+  }
+
+  if (activeTool.key === 'redact') {
+    return (
+      <div style={base}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '8px 14px',
+            background: 'rgba(249,112,102,.06)',
+            border: '1px solid rgba(249,112,102,.2)',
+            borderRadius: 9,
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          <SvgIcon id="ws-redact" size={16} style={{ color: '#f97066', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#f97066' }}>Redact — Pro feature</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)' }}>
+              Permanent removal · GDPR &amp; HIPAA compliant
+            </div>
+          </div>
+          <button
+            style={{
+              background: '#f97066',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 7,
+              padding: '7px 14px',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            Upgrade →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (activeTool.key === 'compress') {
+    return (
+      <div style={base}>
+        <div
+          style={{
+            width: 38,
+            height: 22,
+            borderRadius: 11,
+            background: '#60a5fa',
+            position: 'relative',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 3,
+              left: 19,
+              width: 16,
+              height: 16,
+              borderRadius: 8,
+              background: '#fff',
+              boxShadow: '0 1px 2px rgba(0,0,0,.3)',
+            }}
+          />
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#60a5fa' }}>Compress on download</span>
+        <span style={{ fontSize: 11, color: 'rgba(96,165,250,.55)' }}>· Est. 30–40% reduction</span>
+      </div>
+    )
+  }
+
+  return null
+}
+
+/* Annotate sub-rail (yellow / green / pink / note / flag) */
+function AnnotateSubRail() {
+  type AMode = 'yellow' | 'green' | 'pink' | 'note' | 'flag'
+  const [mode, setMode] = useState<AMode>('yellow')
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ left: 0, width: 0 })
+
+  const modes: { key: AMode; label: string; dot?: string }[] = [
+    { key: 'yellow', label: 'Yellow', dot: '#fbbf24' },
+    { key: 'green',  label: 'Green',  dot: '#4ade80' },
+    { key: 'pink',   label: 'Pink',   dot: '#f472b6' },
+    { key: 'note',   label: 'Note'   },
+    { key: 'flag',   label: 'Flag'   },
+  ]
+
+  useLayoutEffect(() => {
+    const idx = modes.findIndex(m => m.key === mode)
+    const el = tabRefs.current[idx]
+    if (el) setPillStyle({ left: el.offsetLeft, width: el.offsetWidth })
+  }, [mode])
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Annotation mode"
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        background: 'rgba(255,255,255,.05)',
+        border: '1px solid rgba(255,255,255,.08)',
+        borderRadius: 9,
+        padding: 3,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 3,
+          height: 'calc(100% - 6px)',
+          background: '#fff',
+          borderRadius: 6,
+          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+          transition: 'transform .24s cubic-bezier(.34,1.56,.64,1), width .24s cubic-bezier(.34,1.56,.64,1)',
+          transform: `translateX(${pillStyle.left as number}px)`,
+          width: pillStyle.width,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      {modes.map((m, idx) => (
+        <div
+          key={m.key}
+          ref={el => { tabRefs.current[idx] = el }}
+          role="tab"
+          aria-selected={mode === m.key}
+          tabIndex={0}
+          onClick={() => setMode(m.key)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(m.key) } }}
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 10px',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '.05em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            userSelect: 'none',
+            color: mode === m.key ? '#0b0d14' : 'rgba(255,255,255,.35)',
+            transition: 'color .18s',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {m.dot && (
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: m.dot, flexShrink: 0, display: 'block' }} />
+          )}
+          {m.key === 'note' && (
+            <svg width="11" height="11" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+              <rect x="2" y="2" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4"/>
+              <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <line x1="8" y1="12" x2="8" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          )}
+          {m.key === 'flag' && (
+            <svg width="11" height="11" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+              <polygon points="15,2 3,2 1,8 3,14 15,14" fill="#f97066" opacity=".8"/>
+              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          )}
+          {m.label}
+        </div>
+      ))}
+    </div>
   )
 }
 
+/* ─── Page rail — LEFT 64px, matches V2 .page-rail ─── */
 function PageRail({
   pageCount,
   activePage,
@@ -412,93 +422,76 @@ function PageRail({
   activePage: number
   onPageClick: (n: number) => void
 }) {
+  const count = pageCount > 0 ? pageCount : 1  // always show at least 1 placeholder
+
   return (
-    <aside
+    <div
       style={{
-        width: 92,
-        background: '#0b0d14',
-        borderLeft: '1px solid rgba(255,255,255,.06)',
+        width: 64,
+        flexShrink: 0,
+        borderRight: '1px solid rgba(255,255,255,.08)',
+        background: 'rgba(0,0,0,.2)',
+        padding: '10px 6px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        padding: '12px 8px',
         gap: 8,
         overflowY: 'auto',
-        flexShrink: 0,
       }}
     >
-      <span
-        style={{
-          fontSize: 9,
-          fontWeight: 600,
-          color: 'rgba(255,255,255,.2)',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          fontFamily: 'var(--font-sans)',
-          marginBottom: 4,
-        }}
-      >
-        Pages
-      </span>
-
-      {pageCount === 0 ? (
-        <div
-          style={{
-            width: 64,
-            height: 84,
-            borderRadius: 4,
-            border: '1px dashed rgba(255,255,255,.1)',
-            background: 'rgba(255,255,255,.02)',
-          }}
-        />
-      ) : (
-        Array.from({ length: pageCount }, (_, i) => i + 1).map(n => (
-          <button
+      {Array.from({ length: count }, (_, i) => i + 1).map(n => {
+        const isActive = n === activePage
+        return (
+          <div
             key={n}
-            onClick={() => onPageClick(n)}
+            onClick={() => pageCount > 0 && onPageClick(n)}
             style={{
-              width: 64,
-              height: 84,
               borderRadius: 4,
-              border: n === activePage
-                ? '1.5px solid rgba(255,255,255,.4)'
-                : '1px solid rgba(255,255,255,.1)',
-              background: n === activePage ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.02)',
-              cursor: 'pointer',
+              border: isActive ? '1.5px solid #818cf8' : '1.5px solid rgba(255,255,255,.07)',
+              background: 'rgba(255,255,255,.02)',
+              aspectRatio: '1 / 1.414',
+              cursor: pageCount > 0 ? 'pointer' : 'default',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              position: 'relative',
+              flexDirection: 'column',
+              padding: 5,
               transition: 'border-color .15s',
-              padding: 0,
             }}
           >
-            <span
+            {/* Line stubs mimicking page content — decorative */}
+            <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+              {[1, 0.55, 0.82, 0.68, 0.75].map((w, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: i === 0 ? 2 : 1.5,
+                    background: i === 0 ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.14)',
+                    borderRadius: 1,
+                    width: `${w * 100}%`,
+                  }}
+                />
+              ))}
+            </div>
+            <div
               style={{
-                position: 'absolute',
-                bottom: 3,
-                left: 0,
-                right: 0,
+                fontSize: 8,
                 textAlign: 'center',
-                fontSize: 9,
-                color: 'rgba(255,255,255,.3)',
-                fontFamily: 'var(--font-sans)',
+                color: isActive ? '#818cf8' : 'rgba(255,255,255,.2)',
+                fontFamily: 'var(--font-mono)',
+                transition: 'color .15s',
               }}
             >
               {n}
-            </span>
-          </button>
-        ))
-      )}
-    </aside>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
+/* ─── Canvas area — RIGHT flex:1, matches V2 .canvas-area ─── */
 function CanvasArea({
   hasFile,
   isDragging,
-  activeTool,
   onDrop,
   onDragOver,
   onDragLeave,
@@ -506,7 +499,6 @@ function CanvasArea({
 }: {
   hasFile: boolean
   isDragging: boolean
-  activeTool: ToolDef
   onDrop: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
   onDragLeave: () => void
@@ -517,95 +509,62 @@ function CanvasArea({
   if (!hasFile) {
     return (
       <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0b0d14',
-          overflow: 'hidden',
-        }}
+        style={{ flex: 1, overflowY: 'auto', padding: '20px 14px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
       >
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-            padding: '40px 32px',
-            borderRadius: 16,
-            border: isDragging
-              ? `2px dashed ${activeTool.color}`
-              : '2px dashed rgba(255,255,255,.1)',
-            background: isDragging ? `${activeTool.color}08` : 'transparent',
-            transition: 'all .2s',
-            cursor: 'default',
-            maxWidth: 360,
+            width: '100%',
+            maxWidth: 440,
+            marginTop: 60,
+            borderRadius: 14,
+            border: isDragging ? '1.5px dashed #818cf8' : '1.5px dashed rgba(255,255,255,.14)',
+            background: isDragging ? 'rgba(129,140,248,.06)' : 'rgba(255,255,255,.025)',
+            padding: '40px 24px',
             textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'border-color .25s, background .25s',
           }}
+          onClick={() => fileInputRef.current?.click()}
         >
           <div
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              background: `${activeTool.color}15`,
-              border: `1px solid ${activeTool.color}30`,
+              width: 44,
+              height: 44,
+              borderRadius: 12,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: activeTool.color,
+              margin: '0 auto 16px',
+              background: 'rgba(129,140,248,.15)',
             }}
           >
-            <SvgIcon id="ws-ic-upload" size={22} />
+            <SvgIcon id="ws-upload" size={22} style={{ color: '#818cf8' }} />
           </div>
-
-          <div>
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: 'rgba(255,255,255,.8)',
-                margin: '0 0 6px',
-                fontFamily: 'var(--font-sans)',
-              }}
-            >
-              {isDragging ? 'Drop to open' : 'Open a PDF to start'}
-            </p>
-            <p
-              style={{
-                fontSize: 13,
-                color: 'rgba(255,255,255,.35)',
-                margin: 0,
-                fontFamily: 'var(--font-sans)',
-                lineHeight: 1.5,
-              }}
-            >
-              Drag a file here or click below.
-              <br />
-              Files never leave your browser.
-            </p>
+          <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--tx)', marginBottom: 6, letterSpacing: '-.1px' }}>
+            {isDragging ? 'Drop to open' : 'Drop your PDF here'}
           </div>
-
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.28)', marginBottom: 18 }}>
+            files never leave your browser
+          </div>
           <button
-            onClick={() => fileInputRef.current?.click()}
             style={{
-              padding: '9px 20px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '9px 22px',
               borderRadius: 8,
-              border: `1px solid ${activeTool.color}50`,
-              background: `${activeTool.color}12`,
-              color: activeTool.color,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
-              fontFamily: 'var(--font-sans)',
+              letterSpacing: '.02em',
+              color: '#fff',
+              background: '#818cf8',
+              border: 'none',
               cursor: 'pointer',
-              transition: 'background .15s',
             }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = `${activeTool.color}22`)}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = `${activeTool.color}12`)}
+            onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
           >
             Browse files
           </button>
@@ -626,27 +585,26 @@ function CanvasArea({
     )
   }
 
-  /* File loaded — canvas placeholder (replaced in S17+) */
+  /* File loaded — PDF canvas placeholder (real rendering in S17) */
   return (
     <div
       style={{
         flex: 1,
-        background: '#13141c',
-        overflow: 'auto',
+        overflowY: 'auto',
+        padding: '20px 14px',
         display: 'flex',
-        alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '32px 24px',
       }}
     >
-      {/* Placeholder A4 page — replaced by real PDF.js rendering in S17 */}
       <div
         style={{
-          width: 595,
-          minHeight: 842,
+          width: '100%',
+          maxWidth: 440,
           background: '#fff',
-          borderRadius: 4,
-          boxShadow: '0 4px 32px rgba(0,0,0,.5)',
+          borderRadius: 2,
+          boxShadow: '0 4px 48px rgba(0,0,0,.75)',
+          padding: '40px 38px 60px',
+          minHeight: 560,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -655,7 +613,7 @@ function CanvasArea({
           fontFamily: 'var(--font-sans)',
         }}
       >
-        PDF canvas — rendered in Sprint 17
+        PDF canvas — Sprint 17
       </div>
     </div>
   )
@@ -666,28 +624,29 @@ export default function WorkspaceShell() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  /* Resolve initial tool from ?tool= param */
-  const initialToolKey = (searchParams.get('tool') ?? 'edit') as ToolKey
-  const resolvedTool = TOOLS.find(t => t.key === initialToolKey) ?? TOOLS[0]
+  const initialKey = (searchParams.get('tool') ?? 'edit') as ToolKey
+  const resolvedTool = TOOLS.find(t => t.key === initialKey) ?? TOOLS[0]
 
   const [activeTool, setActiveTool] = useState<ToolDef>(resolvedTool)
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [activePage, setActivePage] = useState(1)
-  const [pageCount] = useState(0)  // updated in S17 when PDF.js loads
 
-  /* Consume pending file (set by homepage hub) on mount */
+  /* Consume file handed off from homepage hub */
   useEffect(() => {
     const pending = consumePendingFile()
     if (pending) setFile(pending)
   }, [])
 
-  /* Keep URL in sync when tool changes */
+  /* Keep ?tool= URL param in sync */
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tool', activeTool.key)
     router.replace(`/workspace?${params.toString()}`, { scroll: false })
-  }, [activeTool.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // intentionally omits searchParams — adding it causes an infinite loop
+  // (replace changes searchParams → triggers effect → replace again)
+  }, [activeTool.key])
 
   const handleSelectTool = useCallback((key: ToolKey) => {
     const tool = TOOLS.find(t => t.key === key)
@@ -698,9 +657,7 @@ export default function WorkspaceShell() {
     e.preventDefault()
     setIsDragging(false)
     const f = e.dataTransfer.files[0]
-    if (f?.type === 'application/pdf' || f?.name.endsWith('.pdf')) {
-      setFile(f)
-    }
+    if (f?.type === 'application/pdf' || f?.name.endsWith('.pdf')) setFile(f)
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -709,17 +666,11 @@ export default function WorkspaceShell() {
   }, [])
 
   const handleDragLeave = useCallback(() => setIsDragging(false), [])
-
   const handleFileSelect = useCallback((f: File) => setFile(f), [])
-
-  const handleClearFile = useCallback(() => {
-    setFile(null)
-    setActivePage(1)
-  }, [])
+  const handleClearFile = useCallback(() => { setFile(null); setActivePage(1) }, [])
 
   return (
     <>
-      {/* Inject SVG symbol defs */}
       <div dangerouslySetInnerHTML={{ __html: SVG_DEFS }} />
 
       <div
@@ -732,38 +683,106 @@ export default function WorkspaceShell() {
           fontFamily: 'var(--font-sans)',
         }}
       >
-        {/* Top nav */}
-        <WorkspaceNav
-          fileName={file?.name ?? null}
-          fileSize={file?.size ?? null}
-          activeTool={activeTool}
-          onClearFile={handleClearFile}
-        />
+        {/* ── Nav: back arrow | filename | download ── */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '0 16px',
+            height: 50,
+            borderBottom: '1px solid rgba(255,255,255,.08)',
+            background: 'rgba(11,13,20,.95)',
+            backdropFilter: 'blur(14px)',
+            flexShrink: 0,
+            zIndex: 50,
+          }}
+        >
+          <Link
+            href="/"
+            onClick={handleClearFile}
+            aria-label="Back to home"
+            style={{
+              background: 'none',
+              color: 'rgba(255,255,255,.5)',
+              fontSize: 18,
+              padding: '6px 8px 6px 0',
+              lineHeight: 1,
+              textDecoration: 'none',
+              transition: 'color .15s',
+              flexShrink: 0,
+            }}
+          >
+            <span aria-hidden="true">←</span>
+          </Link>
 
-        {/* Body */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          {/* L2 tool rail */}
-          <ToolRail activeTool={activeTool} onSelect={handleSelectTool} />
+          <span
+            style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,.5)',
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {file ? `${file.name} · ${formatBytes(file.size)}` : 'No file open'}
+          </span>
 
-          {/* L3 contextual strip */}
-          <ContextualPanel activeTool={activeTool} hasFile={!!file} />
+          <button
+            disabled={!file}
+            aria-label="Download PDF"
+            style={{
+              background: file ? '#6366f1' : 'rgba(99,102,241,.35)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '7px 14px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '.03em',
+              whiteSpace: 'nowrap',
+              cursor: file ? 'pointer' : 'default',
+              opacity: file ? 1 : 0.6,
+              transition: 'background .25s, opacity .25s',
+              flexShrink: 0,
+            }}
+          >
+            <span aria-hidden="true">↓ </span>Download
+          </button>
+        </header>
 
-          {/* Canvas */}
+        {/* ── L2: horizontal selector rail + L3 inline strip ── */}
+        <div
+          style={{
+            background: 'rgba(11,13,20,.92)',
+            borderBottom: '1px solid rgba(255,255,255,.08)',
+            padding: '10px 14px 0',
+            flexShrink: 0,
+            backdropFilter: 'blur(14px)',
+          }}
+        >
+          <div style={{ maxWidth: 600, margin: '0 auto' }}>
+            <SelRail activeTool={activeTool} onSelect={handleSelectTool} />
+            <L3Strip activeTool={activeTool} />
+          </div>
+        </div>
+
+        {/* ── ws-body: [page-rail LEFT 64px] [canvas RIGHT flex:1] ── */}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <PageRail
+            pageCount={file ? 1 : 0}  // S17 will provide real page count from PDF.js
+            activePage={activePage}
+            onPageClick={setActivePage}
+          />
+
           <CanvasArea
             hasFile={!!file}
             isDragging={isDragging}
-            activeTool={activeTool}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onFileSelect={handleFileSelect}
-          />
-
-          {/* Page rail */}
-          <PageRail
-            pageCount={file ? pageCount : 0}
-            activePage={activePage}
-            onPageClick={setActivePage}
           />
         </div>
       </div>

@@ -26,16 +26,16 @@ interface MoreTool {
 
 /* ─── Tool data (v2 TM spec) ─── */
 const TOOLS: Record<ToolKey, ToolDef> = {
-  edit:     { color: '#818cf8', name: 'Edit',     desc: 'Click any text to edit it directly',       hint: 'contracts · invoices · forms · CVs',         href: '/edit' },
-  sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/sign' },
-  annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/annotate' },
+  edit:     { color: '#818cf8', name: 'Edit',     desc: 'Click any text to edit it directly',       hint: 'contracts · invoices · forms · CVs',         href: '/workspace?tool=edit' },
+  sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/workspace?tool=sign' },
+  annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/workspace?tool=annotate' },
   redact:   { color: '#f97066', name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
-  compress: { color: '#fb923c', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/compress' },
+  compress: { color: '#fb923c', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/workspace?tool=compress' },
 }
 
 const MORE_TOOLS: Record<MoreKey, MoreTool> = {
-  merge: { name: 'Merge', desc: 'Combine multiple PDFs into one',     hint: 'combine multiple files into one', href: '/merge' },
-  split: { name: 'Split', desc: 'Extract pages or split into parts',  hint: 'extract pages · create sections', href: '/split' },
+  merge: { name: 'Merge', desc: 'Combine multiple PDFs into one',     hint: 'combine multiple files into one', href: '/' },
+  split: { name: 'Split', desc: 'Extract pages or split into parts',  hint: 'extract pages · create sections', href: '/' },
 }
 
 const TOOL_ORDER: ToolKey[] = ['edit', 'sign', 'annotate', 'redact', 'compress']

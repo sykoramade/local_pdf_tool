@@ -75,3 +75,37 @@ Each entry: what went wrong, what the fix was, and the rule going forward.
 - After every commit that completes a sprint's last task, immediately update `docs/tracking/sprint.md` — mark the sprint COMPLETE with date and full done list — as part of the same work block, not at end of session.
 - In autonomous multi-sprint mode: treat sprint board update as a hard gate. Do not begin the next sprint until the board reflects the completed state of the current one.
 - If context limits force a stop mid-sprint: write a `docs/messages/` note to self with the pending board update so the next session can recover it.
+
+---
+
+## 2026-03-19 — WorkspaceShell Built from Memory Instead of V2 Spec (Design Failure)
+
+**What went wrong:** WorkspaceShell was implemented as an IDE-style layout (left sidebar tool rail 56px + left contextual panel 220px + center canvas + right page rail 92px) and marked COMPLETE. None of this exists in V2. The actual V2 workspace has a horizontal segmented pill selector at the top, an inline L3 strip below it, a LEFT 64px page rail, and a RIGHT canvas. The error was caught by the Managing Director when he ran the app — not by any internal check.
+
+**Root cause (two failures):**
+1. `localpdf_v2.html` was NOT read before implementation. Layout was invented from general IDE conventions rather than derived from the spec.
+2. Sprint was marked COMPLETE after TypeScript passed. The app was never opened in a browser to verify it actually rendered correctly.
+
+**Rating:** 2/10 — File was written, spec fidelity and verification both failed completely.
+
+**Rules going forward (added to CLAUDE.md as mandatory quality gates):**
+- **Read `localpdf_v2.html` before writing any new screen or layout component.** Never invent layout. Quote specific CSS classes from V2 in the implementation comments to prove it was read.
+- **No sprint COMPLETE without browser verification.** Run `npm run dev`, navigate to the route, confirm it renders. TypeScript passing ≠ working.
+- **code-reviewer agent is mandatory for any file >300 lines** before marking a task done.
+- When in doubt about a layout detail, ask the Managing Director before building — wasted implementation is more expensive than a clarifying question.
+
+---
+
+## 2026-03-19 — Full Development Pipeline Skipped (Process Failure)
+
+**What went wrong:** The mandatory development pipeline (read V2 → break down tasks → write to `docs/tasks/` → coordinate via `docs/messages/` → build) was skipped entirely for Sprint 16. No task breakdown was written. No V2 analysis was documented. Code was written directly from assumptions. `docs/tasks/frontend.md` was never updated from Sprint 7. When asked why, there was no good answer.
+
+**Root cause:** In autonomous sessions, the pipeline steps that produce documentation artifacts (task files, messages) are silently dropped in favour of writing code faster. There is no enforcement mechanism that blocks implementation if the task file doesn't exist first.
+
+**Rating:** 1/10 — The pipeline exists precisely to prevent this class of failure. Skipping it without reason is not acceptable.
+
+**Rules going forward:**
+- Before writing a single line of implementation code for any new screen or feature: read V2, extract requirements, write tasks to `docs/tasks/frontend.md`. This is a hard gate, not a suggestion.
+- The task file must exist and be reviewed by the Managing Director before implementation begins on any sprint involving a new layout component.
+- Confidence must be rated on every answer. If confidence is below 8/10, bring in the co-CEO and project manager agents before proceeding.
+- "No good answer" for skipping a mandatory step is a signal to stop and ask, not to continue.
