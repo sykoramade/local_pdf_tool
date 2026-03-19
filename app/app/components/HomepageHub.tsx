@@ -30,7 +30,7 @@ const TOOLS: Record<ToolKey, ToolDef> = {
   sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/sign' },
   annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/annotate' },
   redact:   { color: '#f97066', name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
-  compress: { color: '#60a5fa', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/compress' },
+  compress: { color: '#fb923c', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/compress' },
 }
 
 const MORE_TOOLS: Record<MoreKey, MoreTool> = {
@@ -175,8 +175,8 @@ export default function HomepageHub() {
     : 'rgba(255,255,255,.025)'
 
   const moreDzBg = (moreDzHovered || moreDzDragging)
-    ? 'rgba(96,165,250,.07)'
-    : 'rgba(96,165,250,.025)'
+    ? 'rgba(251,146,60,.07)'
+    : 'rgba(251,146,60,.025)'
 
   return (
     <>
@@ -282,8 +282,8 @@ export default function HomepageHub() {
                       onClick={() => setActive(key)}
                       style={{
                         flex: 1, position: 'relative', zIndex: 1,
-                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                        gap: 6, padding: '10px 8px 10px 12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 6, padding: '10px 8px',
                         fontFamily: 'var(--font-sans)',
                         fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                         textTransform: 'uppercase',
@@ -525,8 +525,8 @@ export default function HomepageHub() {
                         onClick={() => setMoreActive(key)}
                         style={{
                           flex: 1, position: 'relative', zIndex: 1,
-                          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                          gap: 6, padding: '10px 8px 10px 12px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          gap: 6, padding: '10px 8px',
                           fontFamily: 'var(--font-sans)',
                           fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                           textTransform: 'uppercase',
@@ -560,7 +560,7 @@ export default function HomepageHub() {
                   onMouseLeave={() => { setMoreDzHovered(false); setMoreDzDragging(false) }}
                   style={{
                     borderRadius: 16,
-                    border: `1.5px ${moreDzDragging ? 'solid' : 'dashed'} rgba(96,165,250,${moreDzHovered || moreDzDragging ? '.5' : '.25'})`,
+                    border: `1.5px ${moreDzDragging ? 'solid' : 'dashed'} rgba(251,146,60,${moreDzHovered || moreDzDragging ? '.5' : '.25'})`,
                     background: moreDzBg,
                     padding: '36px 28px',
                     textAlign: 'center',
@@ -573,9 +573,9 @@ export default function HomepageHub() {
                     width: 44, height: 44, borderRadius: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 14px',
-                    background: 'rgba(96,165,250,.15)',
+                    background: 'rgba(251,146,60,.15)',
                   }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" style={{ color: '#60a5fa' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" style={{ color: '#fb923c' }}>
                       <use href="#ic-upload" />
                     </svg>
                   </div>
@@ -598,7 +598,7 @@ export default function HomepageHub() {
                       padding: '9px 20px', borderRadius: 8,
                       fontFamily: 'var(--font-sans)',
                       fontSize: 12, fontWeight: 600, color: '#fff',
-                      background: '#60a5fa', border: 'none', cursor: 'pointer',
+                      background: '#fb923c', border: 'none', cursor: 'pointer',
                     }}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" style={{ color: '#fff' }}>
@@ -618,13 +618,13 @@ export default function HomepageHub() {
                   <div style={{
                     width: 22, height: 22, borderRadius: 6,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(96,165,250,.15)', flexShrink: 0,
+                    background: 'rgba(251,146,60,.15)', flexShrink: 0,
                   }}>
-                    <svg width="13" height="13" viewBox="0 0 16 16" style={{ color: '#60a5fa' }}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" style={{ color: '#fb923c' }}>
                       <use href="#ic-pages" />
                     </svg>
                   </div>
-                  <span style={{ fontWeight: 600, color: '#60a5fa' }}>{moreTool.name}</span>
+                  <span style={{ fontWeight: 600, color: '#fb923c' }}>{moreTool.name}</span>
                   <span>— {moreTool.desc}</span>
                 </div>
 
