@@ -257,6 +257,24 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 16 — COMPLETE ✅
+**Completed:** 2026-03-19
+**Goal:** WorkspaceShell — full-screen IDE-style app shell at `/workspace`.
+
+### Done
+- [x] app/app/workspace/page.tsx — server component wrapper with Suspense (for useSearchParams)
+- [x] app/app/workspace/WorkspaceShell.tsx — full workspace layout:
+  - WorkspaceNav: Logo, tool badge, filename + size + close, Download button
+  - ToolRail (L2): 56px icon rail — Edit/Sign/Annotate/Redact(PRO)/Compress
+  - ContextualPanel (L3): 220px strip, tool name + desc, options placeholder
+  - CanvasArea: empty state with dashed drop zone + file picker; PDF canvas placeholder for S17
+  - PageRail: 92px right strip, page thumbnail placeholders
+- [x] ?tool= query param drives initial active tool; URL stays in sync on switch
+- [x] consumePendingFile() on mount — homepage hub file hand-off works immediately
+- [x] Drag-and-drop + Browse files opens PDF into workspace
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
