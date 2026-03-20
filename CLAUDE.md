@@ -23,6 +23,11 @@ Competitive edge: fully client-side (privacy), clean UX, no dark patterns.
 4. No new npm package without checking bundle size impact first.
 5. Frontend is built first as static HTML/demo data. Backend serves what the UI needs — never the reverse.
 
+## Implementation Quality Gates — Mandatory
+- **Read `localpdf_v2.html` before writing any new screen or layout component.** Never invent layout — derive it from V2.
+- **No sprint COMPLETE without browser verification.** Run `npm run dev`, open the route, confirm it renders. TypeScript passing ≠ working.
+- **code-reviewer agent mandatory for any file >300 lines** before marking the task done.
+
 ## Development Pipeline (sequential, not parallel)
 1. **UI first** — build the page with demo data until it looks and works right
 2. **Extract requirements** — from the finished UI, define exactly what data/endpoints are needed

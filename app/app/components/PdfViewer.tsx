@@ -10,6 +10,7 @@ interface PdfViewerProps {
   editMap: EditMap
   onEdit: (id: string, text: string) => void
   onTextItems?: (items: ExtractedTextItem[]) => void
+  onLoad?: (pageCount: number) => void
 }
 
 interface PageData {
@@ -39,6 +40,7 @@ export default function PdfViewer({
   editMap,
   onEdit,
   onTextItems,
+  onLoad,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -136,6 +138,7 @@ export default function PdfViewer({
         setPages(pageData)
         setLoading(false)
         onTextItems?.(allItems)
+        onLoad?.(pageData.length)
       } catch (err) {
         if (!cancelled) {
           setError(friendlyError((err as Error).message ?? ''))
@@ -149,7 +152,7 @@ export default function PdfViewer({
       docRef.current?.destroy()
       docRef.current = null
     }
-  }, [pdfBytes, scale, onTextItems])
+  }, [pdfBytes, scale, onTextItems, onLoad])
 
   if (loading) {
     return (

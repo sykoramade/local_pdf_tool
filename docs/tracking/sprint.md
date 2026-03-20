@@ -244,6 +244,42 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 15 — COMPLETE ✅
+**Completed:** 2026-03-19
+**Goal:** Homepage v2 redesign — match v2 home screen: 5-tab selector, dashed drop zone, tool descriptor line, More Tools drawer (Merge/Split), trust row.
+
+### Done
+- [x] S15-1: HomepageHub — replace 6-tab segmented control with 5-tab v2 selector (Edit/Sign/Annotate/Redact PRO/Compress)
+- [x] S15-2: HomepageHub — replace current drop zone with v2 dashed-border style (tool-color icon, title, hint, Browse files button)
+- [x] S15-3: HomepageHub — add tool descriptor line below drop zone
+- [x] S15-4: HomepageHub — add More Tools expandable drawer (Merge/Split sub-selector + drop zone)
+- [x] S15-5: HomepageHub — add trust row at bottom
+
+---
+
+## Sprint 16 — REBUILT ✅
+**Completed:** 2026-03-19 (rebuilt after V2 design failure)
+**Goal:** WorkspaceShell — full-screen workspace at `/workspace` matching V2 HTML spec exactly.
+
+### Done
+- [x] app/app/workspace/page.tsx — server component wrapper with Suspense (for useSearchParams)
+- [x] app/app/workspace/WorkspaceShell.tsx — correct V2 layout (789 lines):
+  - Nav (50px): ← back | filename + size (flex:1) | ↓ Download (indigo, dimmed when no file)
+  - L2 bar: `rgba(11,13,20,.92)` + blur(14px) · max-width 600px inner
+  - SelRail: spring pill (cubic-bezier(.34,1.56,.64,1)) · 5 tabs Edit/Sign/Annotate/Redact PRO/Compress · role="tablist" + keyboard nav
+  - L3Strip: per-tool inline strip (edit hint / sign button / annotate sub-rail / redact pro bar / compress toggle)
+  - AnnotateSubRail: nested spring pill (Yellow/Green/Pink/Note/Flag) with keyboard nav
+  - ws-body flex row: PageRail LEFT 64px (border-right, A4 aspect-ratio thumbnails) + CanvasArea RIGHT flex:1
+- [x] ?tool= query param drives initial active tool; URL stays in sync on switch
+- [x] consumePendingFile() on mount — homepage hub file hand-off works
+- [x] Drag-and-drop + Browse files opens PDF into workspace
+- [x] ARIA: role="tablist/tab", aria-selected, aria-label, keyboard Enter/Space handlers, aria-hidden on decorative elements
+- [x] Legacy route redirects: /edit /sign /annotate /compress → /workspace?tool=X; /merge /split → /
+- [x] HomepageHub hrefs updated: all tool tabs now navigate to /workspace?tool=X
+- [x] CLAUDE.md updated: 3 mandatory quality gates (read V2 before building, browser verify before COMPLETE, code-reviewer for >300 line files)
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
@@ -253,6 +289,10 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 - Stripe/Supabase env var setup (MD action — deferred from Sprint 6)
 - Free placement mode (drag signatures off-grid — Pro feature)
 - Encrypted PDF unlock flow
+- **Workspace PageRail navigation** — clicking a page thumbnail should scroll the canvas to that page (requires scroll-to-page logic / page anchor refs in PdfViewer; deferred from S16)
+- **Workspace text editing — full word selection** — PDF.js extracts text in small sub-word chunks; clicking a "word" only activates one chunk. Requires multi-chunk selection merge. Complex; deferred from S16.
+- **Workspace undo/redo** — undo/redo buttons in L3Strip for Edit tool; V2 design feature. Requires edit history stack (deferred from S16; PdfEditor.tsx has Ctrl+Z undo stack as reference)
+- **Workspace Sign + Annotate full tools** — currently shows PDF canvas + "coming soon" banner; full workspace-embedded implementation deferred from S16
 
 ---
 

@@ -69,8 +69,8 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
             aria-label={`Edit text: ${currentText}`}
             style={{
               ...style,
-              color: isEdited ? 'rgba(79,70,229,0.15)' : 'transparent',
-              backgroundColor: isEdited ? 'rgba(79,70,229,0.08)' : 'transparent',
+              color: isEdited ? '#1e1b4b' : 'transparent',
+              backgroundColor: isEdited ? 'rgba(255,255,255,0.95)' : 'transparent',
               borderBottom: isEdited ? '1px solid rgba(79,70,229,0.4)' : 'none',
               userSelect: 'none',
             }}

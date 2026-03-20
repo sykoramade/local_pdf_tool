@@ -15,8 +15,8 @@ export default function Footer() {
           className="text-[11px] leading-[1.65]"
           style={{ color: 'rgba(255,255,255,.2)' }}
         >
-          &copy; 2026 Lounge Labs UG (haftungsbeschränkt). All rights reserved.
-          &nbsp;&middot;&nbsp; Lounge Labs UG &middot; Registered in Germany &middot;&nbsp;
+          &copy; 2026 Lounge Labs UG (haftungsbeschränkt). All rights reserved.<br />
+          Lounge Labs UG &middot; Registered in Germany &middot;&nbsp;
           <Link
             href="/about"
             className="transition-colors hover:text-white/60"
