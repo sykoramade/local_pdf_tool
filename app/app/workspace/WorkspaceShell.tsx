@@ -3,7 +3,11 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
+import type { EditMap, ExtractedTextItem } from '@/lib/pdf/types'
+
+const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
 
 /* ─── Types ─── */
 type ToolKey = 'edit' | 'sign' | 'annotate' | 'redact' | 'compress'
@@ -488,9 +492,84 @@ function PageRail({
   )
 }
 
+/* ─── Inline compress panel — runs compression when pdfBytes arrives ─── */
+function InlineCompressPanel({ pdfBytes, filename }: { pdfBytes: Uint8Array; filename: string }) {
+  const [state, setState] = useState<'compressing' | 'done' | 'error'>('compressing')
+  const [originalSize, setOriginalSize] = useState(0)
+  const [compressedSize, setCompressedSize] = useState(0)
+  const [savingPct, setSavingPct] = useState(0)
+  const [errorMsg, setErrorMsg] = useState('')
+  const outputRef = useRef<Uint8Array | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      try {
+        const { compressPdf } = await import('@/lib/pdf/compress')
+        const result = await compressPdf(pdfBytes)
+        if (cancelled) return
+        outputRef.current = result.output
+        setOriginalSize(result.originalBytes)
+        setCompressedSize(result.compressedBytes)
+        setSavingPct(result.savingPercent)
+        setState('done')
+      } catch (err) {
+        if (!cancelled) { setErrorMsg((err as Error).message ?? 'Compression failed'); setState('error') }
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [pdfBytes])
+
+  function handleDownload() {
+    if (!outputRef.current) return
+    const url = URL.createObjectURL(new Blob([outputRef.current.buffer as ArrayBuffer], { type: 'application/pdf' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename.replace(/\.pdf$/i, '_compressed.pdf')
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const label = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`
+
+  return (
+    <div style={{ padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: '#111' }}>
+      {state === 'compressing' && (
+        <>
+          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Compressing…</div>
+          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden', margin: '0 auto', maxWidth: 200 }}>
+            <div style={{ height: '100%', width: '60%', background: '#6366f1', borderRadius: 2, animation: 'pulse 1.2s ease-in-out infinite' }} />
+          </div>
+        </>
+      )}
+      {state === 'error' && <div style={{ color: '#ef4444', fontSize: 13 }}>{errorMsg}</div>}
+      {state === 'done' && (
+        <>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>−{savingPct}%</div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 20 }}>{label(originalSize)} → {label(compressedSize)}</div>
+          <button
+            onClick={handleDownload}
+            style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            ↓ Download compressed PDF
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 /* ─── Canvas area — RIGHT flex:1, matches V2 .canvas-area ─── */
 function CanvasArea({
   hasFile,
+  pdfBytes,
+  activeTool,
+  editMap,
+  onEdit,
+  onPageCount,
+  onTextItems,
+  filename,
   isDragging,
   onDrop,
   onDragOver,
@@ -498,6 +577,13 @@ function CanvasArea({
   onFileSelect,
 }: {
   hasFile: boolean
+  pdfBytes: Uint8Array | null
+  activeTool: ToolDef
+  editMap: EditMap
+  onEdit: (id: string, text: string) => void
+  onPageCount: (n: number) => void
+  onTextItems: (items: ExtractedTextItem[]) => void
+  filename: string
   isDragging: boolean
   onDrop: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
@@ -585,7 +671,59 @@ function CanvasArea({
     )
   }
 
-  /* File loaded — PDF canvas placeholder (real rendering in S17) */
+  /* File loaded — render tool-specific canvas content */
+  const cardStyle: React.CSSProperties = {
+    width: 'fit-content',
+    background: '#fff',
+    borderRadius: 2,
+    boxShadow: '0 4px 48px rgba(0,0,0,.75)',
+    minHeight: 560,
+  }
+
+  const noOpEdit = () => {}
+  const readOnlyMap: EditMap = new Map()
+
+  let toolContent: React.ReactNode
+
+  if (!pdfBytes) {
+    toolContent = (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 560, color: '#9ca3af', fontSize: 13, fontFamily: 'var(--font-sans)' }}>
+        Loading PDF…
+      </div>
+    )
+  } else if (activeTool.key === 'compress') {
+    toolContent = <InlineCompressPanel key="compress" pdfBytes={pdfBytes} filename={filename} />
+  } else if (activeTool.key === 'redact') {
+    toolContent = (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 560, padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 12 }}>PRO</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 8 }}>Redact sensitive content</div>
+        <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>Permanently remove text and images — not just visually hidden. Available on the Pro plan.</div>
+      </div>
+    )
+  } else {
+    /* edit, sign, annotate — all render the PDF canvas via PdfViewer */
+    const isEdit = activeTool.key === 'edit'
+    toolContent = (
+      <>
+        <PdfViewer
+          key={activeTool.key}
+          pdfBytes={pdfBytes}
+          scale={1.5}
+          editMap={isEdit ? editMap : readOnlyMap}
+          onEdit={isEdit ? onEdit : noOpEdit}
+          onLoad={onPageCount}
+          onTextItems={onTextItems}
+        />
+        {!isEdit && (
+          <div style={{ padding: '12px 16px', background: '#f9fafb', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: 12, color: '#6b7280', fontFamily: 'var(--font-sans)' }}>
+            {activeTool.label} tools coming soon in workspace
+          </div>
+        )}
+      </>
+    )
+  }
+
   return (
     <div
       style={{
@@ -594,26 +732,11 @@ function CanvasArea({
         padding: '20px 14px',
         display: 'flex',
         justifyContent: 'center',
+        alignItems: 'flex-start',
       }}
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 440,
-          background: '#fff',
-          borderRadius: 2,
-          boxShadow: '0 4px 48px rgba(0,0,0,.75)',
-          padding: '40px 38px 60px',
-          minHeight: 560,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#888',
-          fontSize: 14,
-          fontFamily: 'var(--font-sans)',
-        }}
-      >
-        PDF canvas — Sprint 17
+      <div style={cardStyle}>
+        {toolContent}
       </div>
     </div>
   )
@@ -629,6 +752,10 @@ export default function WorkspaceShell() {
 
   const [activeTool, setActiveTool] = useState<ToolDef>(resolvedTool)
   const [file, setFile] = useState<File | null>(null)
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
+  const [editMap, setEditMap] = useState<EditMap>(new Map())
+  const [textItems, setTextItems] = useState<ExtractedTextItem[]>([])
+  const [pageCount, setPageCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [activePage, setActivePage] = useState(1)
 
@@ -637,6 +764,16 @@ export default function WorkspaceShell() {
     const pending = consumePendingFile()
     if (pending) setFile(pending)
   }, [])
+
+  /* Convert File → Uint8Array when file changes */
+  useEffect(() => {
+    if (!file) { setPdfBytes(null); setPageCount(0); setEditMap(new Map()); setTextItems([]); return }
+    let cancelled = false
+    file.arrayBuffer().then(buf => {
+      if (!cancelled) setPdfBytes(new Uint8Array(buf))
+    })
+    return () => { cancelled = true }
+  }, [file])
 
   /* Keep ?tool= URL param in sync */
   useEffect(() => {
@@ -668,6 +805,28 @@ export default function WorkspaceShell() {
   const handleDragLeave = useCallback(() => setIsDragging(false), [])
   const handleFileSelect = useCallback((f: File) => setFile(f), [])
   const handleClearFile = useCallback(() => { setFile(null); setActivePage(1) }, [])
+  const handleEdit = useCallback((id: string, text: string) => {
+    setEditMap(prev => new Map(prev).set(id, text))
+  }, [])
+  const handlePageCount = useCallback((n: number) => setPageCount(n), [])
+  const handleTextItems = useCallback((items: ExtractedTextItem[]) => setTextItems(items), [])
+
+  const handleDownload = useCallback(async () => {
+    if (!pdfBytes || !file) return
+    let outputBytes = pdfBytes
+    let outputName = file.name
+    if (activeTool.key === 'edit' && editMap.size > 0) {
+      const { applyEditsAndSave } = await import('@/lib/pdf/save')
+      outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
+      outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+    }
+    const url = URL.createObjectURL(new Blob([outputBytes.buffer as ArrayBuffer], { type: 'application/pdf' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = outputName
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [pdfBytes, file, activeTool.key, editMap, textItems])
 
   return (
     <>
@@ -732,6 +891,7 @@ export default function WorkspaceShell() {
           <button
             disabled={!file}
             aria-label="Download PDF"
+            onClick={handleDownload}
             style={{
               background: file ? '#6366f1' : 'rgba(99,102,241,.35)',
               color: '#fff',
@@ -771,13 +931,20 @@ export default function WorkspaceShell() {
         {/* ── ws-body: [page-rail LEFT 64px] [canvas RIGHT flex:1] ── */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <PageRail
-            pageCount={file ? 1 : 0}  // S17 will provide real page count from PDF.js
+            pageCount={pageCount}
             activePage={activePage}
             onPageClick={setActivePage}
           />
 
           <CanvasArea
             hasFile={!!file}
+            pdfBytes={pdfBytes}
+            activeTool={activeTool}
+            editMap={editMap}
+            onEdit={handleEdit}
+            onPageCount={handlePageCount}
+            onTextItems={handleTextItems}
+            filename={file?.name ?? ''}
             isDragging={isDragging}
             onDrop={handleDrop}
             onDragOver={handleDragOver}

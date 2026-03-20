@@ -289,6 +289,10 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 - Stripe/Supabase env var setup (MD action — deferred from Sprint 6)
 - Free placement mode (drag signatures off-grid — Pro feature)
 - Encrypted PDF unlock flow
+- **Workspace PageRail navigation** — clicking a page thumbnail should scroll the canvas to that page (requires scroll-to-page logic / page anchor refs in PdfViewer; deferred from S16)
+- **Workspace text editing — full word selection** — PDF.js extracts text in small sub-word chunks; clicking a "word" only activates one chunk. Requires multi-chunk selection merge. Complex; deferred from S16.
+- **Workspace undo/redo** — undo/redo buttons in L3Strip for Edit tool; V2 design feature. Requires edit history stack (deferred from S16; PdfEditor.tsx has Ctrl+Z undo stack as reference)
+- **Workspace Sign + Annotate full tools** — currently shows PDF canvas + "coming soon" banner; full workspace-embedded implementation deferred from S16
 
 ---
 
