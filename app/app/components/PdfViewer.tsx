@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
 
 interface PdfViewerProps {
   pdfBytes: Uint8Array
   scale?: number
   editMap: EditMap
-  onEdit: (id: string, text: string) => void
+  onEdit: (id: string, fieldData: FieldData) => void
   onTextItems?: (items: ExtractedTextItem[]) => void
   onLoad?: (pageCount: number) => void
+  onFieldSelect?: (id: string) => void
+  pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
 }
 
 interface PageData {
@@ -41,6 +43,8 @@ export default function PdfViewer({
   onEdit,
   onTextItems,
   onLoad,
+  onFieldSelect,
+  pageRefs,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,14 +60,19 @@ export default function PdfViewer({
     for (const { pageNum } of pageData) {
       const canvas = canvasRefs.current.get(pageNum)
       if (!canvas) continue
-      const page = await doc.getPage(pageNum)
-      const vp = page.getViewport({ scale })
-      canvas.width = vp.width
-      canvas.height = vp.height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) continue
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await page.render({ canvasContext: ctx as any, viewport: vp }).promise
+      try {
+        const page = await doc.getPage(pageNum)
+        const vp = page.getViewport({ scale })
+        canvas.width = vp.width
+        canvas.height = vp.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) continue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await page.render({ canvasContext: ctx as any, viewport: vp }).promise
+      } catch (err) {
+        // Swallow RenderingCancelledException — happens when component unmounts mid-render
+        if ((err as Error)?.name !== 'RenderingCancelledException') throw err
+      }
     }
   }, [scale])
 
@@ -151,8 +160,9 @@ export default function PdfViewer({
       cancelled = true
       docRef.current?.destroy()
       docRef.current = null
+      pageRefs?.current.clear()
     }
-  }, [pdfBytes, scale, onTextItems, onLoad])
+  }, [pdfBytes, scale, onTextItems, onLoad, pageRefs])
 
   if (loading) {
     return (
@@ -193,11 +203,18 @@ export default function PdfViewer({
     <div className="flex flex-col items-center gap-6 py-6 px-4">
       {pages.map(({ pageNum, width, height, items }) => {
         const pageEditCount = items.filter(
-          item => editMap.has(item.id) && editMap.get(item.id) !== item.str
+          item => editMap.has(item.id) && editMap.get(item.id)?.value !== item.str
         ).length
 
         return (
-          <div key={pageNum} className="flex flex-col items-center gap-1 w-full" style={{ maxWidth: width }}>
+          <div
+            key={pageNum}
+            ref={el => {
+              if (el && pageRefs) pageRefs.current.set(pageNum, el)
+            }}
+            className="flex flex-col items-center gap-1 w-full"
+            style={{ maxWidth: width }}
+          >
             {pageEditCount > 0 && (
               <div className="self-end text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
                 {pageEditCount} edit{pageEditCount !== 1 ? 's' : ''} on p.{pageNum}
@@ -222,6 +239,7 @@ export default function PdfViewer({
                     items={items}
                     editMap={editMap}
                     onEdit={onEdit}
+                    onFieldSelect={onFieldSelect}
                     scale={scale}
                   />
                 </div>

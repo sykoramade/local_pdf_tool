@@ -26,8 +26,8 @@ export async function applyEditsAndSave(
     return fontCache.get(standardFontName)!
   }
 
-  for (const [id, newText] of Array.from(editMap.entries())) {
-    if (!newText.trim()) continue
+  for (const [id, fieldData] of Array.from(editMap.entries())) {
+    if (!fieldData.value.trim()) continue
 
     const item = textItems.find(t => t.id === id)
     if (!item) continue
@@ -38,7 +38,7 @@ export async function applyEditsAndSave(
     const fontMatch = mapFont(item.fontName)
     const font = await getFont(fontMatch.standardFont)
 
-    const fs = item.pdfFontSize || 12
+    const fs = fieldData.size || item.pdfFontSize || 12
     const originalWidth = font.widthOfTextAtSize(item.str, fs)
 
     // Mask original text with white rectangle sized to original text
@@ -51,14 +51,25 @@ export async function applyEditsAndSave(
       opacity: 1,
     })
 
+    // Parse color: fieldData.color is hex like '#3b82f6' or '#000000'
+    const hexToRgb = (hex: string) => {
+      const h = hex.replace('#', '')
+      return {
+        r: parseInt(h.slice(0, 2), 16) / 255,
+        g: parseInt(h.slice(2, 4), 16) / 255,
+        b: parseInt(h.slice(4, 6), 16) / 255,
+      }
+    }
+    const { r, g, b } = hexToRgb(fieldData.color || '#000000')
+
     // Draw replacement — clip to original width as a soft guard
     // (longer replacements will overflow but won't corrupt other text)
-    page.drawText(newText, {
+    page.drawText(fieldData.value, {
       x: item.pdfX,
       y: item.pdfY,
       size: fs,
       font,
-      color: rgb(0, 0, 0),
+      color: rgb(r, g, b),
       maxWidth: originalWidth * 3, // generous but bounded
     })
   }

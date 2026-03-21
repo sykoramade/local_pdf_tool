@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import PdfDropzone from './PdfDropzone'
 import AuthModal from './AuthModal'
-import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
 import { useUser } from '@/hooks/useUser'
 import { canUse, incrementUses } from '@/lib/usage'
 import { consumePendingFile } from '@/lib/pending-file'
@@ -102,15 +102,15 @@ export default function PdfEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleEdit = useCallback((id: string, text: string) => {
+  const handleEdit = useCallback((id: string, fieldData: FieldData) => {
     setEditMap(prev => {
       const item = textItemsRef.current.find(t => t.id === id)
       const original = item?.str ?? ''
       const next = new Map(prev)
-      if (text === original) {
+      if (fieldData.value === original) {
         next.delete(id) // revert — no longer an edit
       } else {
-        next.set(id, text)
+        next.set(id, fieldData)
       }
       // Push previous state to history so Ctrl+Z can restore it
       historyRef.current = [...historyRef.current, prev]

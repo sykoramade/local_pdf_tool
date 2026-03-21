@@ -22,8 +22,18 @@ export interface ExtractedTextItem {
   fontName: string   // raw PDF font name — passed to font-map
 }
 
-// Map of text item id → replacement string
-export type EditMap = Map<string, string>
+export interface FieldData {
+  value: string       // replacement text
+  family: string      // e.g. 'Helvetica', 'Arial'
+  size: number        // font size in pt
+  color: string       // hex string e.g. '#000000'
+  bold: boolean
+  italic: boolean
+  underline: boolean
+}
+
+// Map of text item id → FieldData
+export type EditMap = Map<string, FieldData>
 
 // ─── Annotation types ────────────────────────────────────────────────────────
 

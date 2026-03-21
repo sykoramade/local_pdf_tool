@@ -280,6 +280,24 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 17 — COMPLETE ✅
+**Completed:** 2026-03-21
+**Goal:** WorkspaceShell rich edit toolbar + PageRail scroll-to-page + type model upgrade.
+
+### Done
+- [x] F17-0: Type model — `EditMap` upgraded from `Map<string,string>` to `Map<string,FieldData>` (value, family, size, color, bold, italic, underline)
+- [x] F17-0: `lib/pdf/types.ts` — `FieldData` interface added, `EditMap` type updated
+- [x] F17-0: `lib/pdf/save.ts` — loop updated to use `fieldData.value`, `fieldData.size`, `fieldData.color`
+- [x] F17-0: `PdfViewer.tsx` — updated to read `.value` from FieldData; `onEdit` prop typed to `FieldData`
+- [x] F17-0: `PdfTextLayer.tsx` — same pattern; `onFieldSelect` prop added
+- [x] F17-1: `EditToolbar.tsx` (new, ~200 lines) — font family select, size stepper, color picker, bold/italic/underline toggles, edit count badge, undo/redo buttons
+- [x] F17-1: `WorkspaceShell.tsx` — history stack (`histRef`, `hIdx`, `histUndo`, `histRedo`, `hPush`), `selectedFieldId` state, keyboard `Cmd+Z` / `Cmd+Shift+Z`
+- [x] F17-2: PageRail scroll-to-page — `pageRefsMap` in WorkspaceShell, `pageRefs` prop on PdfViewer, `scrollIntoView` on thumbnail click
+- [x] HomepageHub — tool-color pill highlight improvements
+- [x] globals.css — animation tokens for secondary toolbar appear animation
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
@@ -289,10 +307,8 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 - Stripe/Supabase env var setup (MD action — deferred from Sprint 6)
 - Free placement mode (drag signatures off-grid — Pro feature)
 - Encrypted PDF unlock flow
-- **Workspace PageRail navigation** — clicking a page thumbnail should scroll the canvas to that page (requires scroll-to-page logic / page anchor refs in PdfViewer; deferred from S16)
 - **Workspace text editing — full word selection** — PDF.js extracts text in small sub-word chunks; clicking a "word" only activates one chunk. Requires multi-chunk selection merge. Complex; deferred from S16.
-- **Workspace undo/redo** — undo/redo buttons in L3Strip for Edit tool; V2 design feature. Requires edit history stack (deferred from S16; PdfEditor.tsx has Ctrl+Z undo stack as reference)
-- **Workspace Sign + Annotate full tools** — currently shows PDF canvas + "coming soon" banner; full workspace-embedded implementation deferred from S16
+- **Workspace Sign + Annotate full tools** — S18 target (typed-name Sign + Annotate UI shell)
 
 ---
 
