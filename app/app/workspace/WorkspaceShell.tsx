@@ -6,13 +6,14 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
 import type { EditMap, ExtractedTextItem, FieldData } from '@/lib/pdf/types'
+import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
 import { formatBytes } from '@/lib/pdf/compress'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
 
 /* ─── Types ─── */
-type ToolKey = 'edit' | 'sign' | 'annotate' | 'redact' | 'compress'
+// ToolKey imported from lib/ui/tool-colors
 
 interface ToolDef {
   key: ToolKey
@@ -29,14 +30,12 @@ const TOOLS: ToolDef[] = [
   { key: 'compress', label: 'Compress' },
 ]
 
-/* ─── Tool accent colors ─── */
-const TOOL_COLORS: Record<ToolKey, { bg: string; text: string }> = {
-  edit:     { bg: 'rgba(129,140,248,.20)', text: '#818cf8' },
-  sign:     { bg: 'rgba(34,211,160,.20)',  text: '#22d3a0' },
-  annotate: { bg: 'rgba(251,191,36,.20)',  text: '#d97706' },
-  redact:   { bg: 'rgba(249,112,102,.20)', text: '#f97066' },
-  compress: { bg: 'rgba(96,165,250,.20)',  text: '#60a5fa' },
-}
+/* ─── Tool accent colors — from lib/ui/tool-colors.ts ─── */
+// TOOL_HEX and TOOL_BG imported above
+
+/* ─── Sign types ─── */
+type SigMode = 'idle' | 'naming' | 'placing'
+interface SigEntry { pageNum: number; xPct: number; yPct: number; text: string }
 
 /* ─── Inline SVG symbols (V2 icon set) ─── */
 const SVG_DEFS = `
@@ -120,8 +119,8 @@ function SelRail({
           position: 'absolute',
           top: 3,
           height: 'calc(100% - 6px)',
-          background: TOOL_COLORS[activeTool.key].bg,
-          border: `1px solid ${TOOL_COLORS[activeTool.key].text}40`,
+          background: TOOL_BG[activeTool.key],
+          border: `1px solid ${TOOL_HEX[activeTool.key]}40`,
           borderRadius: 8,
           boxShadow: '0 1px 4px rgba(0,0,0,.12)',
           transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1), background .18s, border-color .18s',
@@ -157,7 +156,7 @@ function SelRail({
               fontWeight: 700,
               letterSpacing: '.06em',
               textTransform: 'uppercase',
-              color: isActive ? TOOL_COLORS[tool.key].text : 'rgba(255,255,255,.3)',
+              color: isActive ? TOOL_HEX[tool.key] : 'rgba(255,255,255,.3)',
               cursor: tool.pro ? 'default' : 'pointer',
               userSelect: 'none',
               transition: 'color .18s',
@@ -206,6 +205,11 @@ function L3Strip({
   compressStats,
   compressLoading,
   onToggleCompress,
+  sigMode,
+  sigCount,
+  onOpenSigNaming,
+  onConfirmSigName,
+  onCancelSig,
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -219,7 +223,18 @@ function L3Strip({
   compressStats: { original: number; compressed: number; pct: number } | null
   compressLoading: boolean
   onToggleCompress: () => void
+  sigMode: SigMode
+  sigCount: number
+  onOpenSigNaming: () => void
+  onConfirmSigName: (name: string) => void
+  onCancelSig: () => void
 }) {
+  const [sigName, setSigName] = useState('')
+
+  useEffect(() => {
+    if (sigMode !== 'naming') setSigName('')
+  }, [sigMode])
+
   const base: React.CSSProperties = {
     height: 52,
     display: 'flex',
@@ -250,29 +265,81 @@ function L3Strip({
   }
 
   if (activeTool.key === 'sign') {
-    return (
-      <div style={base}>
-        <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
-          <button
-            style={{
-              background: '#22d3a0',
-              color: '#0b0d14',
-              border: 'none',
-              borderRadius: 7,
-              padding: '6px 14px',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            + Add Signature
-          </button>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>
-            Drag to position
-          </span>
+    if (sigMode === 'idle') {
+      return (
+        <div style={base}>
+          <div key="sign-idle" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
+            <button
+              onClick={onOpenSigNaming}
+              style={{ background: '#22d3a0', color: '#0b0d14', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+            >
+              + Add Signature
+            </button>
+            {sigCount > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#22d3a0', background: 'rgba(34,211,160,.12)', border: '1px solid rgba(34,211,160,.25)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
+                {sigCount} sig{sigCount > 1 ? 's' : ''} ✓
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>Click to place</span>
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+
+    if (sigMode === 'naming') {
+      return (
+        <div style={base}>
+          <div key="sign-naming" style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', animation: 'strip-appear .2s ease both' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)', flexShrink: 0 }}>Type name:</span>
+            <input
+              autoFocus
+              value={sigName}
+              onChange={e => setSigName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && sigName.trim()) onConfirmSigName(sigName.trim()) }}
+              placeholder="Your name"
+              style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 6, padding: '5px 10px', fontSize: 12, color: '#fff', outline: 'none', fontFamily: 'var(--font-sans)' }}
+            />
+            {sigName.trim() && (
+              <span style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontSize: 18, color: '#0b0d14', background: '#fff', padding: '2px 10px', borderRadius: 4, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {sigName}
+              </span>
+            )}
+            <button
+              onClick={() => sigName.trim() && onConfirmSigName(sigName.trim())}
+              disabled={!sigName.trim()}
+              style={{ background: sigName.trim() ? '#22d3a0' : 'rgba(34,211,160,.3)', color: '#0b0d14', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: sigName.trim() ? 'pointer' : 'default', flexShrink: 0 }}
+            >
+              Place →
+            </button>
+            <button
+              onClick={onCancelSig}
+              style={{ background: 'none', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: 'rgba(255,255,255,.5)', cursor: 'pointer', flexShrink: 0 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (sigMode === 'placing') {
+      return (
+        <div style={base}>
+          <div key="sign-placing" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#22d3a0', flexShrink: 0, display: 'block', boxShadow: '0 0 0 3px rgba(34,211,160,.25)' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#22d3a0' }}>Click on the PDF to place your signature</span>
+            <button
+              onClick={onCancelSig}
+              style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: 'rgba(255,255,255,.5)', cursor: 'pointer', flexShrink: 0 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return null
   }
 
   if (activeTool.key === 'annotate') {
@@ -558,6 +625,8 @@ function CanvasArea({
   onFileSelect,
   onFieldSelect,
   pageRefs,
+  sigMode,
+  onSigPlace,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -574,8 +643,33 @@ function CanvasArea({
   onFileSelect: (file: File) => void
   onFieldSelect?: (id: string) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
+  sigMode?: SigMode
+  onSigPlace?: (pageNum: number, xPct: number, yPct: number) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    if (!pageRefs || !onSigPlace) return
+    const pages = pageRefs.current
+    for (const [pageNum, el] of Array.from(pages.entries())) {
+      const rect = el.getBoundingClientRect()
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom &&
+          e.clientX >= rect.left && e.clientX <= rect.right) {
+        const xPct = ((e.clientX - rect.left) / rect.width) * 100
+        const yPct = ((e.clientY - rect.top) / rect.height) * 100
+        onSigPlace(pageNum, Math.max(0, Math.min(100, xPct)), Math.max(0, Math.min(100, yPct)))
+        return
+      }
+    }
+    // Fallback: use page 1
+    const first = pages.get(1)
+    if (first) {
+      const rect = first.getBoundingClientRect()
+      const xPct = ((e.clientX - rect.left) / rect.width) * 100
+      const yPct = ((e.clientY - rect.top) / rect.height) * 100
+      onSigPlace(1, Math.max(0, Math.min(100, xPct)), Math.max(0, Math.min(100, yPct)))
+    }
+  }, [pageRefs, onSigPlace])
 
   if (!hasFile) {
     return (
@@ -712,8 +806,41 @@ function CanvasArea({
         alignItems: 'flex-start',
       }}
     >
-      <div style={cardStyle}>
+      <div style={{ ...cardStyle, position: 'relative' }}>
         {toolContent}
+        {sigMode === 'placing' && (
+          <div
+            onClick={handleOverlayClick}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              cursor: 'crosshair',
+              zIndex: 10,
+              background: 'rgba(34,211,160,.03)',
+              border: '2px solid rgba(34,211,160,.35)',
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span
+              style={{
+                background: 'rgba(34,211,160,.92)',
+                color: '#0b0d14',
+                padding: '6px 16px',
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: 700,
+                pointerEvents: 'none',
+                userSelect: 'none',
+                boxShadow: '0 2px 12px rgba(0,0,0,.3)',
+              }}
+            >
+              Click to place signature
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -736,6 +863,11 @@ export default function WorkspaceShell() {
   const [isDragging, setIsDragging] = useState(false)
   const [activePage, setActivePage] = useState(1)
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+
+  /* Sign state */
+  const [sigMode, setSigMode] = useState<SigMode>('idle')
+  const [pendingSigText, setPendingSigText] = useState('')
+  const [sigs, setSigs] = useState<SigEntry[]>([])
 
   /* Compress state */
   const [compressEnabled, setCompressEnabled] = useState(false)
@@ -845,6 +977,22 @@ export default function WorkspaceShell() {
   const handlePageCount = useCallback((n: number) => setPageCount(n), [])
   const handleTextItems = useCallback((items: ExtractedTextItem[]) => setTextItems(items), [])
 
+  /* Sign handlers */
+  const handleOpenSigNaming = useCallback(() => setSigMode('naming'), [])
+  const handleConfirmSigName = useCallback((name: string) => {
+    setPendingSigText(name)
+    setSigMode('placing')
+  }, [])
+  const handleCancelSig = useCallback(() => {
+    setSigMode('idle')
+    setPendingSigText('')
+  }, [])
+  const handleSigPlace = useCallback((pageNum: number, xPct: number, yPct: number) => {
+    setSigs(prev => [...prev, { pageNum, xPct, yPct, text: pendingSigText }])
+    setSigMode('idle')
+    setPendingSigText('')
+  }, [pendingSigText])
+
   /* Compute compress stats when compress tool is active and pdfBytes available */
   useEffect(() => {
     if (activeTool.key !== 'compress' || !pdfBytes) return
@@ -900,6 +1048,13 @@ export default function WorkspaceShell() {
         outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
         outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
       }
+      if (sigs.length > 0) {
+        const { embedTypedSignature } = await import('@/lib/pdf/signature')
+        outputBytes = await embedTypedSignature(outputBytes, sigs)
+        if (outputName === file.name) {
+          outputName = file.name.replace(/\.pdf$/i, '_signed.pdf')
+        }
+      }
       if (compressEnabled) {
         const { compressPdf } = await import('@/lib/pdf/compress')
         const result = await compressPdf(outputBytes)
@@ -917,7 +1072,7 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, compressEnabled])
+  }, [pdfBytes, file, editMap, textItems, sigs, compressEnabled])
 
   return (
     <>
@@ -1034,6 +1189,11 @@ export default function WorkspaceShell() {
               compressStats={compressStats}
               compressLoading={compressLoading}
               onToggleCompress={handleToggleCompress}
+              sigMode={sigMode}
+              sigCount={sigs.length}
+              onOpenSigNaming={handleOpenSigNaming}
+              onConfirmSigName={handleConfirmSigName}
+              onCancelSig={handleCancelSig}
             />
           </div>
         </div>
@@ -1062,6 +1222,8 @@ export default function WorkspaceShell() {
             onFileSelect={handleFileSelect}
             onFieldSelect={setSelectedFieldId}
             pageRefs={pageRefsMap}
+            sigMode={sigMode}
+            onSigPlace={handleSigPlace}
           />
         </div>
       </div>

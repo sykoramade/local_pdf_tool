@@ -18,7 +18,7 @@
  *    No coordinate math is inlined here — coords.ts is the single source of truth.
  */
 
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { pctToPdfCoords } from './coords'
 
 // ─── Public interface ─────────────────────────────────────────────────────────
@@ -100,6 +100,73 @@ export async function applySignatures(
   // useObjectStreams: false — prevents font cross-reference corruption in some
   // PDF viewers (same fix as save.ts). Object streams are a PDF 1.5 feature
   // that certain viewers misparse when resolving embedded font resources.
+  const saved = await pdfDoc.save({ useObjectStreams: false })
+  return new Uint8Array(saved)
+}
+
+// ─── embedTypedSignature ──────────────────────────────────────────────────────
+
+export interface TypedSignatureEntry {
+  /** 1-indexed page number. */
+  pageNum: number
+  /** Centre X as % of page width (0–100). */
+  xPct: number
+  /** Centre Y as % of page height (0–100). */
+  yPct: number
+  /** The typed name to render. */
+  text: string
+  /** Signature width as % of page width (default 30). */
+  widthPct?: number
+}
+
+/**
+ * Embed typed-name signatures into a PDF using Times Roman Italic.
+ * Font size is computed so the text fits within widthPct of the page width.
+ */
+export async function embedTypedSignature(
+  pdfBytes: Uint8Array,
+  entries: TypedSignatureEntry[],
+): Promise<Uint8Array> {
+  if (entries.length === 0) return pdfBytes
+
+  const pdfDoc = await PDFDocument.load(pdfBytes as unknown as ArrayBuffer)
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic)
+  const pages = pdfDoc.getPages()
+
+  for (const entry of entries) {
+    const page = pages[entry.pageNum - 1]
+    if (!page) {
+      throw new Error(
+        `embedTypedSignature: pageNum ${entry.pageNum} does not exist ` +
+        `(PDF has ${pages.length} page(s)).`,
+      )
+    }
+
+    if (!entry.text.trim()) continue
+
+    const { width: pw, height: ph } = page.getSize()
+    const targetW = ((entry.widthPct ?? 30) / 100) * pw
+
+    // Shrink font until text fits target width
+    let size = 48
+    while (size > 8 && font.widthOfTextAtSize(entry.text, size) > targetW) size -= 2
+
+    const textW = font.widthOfTextAtSize(entry.text, size)
+    const textH = font.heightAtSize(size)
+
+    // Convert % centre coords to PDF user units (origin = bottom-left)
+    const cx = (entry.xPct / 100) * pw
+    const cy = ph - (entry.yPct / 100) * ph
+
+    page.drawText(entry.text, {
+      x: cx - textW / 2,
+      y: cy - textH / 2,
+      size,
+      font,
+      color: rgb(0.1, 0.1, 0.14),
+    })
+  }
+
   const saved = await pdfDoc.save({ useObjectStreams: false })
   return new Uint8Array(saved)
 }
