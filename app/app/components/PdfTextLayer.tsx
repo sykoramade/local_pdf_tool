@@ -1,21 +1,40 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import type { ExtractedTextItem, EditMap } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
 import { mapFont } from '@/lib/pdf/fonts/font-map'
 
 interface PdfTextLayerProps {
   items: ExtractedTextItem[]
   editMap: EditMap
-  onEdit: (id: string, text: string) => void
+  onEdit: (id: string, fieldData: FieldData) => void
+  onFieldSelect?: (id: string) => void
   scale: number
 }
 
-export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextLayerProps) {
+export default function PdfTextLayer({ items, editMap, onEdit, onFieldSelect, scale }: PdfTextLayerProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   function handleBlur(id: string, value: string) {
-    onEdit(id, value)
+    const item = items.find(i => i.id === id)
+    if (!item) return
+
+    const existing = editMap.get(id)
+
+    // Don't record an edit if nothing actually changed
+    if (!existing && value === item.str) { setActiveId(null); return }
+    if (existing && value === existing.value) { setActiveId(null); return }
+
+    const fieldData: FieldData = {
+      value,
+      family: existing?.family ?? 'Helvetica',
+      size: existing?.size ?? item.canvasFontSize ?? 12,
+      color: existing?.color ?? '#000000',
+      bold: existing?.bold ?? false,
+      italic: existing?.italic ?? false,
+      underline: existing?.underline ?? false,
+    }
+    onEdit(id, fieldData)
     setActiveId(null)
   }
 
@@ -26,8 +45,8 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
 
         const fontMatch = mapFont(item.fontName)
         const isActive = activeId === item.id
-        const currentText = editMap.get(item.id) ?? item.str
-        const isEdited = editMap.has(item.id) && editMap.get(item.id) !== item.str
+        const currentText = editMap.get(item.id)?.value ?? item.str
+        const isEdited = editMap.has(item.id) && editMap.get(item.id)?.value !== item.str
 
         // Minimum tap target height of 28px for mobile usability
         const tapHeight = Math.max(item.canvasFontSize * 1.2, 28)
@@ -35,7 +54,7 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
         const style: React.CSSProperties = {
           position: 'absolute',
           left: item.canvasX,
-          top: item.canvasY - item.canvasFontSize * 0.2, // small offset to align baseline
+          top: item.canvasY,
           minWidth: Math.max(item.canvasWidth, 24),
           height: tapHeight,
           fontSize: item.canvasFontSize,
@@ -76,11 +95,15 @@ export default function PdfTextLayer({ items, editMap, onEdit, scale }: PdfTextL
             }}
             className="hover:bg-indigo-50/40 hover:border-b hover:border-indigo-300/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
             title={isEdited ? `Edited: "${currentText}"` : 'Click to edit'}
-            onClick={() => setActiveId(item.id)}
+            onClick={() => {
+              setActiveId(item.id)
+              onFieldSelect?.(item.id)
+            }}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 setActiveId(item.id)
+                onFieldSelect?.(item.id)
               }
             }}
           >

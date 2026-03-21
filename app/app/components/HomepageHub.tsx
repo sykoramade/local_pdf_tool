@@ -30,7 +30,7 @@ const TOOLS: Record<ToolKey, ToolDef> = {
   sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/workspace?tool=sign' },
   annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/workspace?tool=annotate' },
   redact:   { color: '#f97066', name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
-  compress: { color: '#fb923c', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/workspace?tool=compress' },
+  compress: { color: '#60a5fa', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/workspace?tool=compress' },
 }
 
 const MORE_TOOLS: Record<MoreKey, MoreTool> = {
@@ -265,9 +265,10 @@ export default function HomepageHub() {
                   style={{
                     position: 'absolute', top: 3, left: 3,
                     height: 'calc(100% - 6px)',
-                    background: '#fff', borderRadius: 8,
-                    boxShadow: '0 1px 4px rgba(0,0,0,.22)',
-                    transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
+                    background: tool.color + '33', borderRadius: 8,
+                    border: `1px solid ${tool.color}55`,
+                    boxShadow: 'none',
+                    transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1), background .18s, border-color .18s',
                     pointerEvents: 'none', zIndex: 0,
                   }}
                 />
@@ -287,12 +288,12 @@ export default function HomepageHub() {
                         fontFamily: 'var(--font-sans)',
                         fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                         textTransform: 'uppercase',
-                        color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+                        color: isActive ? t.color : 'rgba(255,255,255,.3)',
                         cursor: 'pointer', userSelect: 'none',
                         transition: 'color .18s', whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => {
-                        if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)'
+                        if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.65)'
                       }}
                       onMouseLeave={e => {
                         if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.3)'
@@ -303,7 +304,7 @@ export default function HomepageHub() {
                         viewBox="0 0 16 16"
                         style={{
                           flexShrink: 0,
-                          color: isActive ? '#0b0d14' : 'currentColor',
+                          color: isActive ? t.color : 'currentColor',
                           opacity: isActive ? 1 : 0.7,
                         }}
                       >
@@ -509,8 +510,9 @@ export default function HomepageHub() {
                     style={{
                       position: 'absolute', top: 3, left: 3,
                       height: 'calc(100% - 6px)',
-                      background: '#fff', borderRadius: 8,
-                      boxShadow: '0 1px 4px rgba(0,0,0,.22)',
+                      background: 'rgba(251,146,60,.20)', borderRadius: 8,
+                      border: '1px solid rgba(251,146,60,.35)',
+                      boxShadow: 'none',
                       transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
                       pointerEvents: 'none', zIndex: 0,
                     }}
@@ -530,12 +532,12 @@ export default function HomepageHub() {
                           fontFamily: 'var(--font-sans)',
                           fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
                           textTransform: 'uppercase',
-                          color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+                          color: isActive ? '#fb923c' : 'rgba(255,255,255,.3)',
                           cursor: 'pointer', userSelect: 'none',
                           transition: 'color .18s', whiteSpace: 'nowrap',
                         }}
                         onMouseEnter={e => {
-                          if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.6)'
+                          if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.65)'
                         }}
                         onMouseLeave={e => {
                           if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.3)'

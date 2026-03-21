@@ -5,7 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
-import type { EditMap, ExtractedTextItem } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData } from '@/lib/pdf/types'
+import EditToolbar from '@/app/components/EditToolbar'
+import { formatBytes } from '@/lib/pdf/compress'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
 
@@ -26,6 +28,15 @@ const TOOLS: ToolDef[] = [
   { key: 'redact',   label: 'Redact',  pro: true },
   { key: 'compress', label: 'Compress' },
 ]
+
+/* ─── Tool accent colors ─── */
+const TOOL_COLORS: Record<ToolKey, { bg: string; text: string }> = {
+  edit:     { bg: 'rgba(129,140,248,.20)', text: '#818cf8' },
+  sign:     { bg: 'rgba(34,211,160,.20)',  text: '#22d3a0' },
+  annotate: { bg: 'rgba(251,191,36,.20)',  text: '#d97706' },
+  redact:   { bg: 'rgba(249,112,102,.20)', text: '#f97066' },
+  compress: { bg: 'rgba(96,165,250,.20)',  text: '#60a5fa' },
+}
 
 /* ─── Inline SVG symbols (V2 icon set) ─── */
 const SVG_DEFS = `
@@ -67,11 +78,6 @@ function SvgIcon({ id, size = 16, style }: { id: string; size?: number; style?: 
   )
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 /* ─── Spring pill selector rail — matches V2 .sel-rail/.sel-pill ─── */
 function SelRail({
@@ -108,16 +114,17 @@ function SelRail({
         padding: 3,
       }}
     >
-      {/* Spring pill */}
+      {/* Spring pill — colored by active tool */}
       <div
         style={{
           position: 'absolute',
           top: 3,
           height: 'calc(100% - 6px)',
-          background: '#fff',
+          background: TOOL_COLORS[activeTool.key].bg,
+          border: `1px solid ${TOOL_COLORS[activeTool.key].text}40`,
           borderRadius: 8,
-          boxShadow: '0 1px 4px rgba(0,0,0,.22)',
-          transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1)',
+          boxShadow: '0 1px 4px rgba(0,0,0,.12)',
+          transition: 'transform .28s cubic-bezier(.34,1.56,.64,1), width .28s cubic-bezier(.34,1.56,.64,1), background .18s, border-color .18s',
           transform: `translateX(${(pillStyle.left as number) - 0}px)`,
           width: pillStyle.width,
           pointerEvents: 'none',
@@ -150,7 +157,7 @@ function SelRail({
               fontWeight: 700,
               letterSpacing: '.06em',
               textTransform: 'uppercase',
-              color: isActive ? '#0b0d14' : 'rgba(255,255,255,.3)',
+              color: isActive ? TOOL_COLORS[tool.key].text : 'rgba(255,255,255,.3)',
               cursor: tool.pro ? 'default' : 'pointer',
               userSelect: 'none',
               transition: 'color .18s',
@@ -186,22 +193,58 @@ function SelRail({
 }
 
 /* ─── L3 contextual strips — one per tool, shown inline below sel-rail ─── */
-function L3Strip({ activeTool }: { activeTool: ToolDef }) {
+function L3Strip({
+  activeTool,
+  selectedField,
+  editCount,
+  canUndo,
+  canRedo,
+  onFieldChange,
+  onUndo,
+  onRedo,
+  compressEnabled,
+  compressStats,
+  compressLoading,
+  onToggleCompress,
+}: {
+  activeTool: ToolDef
+  selectedField: FieldData | null
+  editCount: number
+  canUndo: boolean
+  canRedo: boolean
+  onFieldChange: (patch: Partial<FieldData>) => void
+  onUndo: () => void
+  onRedo: () => void
+  compressEnabled: boolean
+  compressStats: { original: number; compressed: number; pct: number } | null
+  compressLoading: boolean
+  onToggleCompress: () => void
+}) {
   const base: React.CSSProperties = {
-    minHeight: 44,
+    height: 52,
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 0 11px',
+    padding: '0',
     gap: 10,
-    flexWrap: 'wrap',
+    overflow: 'hidden',
   }
+
+  const animKey = activeTool.key
 
   if (activeTool.key === 'edit') {
     return (
       <div style={base}>
-        <span style={{ fontSize: 12, color: '#818cf8', fontWeight: 500 }}>
-          Click any text to edit inline
-        </span>
+        <div key={animKey} style={{ width: '100%', animation: 'strip-appear .2s ease both' }}>
+          <EditToolbar
+            selectedField={selectedField}
+            editCount={editCount}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onFieldChange={onFieldChange}
+            onUndo={onUndo}
+            onRedo={onRedo}
+          />
+        </div>
       </div>
     )
   }
@@ -209,23 +252,25 @@ function L3Strip({ activeTool }: { activeTool: ToolDef }) {
   if (activeTool.key === 'sign') {
     return (
       <div style={base}>
-        <button
-          style={{
-            background: '#22d3a0',
-            color: '#0b0d14',
-            border: 'none',
-            borderRadius: 7,
-            padding: '7px 16px',
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          + Add Signature
-        </button>
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>
-          Drag to position
-        </span>
+        <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
+          <button
+            style={{
+              background: '#22d3a0',
+              color: '#0b0d14',
+              border: 'none',
+              borderRadius: 7,
+              padding: '6px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            + Add Signature
+          </button>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>
+            Drag to position
+          </span>
+        </div>
       </div>
     )
   }
@@ -233,7 +278,9 @@ function L3Strip({ activeTool }: { activeTool: ToolDef }) {
   if (activeTool.key === 'annotate') {
     return (
       <div style={base}>
-        <AnnotateSubRail />
+        <div key={animKey} style={{ animation: 'strip-appear .2s ease both' }}>
+          <AnnotateSubRail />
+        </div>
       </div>
     )
   }
@@ -241,19 +288,7 @@ function L3Strip({ activeTool }: { activeTool: ToolDef }) {
   if (activeTool.key === 'redact') {
     return (
       <div style={base}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '8px 14px',
-            background: 'rgba(249,112,102,.06)',
-            border: '1px solid rgba(249,112,102,.2)',
-            borderRadius: 9,
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
+        <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px', background: 'rgba(249,112,102,.06)', border: '1px solid rgba(249,112,102,.2)', borderRadius: 9, width: '100%', boxSizing: 'border-box', animation: 'strip-appear .2s ease both' }}>
           <SvgIcon id="ws-redact" size={16} style={{ color: '#f97066', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: '#f97066' }}>Redact — Pro feature</div>
@@ -262,17 +297,7 @@ function L3Strip({ activeTool }: { activeTool: ToolDef }) {
             </div>
           </div>
           <button
-            style={{
-              background: '#f97066',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 7,
-              padding: '7px 14px',
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            style={{ background: '#f97066', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
           >
             Upgrade →
           </button>
@@ -282,34 +307,55 @@ function L3Strip({ activeTool }: { activeTool: ToolDef }) {
   }
 
   if (activeTool.key === 'compress') {
+    const toggleOn = compressEnabled
     return (
       <div style={base}>
-        <div
-          style={{
-            width: 38,
-            height: 22,
-            borderRadius: 11,
-            background: '#60a5fa',
-            position: 'relative',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          <div
+        <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
+          {/* Toggle */}
+          <button
+            onClick={onToggleCompress}
+            aria-pressed={toggleOn}
+            aria-label="Compress on download"
             style={{
-              position: 'absolute',
-              top: 3,
-              left: 19,
-              width: 16,
-              height: 16,
-              borderRadius: 8,
-              background: '#fff',
-              boxShadow: '0 1px 2px rgba(0,0,0,.3)',
+              width: 38,
+              height: 22,
+              borderRadius: 11,
+              background: toggleOn ? '#60a5fa' : 'rgba(255,255,255,.12)',
+              position: 'relative',
+              cursor: 'pointer',
+              flexShrink: 0,
+              border: 'none',
+              padding: 0,
+              transition: 'background .2s',
             }}
-          />
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 3,
+                left: toggleOn ? 19 : 3,
+                width: 16,
+                height: 16,
+                borderRadius: 8,
+                background: '#fff',
+                boxShadow: '0 1px 2px rgba(0,0,0,.3)',
+                transition: 'left .2s',
+              }}
+            />
+          </button>
+          <span style={{ fontSize: 12, fontWeight: 600, color: toggleOn ? '#60a5fa' : 'rgba(255,255,255,.4)', transition: 'color .2s' }}>
+            Compress on download
+          </span>
+          {/* Real filesize stats */}
+          {compressLoading && (
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>Calculating…</span>
+          )}
+          {!compressLoading && compressStats && (
+            <span style={{ fontSize: 11, color: 'rgba(96,165,250,.7)' }}>
+              · {formatBytes(compressStats.original)} → {formatBytes(compressStats.compressed)} (−{compressStats.pct}%)
+            </span>
+          )}
         </div>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#60a5fa' }}>Compress on download</span>
-        <span style={{ fontSize: 11, color: 'rgba(96,165,250,.55)' }}>· Est. 30–40% reduction</span>
       </div>
     )
   }
@@ -329,7 +375,7 @@ function AnnotateSubRail() {
     { key: 'green',  label: 'Green',  dot: '#4ade80' },
     { key: 'pink',   label: 'Pink',   dot: '#f472b6' },
     { key: 'note',   label: 'Note'   },
-    { key: 'flag',   label: 'Flag'   },
+    { key: 'flag',   label: 'Arrow'  },
   ]
 
   useLayoutEffect(() => {
@@ -404,9 +450,12 @@ function AnnotateSubRail() {
             </svg>
           )}
           {m.key === 'flag' && (
+            /* Arrow post-it note icon */
             <svg width="11" height="11" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
-              <polygon points="15,2 3,2 1,8 3,14 15,14" fill="#f97066" opacity=".8"/>
-              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <rect x="2" y="3" width="9" height="8" rx="1.2" fill="currentColor" opacity=".25"/>
+              <rect x="2" y="3" width="9" height="8" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M4 13 L8 13 L8 16 Z" fill="currentColor" opacity=".4"/>
+              <path d="M7 7 L10 7 M9 5.5 L11 7 L9 8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           )}
           {m.label}
@@ -492,74 +541,6 @@ function PageRail({
   )
 }
 
-/* ─── Inline compress panel — runs compression when pdfBytes arrives ─── */
-function InlineCompressPanel({ pdfBytes, filename }: { pdfBytes: Uint8Array; filename: string }) {
-  const [state, setState] = useState<'compressing' | 'done' | 'error'>('compressing')
-  const [originalSize, setOriginalSize] = useState(0)
-  const [compressedSize, setCompressedSize] = useState(0)
-  const [savingPct, setSavingPct] = useState(0)
-  const [errorMsg, setErrorMsg] = useState('')
-  const outputRef = useRef<Uint8Array | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    async function run() {
-      try {
-        const { compressPdf } = await import('@/lib/pdf/compress')
-        const result = await compressPdf(pdfBytes)
-        if (cancelled) return
-        outputRef.current = result.output
-        setOriginalSize(result.originalBytes)
-        setCompressedSize(result.compressedBytes)
-        setSavingPct(result.savingPercent)
-        setState('done')
-      } catch (err) {
-        if (!cancelled) { setErrorMsg((err as Error).message ?? 'Compression failed'); setState('error') }
-      }
-    }
-    run()
-    return () => { cancelled = true }
-  }, [pdfBytes])
-
-  function handleDownload() {
-    if (!outputRef.current) return
-    const url = URL.createObjectURL(new Blob([outputRef.current.buffer as ArrayBuffer], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename.replace(/\.pdf$/i, '_compressed.pdf')
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const label = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`
-
-  return (
-    <div style={{ padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: '#111' }}>
-      {state === 'compressing' && (
-        <>
-          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Compressing…</div>
-          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden', margin: '0 auto', maxWidth: 200 }}>
-            <div style={{ height: '100%', width: '60%', background: '#6366f1', borderRadius: 2, animation: 'pulse 1.2s ease-in-out infinite' }} />
-          </div>
-        </>
-      )}
-      {state === 'error' && <div style={{ color: '#ef4444', fontSize: 13 }}>{errorMsg}</div>}
-      {state === 'done' && (
-        <>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>−{savingPct}%</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 20 }}>{label(originalSize)} → {label(compressedSize)}</div>
-          <button
-            onClick={handleDownload}
-            style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-          >
-            ↓ Download compressed PDF
-          </button>
-        </>
-      )}
-    </div>
-  )
-}
-
 /* ─── Canvas area — RIGHT flex:1, matches V2 .canvas-area ─── */
 function CanvasArea({
   hasFile,
@@ -575,12 +556,14 @@ function CanvasArea({
   onDragOver,
   onDragLeave,
   onFileSelect,
+  onFieldSelect,
+  pageRefs,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
   activeTool: ToolDef
   editMap: EditMap
-  onEdit: (id: string, text: string) => void
+  onEdit: (id: string, fieldData: FieldData) => void
   onPageCount: (n: number) => void
   onTextItems: (items: ExtractedTextItem[]) => void
   filename: string
@@ -589,6 +572,8 @@ function CanvasArea({
   onDragOver: (e: React.DragEvent) => void
   onDragLeave: () => void
   onFileSelect: (file: File) => void
+  onFieldSelect?: (id: string) => void
+  pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -691,8 +676,6 @@ function CanvasArea({
         Loading PDF…
       </div>
     )
-  } else if (activeTool.key === 'compress') {
-    toolContent = <InlineCompressPanel key="compress" pdfBytes={pdfBytes} filename={filename} />
   } else if (activeTool.key === 'redact') {
     toolContent = (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 560, padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)' }}>
@@ -702,25 +685,19 @@ function CanvasArea({
       </div>
     )
   } else {
-    /* edit, sign, annotate — all render the PDF canvas via PdfViewer */
+    /* All tools (edit, sign, annotate, compress) render the PDF canvas via PdfViewer */
     const isEdit = activeTool.key === 'edit'
     toolContent = (
-      <>
-        <PdfViewer
-          key={activeTool.key}
-          pdfBytes={pdfBytes}
-          scale={1.5}
-          editMap={isEdit ? editMap : readOnlyMap}
-          onEdit={isEdit ? onEdit : noOpEdit}
-          onLoad={onPageCount}
-          onTextItems={onTextItems}
-        />
-        {!isEdit && (
-          <div style={{ padding: '12px 16px', background: '#f9fafb', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: 12, color: '#6b7280', fontFamily: 'var(--font-sans)' }}>
-            {activeTool.label} tools coming soon in workspace
-          </div>
-        )}
-      </>
+      <PdfViewer
+        pdfBytes={pdfBytes}
+        scale={1.5}
+        editMap={isEdit ? editMap : readOnlyMap}
+        onEdit={isEdit ? onEdit : noOpEdit}
+        onLoad={onPageCount}
+        onTextItems={onTextItems}
+        onFieldSelect={isEdit ? onFieldSelect : undefined}
+        pageRefs={pageRefs}
+      />
     )
   }
 
@@ -758,6 +735,46 @@ export default function WorkspaceShell() {
   const [pageCount, setPageCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [activePage, setActivePage] = useState(1)
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+
+  /* Compress state */
+  const [compressEnabled, setCompressEnabled] = useState(false)
+  const [compressStats, setCompressStats] = useState<{ original: number; compressed: number; pct: number } | null>(null)
+  const [compressLoading, setCompressLoading] = useState(false)
+
+  /* History stack */
+  const histRef = useRef<EditMap[]>([new Map()])
+  const [hIdx, setHIdx] = useState(0)
+
+  const hPush = useCallback((nextMap: EditMap) => {
+    const newHist = histRef.current.slice(0, hIdx + 1)
+    newHist.push(nextMap)
+    histRef.current = newHist
+    setHIdx(newHist.length - 1)
+  }, [hIdx])
+
+  const histUndo = useCallback(() => {
+    if (hIdx === 0) return
+    const newIdx = hIdx - 1
+    setHIdx(newIdx)
+    setEditMap(histRef.current[newIdx])
+  }, [hIdx])
+
+  const histRedo = useCallback(() => {
+    if (hIdx >= histRef.current.length - 1) return
+    const newIdx = hIdx + 1
+    setHIdx(newIdx)
+    setEditMap(histRef.current[newIdx])
+  }, [hIdx])
+
+  /* Page refs for scroll-to-page */
+  const pageRefsMap = useRef<Map<number, HTMLDivElement>>(new Map())
+
+  const handlePageClick = useCallback((n: number) => {
+    setActivePage(n)
+    const el = pageRefsMap.current.get(n)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   /* Consume file handed off from homepage hub */
   useEffect(() => {
@@ -767,7 +784,7 @@ export default function WorkspaceShell() {
 
   /* Convert File → Uint8Array when file changes */
   useEffect(() => {
-    if (!file) { setPdfBytes(null); setPageCount(0); setEditMap(new Map()); setTextItems([]); return }
+    if (!file) { setPdfBytes(null); setPageCount(0); setEditMap(new Map()); setTextItems([]); histRef.current = [new Map()]; setHIdx(0); setSelectedFieldId(null); pageRefsMap.current.clear(); return }
     let cancelled = false
     file.arrayBuffer().then(buf => {
       if (!cancelled) setPdfBytes(new Uint8Array(buf))
@@ -804,29 +821,103 @@ export default function WorkspaceShell() {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), [])
   const handleFileSelect = useCallback((f: File) => setFile(f), [])
-  const handleClearFile = useCallback(() => { setFile(null); setActivePage(1) }, [])
-  const handleEdit = useCallback((id: string, text: string) => {
-    setEditMap(prev => new Map(prev).set(id, text))
-  }, [])
+  const handleClearFile = useCallback(() => { setFile(null); setActivePage(1); setSelectedFieldId(null) }, [])
+
+  const handleEdit = useCallback((id: string, fieldData: FieldData) => {
+    setEditMap(prev => {
+      const next = new Map(prev).set(id, fieldData)
+      hPush(next)
+      return next
+    })
+  }, [hPush])
+
+  const handleFieldChange = useCallback((patch: Partial<FieldData>) => {
+    if (!selectedFieldId) return
+    setEditMap(prev => {
+      const existing = prev.get(selectedFieldId)
+      if (!existing) return prev
+      const updated = { ...existing, ...patch }
+      const next = new Map(prev).set(selectedFieldId, updated)
+      hPush(next)
+      return next
+    })
+  }, [selectedFieldId, hPush])
   const handlePageCount = useCallback((n: number) => setPageCount(n), [])
   const handleTextItems = useCallback((items: ExtractedTextItem[]) => setTextItems(items), [])
 
+  /* Compute compress stats when compress tool is active and pdfBytes available */
+  useEffect(() => {
+    if (activeTool.key !== 'compress' || !pdfBytes) return
+    let cancelled = false
+    setCompressLoading(true)
+    setCompressStats(null)
+    async function run() {
+      try {
+        const { compressPdf } = await import('@/lib/pdf/compress')
+        const result = await compressPdf(pdfBytes!)
+        if (cancelled) return
+        setCompressStats({
+          original: result.originalBytes,
+          compressed: result.compressedBytes,
+          pct: result.savingPercent,
+        })
+      } catch {
+        // Stats failed silently — user can still toggle
+      } finally {
+        if (!cancelled) setCompressLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [activeTool.key, pdfBytes])
+
+  const handleToggleCompress = useCallback(() => setCompressEnabled(prev => !prev), [])
+
+  /* Keyboard handler for undo/redo */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) histRedo()
+        else histUndo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [histUndo, histRedo])
+
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+
   const handleDownload = useCallback(async () => {
     if (!pdfBytes || !file) return
-    let outputBytes = pdfBytes
-    let outputName = file.name
-    if (activeTool.key === 'edit' && editMap.size > 0) {
-      const { applyEditsAndSave } = await import('@/lib/pdf/save')
-      outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
-      outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+    setDownloadError(null)
+    let url: string | null = null
+    try {
+      let outputBytes = pdfBytes
+      let outputName = file.name
+      if (editMap.size > 0) {
+        const { applyEditsAndSave } = await import('@/lib/pdf/save')
+        outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
+        outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+      }
+      if (compressEnabled) {
+        const { compressPdf } = await import('@/lib/pdf/compress')
+        const result = await compressPdf(outputBytes)
+        outputBytes = result.output
+        outputName = outputName.replace(/\.pdf$/i, '_compressed.pdf')
+      }
+      url = URL.createObjectURL(new Blob([outputBytes.buffer as ArrayBuffer], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = outputName
+      a.click()
+    } catch (err) {
+      setDownloadError('Download failed — the PDF could not be processed. Please try again.')
+      console.error('[handleDownload]', err)
+    } finally {
+      if (url) URL.revokeObjectURL(url)
     }
-    const url = URL.createObjectURL(new Blob([outputBytes.buffer as ArrayBuffer], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = outputName
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [pdfBytes, file, activeTool.key, editMap, textItems])
+  }, [pdfBytes, file, editMap, textItems, compressEnabled])
 
   return (
     <>
@@ -888,6 +979,12 @@ export default function WorkspaceShell() {
             {file ? `${file.name} · ${formatBytes(file.size)}` : 'No file open'}
           </span>
 
+          {downloadError && (
+            <span style={{ fontSize: 11, color: '#f87171', maxWidth: 220 }} title={downloadError}>
+              ⚠ Download failed
+            </span>
+          )}
+
           <button
             disabled={!file}
             aria-label="Download PDF"
@@ -924,7 +1021,20 @@ export default function WorkspaceShell() {
         >
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
             <SelRail activeTool={activeTool} onSelect={handleSelectTool} />
-            <L3Strip activeTool={activeTool} />
+            <L3Strip
+              activeTool={activeTool}
+              selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
+              editCount={editMap.size}
+              canUndo={hIdx > 0}
+              canRedo={hIdx < histRef.current.length - 1}
+              onFieldChange={handleFieldChange}
+              onUndo={histUndo}
+              onRedo={histRedo}
+              compressEnabled={compressEnabled}
+              compressStats={compressStats}
+              compressLoading={compressLoading}
+              onToggleCompress={handleToggleCompress}
+            />
           </div>
         </div>
 
@@ -933,7 +1043,7 @@ export default function WorkspaceShell() {
           <PageRail
             pageCount={pageCount}
             activePage={activePage}
-            onPageClick={setActivePage}
+            onPageClick={handlePageClick}
           />
 
           <CanvasArea
@@ -950,6 +1060,8 @@ export default function WorkspaceShell() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onFileSelect={handleFileSelect}
+            onFieldSelect={setSelectedFieldId}
+            pageRefs={pageRefsMap}
           />
         </div>
       </div>

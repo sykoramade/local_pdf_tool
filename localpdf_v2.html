@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalPDF — Prototype v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d14;
+  --surf:rgba(255,255,255,.03);
+  --bord:rgba(255,255,255,.08);
+  --bord2:rgba(255,255,255,.14);
+  --tx:#f4f6fc;
+  --tx2:rgba(255,255,255,.5);
+  --tx3:rgba(255,255,255,.28);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --font-display:'Instrument Serif',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --tc:#818cf8;
+}
+html,body{height:100%;background:var(--bg);font-family:var(--font-body);color:var(--tx);overflow:hidden}
+button{font-family:var(--font-body);cursor:pointer;border:none}
+input{font-family:var(--font-body)}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .22s var(--ease) both}
+
+/* ── NAV ── */
+.nav{
+  display:flex;align-items:center;gap:8px;
+  padding:0 16px;height:50px;
+  border-bottom:1px solid var(--bord);
+  background:rgba(11,13,20,.95);
+  backdrop-filter:blur(14px);
+  flex-shrink:0;z-index:50;
+}
+.nav-logo{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.nav-back{background:none;color:var(--tx2);font-size:18px;padding:6px 8px 6px 0;line-height:1;transition:color .15s}
+.nav-back:hover{color:var(--tx)}
+.nav-filename{font-size:12px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-dl{
+  background:#6366f1;color:#fff;
+  border-radius:8px;padding:7px 14px;
+  font-size:11px;font-weight:600;letter-spacing:.03em;
+  white-space:nowrap;transition:background .25s;
+}
+.nav-dl.dim{background:rgba(99,102,241,.35)}
+.nav-dl:hover{background:#4f46e5}
+
+/* ── SELECTOR RAIL ── */
+.sel-rail{
+  position:relative;display:flex;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--bord);
+  border-radius:11px;padding:3px;
+}
+.sel-pill{
+  position:absolute;top:3px;height:calc(100% - 6px);
+  background:#fff;border-radius:8px;
+  box-shadow:0 1px 4px rgba(0,0,0,.22);
+  transition:transform .28s var(--spring),width .28s var(--spring);
+  pointer-events:none;z-index:0;
+}
+.sel-tab{
+  position:relative;z-index:1;flex:1;
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:6px;padding:9px 8px 9px 10px;
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(255,255,255,.3);cursor:pointer;user-select:none;
+  transition:color .18s;white-space:nowrap;
+}
+.sel-tab.active{color:#0b0d14}
+.sel-tab .tab-icon{width:14px;height:14px;flex-shrink:0;opacity:.7;transition:opacity .18s}
+.sel-tab.active .tab-icon{opacity:1}
+.pro-pip{
+  font-size:7px;font-weight:700;
+  background:rgba(249,112,102,.18);color:#f97066;
+  padding:1px 4px;border-radius:3px;margin-left:2px;
+}
+
+/* ── LAYER 2 ── */
+.l2{
+  background:rgba(11,13,20,.92);border-bottom:1px solid var(--bord);
+  padding:10px 14px 0;flex-shrink:0;backdrop-filter:blur(14px);
+}
+.l2-inner{max-width:600px;margin:0 auto}
+
+/* ── LAYER 3 ── */
+.l3{
+  min-height:44px;display:flex;align-items:center;
+  padding:8px 0 11px;gap:10px;flex-wrap:wrap;
+  transition:opacity .15s,transform .15s;
+}
+.l3.hide{display:none}
+.l3.fading{opacity:0;transform:translateY(-3px)}
+
+/* ── DROP ZONE (homepage hero) ── */
+.dz-wrap{
+  border-radius:14px;
+  border:1.5px dashed rgba(255,255,255,.14);
+  background:rgba(255,255,255,.025);
+  padding:40px 24px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .25s,background .25s,box-shadow .25s;
+  position:relative;overflow:hidden;
+  margin-bottom:12px;
+}
+.dz-wrap:hover{
+  border-style:solid;
+  border-color:var(--tc);
+  background:color-mix(in srgb,var(--tc) 6%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--tc) 20%,transparent);
+}
+.dz-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;
+  background:color-mix(in srgb,var(--tc) 15%,transparent);
+  transition:background .25s;
+}
+.dz-icon svg{transition:transform .2s var(--spring)}
+.dz-wrap:hover .dz-icon svg{transform:translateY(-2px)}
+.dz-title{
+  font-size:15px;font-weight:500;color:var(--tx);
+  margin-bottom:6px;letter-spacing:-.1px;
+}
+.dz-hint{font-size:12px;color:var(--tx3);margin-bottom:18px}
+.dz-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 22px;border-radius:8px;
+  font-size:12px;font-weight:600;letter-spacing:.02em;
+  color:#fff;background:var(--tc);
+  border:none;cursor:pointer;
+  transition:background .2s,transform .15s;
+}
+.dz-btn:hover{transform:translateY(-1px)}
+.dz-btn:active{transform:scale(.98)}
+
+/* Tool descriptor line */
+.tool-descriptor{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--tx2);
+  padding:2px 0 14px;
+}
+.tool-descriptor .desc-icon{
+  width:20px;height:20px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--tc) 15%,transparent);
+  flex-shrink:0;
+}
+.tool-descriptor .desc-name{font-weight:600;color:var(--tc)}
+
+/* Pages row */
+.pages-divider{
+  display:flex;align-items:center;gap:10px;
+  margin:2px 0 10px;font-size:11px;color:var(--tx3);
+}
+.pages-divider::before,.pages-divider::after{
+  content:'';flex:1;height:1px;background:rgba(255,255,255,.07);
+}
+.pages-row{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;
+  border:1px solid rgba(96,165,250,.15);
+  border-radius:10px;
+  background:rgba(96,165,250,.025);
+  cursor:pointer;
+  transition:background .2s,border-color .2s;
+}
+.pages-row:hover{background:rgba(96,165,250,.05);border-color:rgba(96,165,250,.3)}
+.pages-row-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:rgba(96,165,250,.12);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.pages-row-name{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.pages-row-desc{font-size:11px;color:var(--tx2);margin-top:1px}
+.pages-row-arrow{margin-left:auto;color:rgba(96,165,250,.5);font-size:16px;transition:transform .2s,color .2s}
+.pages-row:hover .pages-row-arrow{transform:translateX(3px);color:#60a5fa}
+
+/* trust pills */
+.trust-row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:18px}
+.trust-item{font-size:11.5px;color:var(--tx2);display:flex;align-items:center;gap:5px}
+
+/* ── WORKSPACE BODY ── */
+.ws-body{display:flex;flex:1;overflow:hidden}
+.page-rail{
+  width:64px;flex-shrink:0;
+  border-right:1px solid var(--bord);
+  background:rgba(0,0,0,.2);
+  padding:10px 6px;
+  display:flex;flex-direction:column;gap:8px;
+  overflow-y:auto;
+}
+.pg-thumb{
+  border-radius:4px;border:1.5px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+  aspect-ratio:1/1.414;cursor:pointer;
+  display:flex;flex-direction:column;padding:5px;
+  transition:border-color .15s;
+}
+.pg-thumb.active{border-color:var(--tc)}
+.pg-lines{display:flex;flex-direction:column;gap:2px;flex:1}
+.pg-line{height:1.5px;background:rgba(255,255,255,.14);border-radius:1px}
+.pg-line.h{height:2px;background:rgba(255,255,255,.28)}
+.pg-num{
+  font-size:8px;text-align:center;color:rgba(255,255,255,.2);
+  font-family:var(--font-mono);transition:color .15s;
+}
+.pg-thumb.active .pg-num{color:var(--tc)}
+.canvas-area{flex:1;overflow-y:auto;padding:20px 14px;display:flex;justify-content:center}
+
+/* ── PDF DOC ── */
+.pdf-doc{
+  width:100%;max-width:440px;
+  background:#fff;border-radius:2px;
+  box-shadow:0 4px 48px rgba(0,0,0,.75);
+  padding:40px 38px 60px;
+  position:relative;font-family:Georgia,serif;
+  color:#1a1a2e;min-height:560px;
+}
+.pdf-t{font-size:21px;font-weight:700;margin-bottom:8px}
+.pdf-meta-line{font-size:11.5px;color:#555;margin-bottom:3px;font-family:system-ui}
+.pdf-sec{font-size:13px;font-weight:700;margin-top:20px;margin-bottom:5px}
+.pdf-body{font-size:11.5px;line-height:1.7;color:#333}
+.pdf-f{
+  display:inline;cursor:default;border-radius:2px;
+  transition:background .15s,box-shadow .15s;padding:0 2px;
+}
+.pdf-f.editable:hover{background:rgba(129,140,248,.12);box-shadow:inset 0 -1.5px 0 rgba(129,140,248,.5);cursor:text}
+.pdf-f.edited{color:#312e81;border-bottom:1.5px solid rgba(99,102,241,.5)}
+.pdf-f.hl-yellow{background:rgba(251,191,36,.45)}
+.pdf-f.hl-green{background:rgba(74,222,128,.45)}
+.pdf-f.hl-pink{background:rgba(244,114,182,.45)}
+.pdf-ei{
+  font-family:Georgia,serif;font-size:11.5px;
+  background:rgba(99,102,241,.07);border:1.5px solid #818cf8;
+  border-radius:3px;padding:1px 5px;color:#1a1a2e;outline:none;
+}
+.sig-zone{border-top:1px solid #e0e0e0;padding-top:8px;flex:1}
+.sig-label{font-size:9px;color:#bbb;font-family:system-ui;margin-bottom:5px}
+.sig-ph{
+  border:2px dashed rgba(34,211,160,.4);border-radius:6px;
+  padding:7px 12px;font-size:10px;color:#22d3a0;
+  background:rgba(34,211,160,.04);text-align:center;cursor:pointer;
+  font-family:system-ui;transition:background .2s;
+}
+.sig-ph:hover{background:rgba(34,211,160,.08)}
+.sig-placed{font-family:'Brush Script MT',cursive;font-size:26px;color:#1a1a2e;padding:2px 0}
+
+/* annotation overlays */
+.sticky-note{
+  position:absolute;right:-6px;
+  background:#fef08a;padding:8px 10px;
+  box-shadow:2px 3px 10px rgba(0,0,0,.18);
+  font-family:system-ui;font-size:10px;color:#1c1917;
+  border-radius:2px;width:112px;cursor:pointer;z-index:20;
+}
+.arrow-flag{position:absolute;right:0;cursor:pointer;z-index:20;line-height:0}
+
+/* ── L3 COMPONENTS ── */
+.op-badge{
+  display:inline-flex;align-items:center;
+  font-size:11px;font-weight:600;
+  padding:3px 11px;border-radius:20px;
+}
+.toggle-btn{
+  width:38px;height:22px;border-radius:11px;
+  position:relative;cursor:pointer;
+  transition:background .2s;flex-shrink:0;
+  padding:0;
+}
+.toggle-btn.on{background:#60a5fa}
+.toggle-btn.off{background:rgba(255,255,255,.15)}
+.toggle-k{
+  position:absolute;top:3px;left:3px;
+  width:16px;height:16px;border-radius:8px;
+  background:#fff;transition:left .2s var(--spring);
+  box-shadow:0 1px 2px rgba(0,0,0,.3);
+}
+.toggle-btn.on .toggle-k{left:19px}
+
+/* annot inner pill */
+.an-rail{
+  position:relative;display:inline-flex;
+  background:rgba(255,255,255,.05);border:1px solid var(--bord);
+  border-radius:9px;padding:3px;
+}
+.an-pill{
+  position:absolute;top:3px;height:calc(100% - 6px);
+  background:#fff;border-radius:6px;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+  transition:transform .24s var(--spring),width .24s var(--spring);
+  pointer-events:none;z-index:0;
+}
+.an-tab{
+  position:relative;z-index:1;
+  display:flex;align-items:center;gap:5px;
+  padding:5px 10px;font-size:10px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;
+  cursor:pointer;user-select:none;
+  color:rgba(255,255,255,.35);transition:color .18s;white-space:nowrap;
+}
+.an-tab.active{color:#0b0d14}
+.an-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ── MODAL ── */
+.modal-ov{
+  position:absolute;inset:0;background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center;z-index:100;
+}
+.modal-ov.open{display:flex}
+.modal-box{
+  background:#141720;border:1px solid rgba(255,255,255,.1);
+  border-radius:18px;padding:26px;width:300px;max-width:92%;
+}
+.modal-hd{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:15px;font-weight:600;margin-bottom:16px;
+}
+.modal-x{background:none;color:var(--tx2);font-size:17px;padding:2px}
+.sig-canvas{
+  background:#fff;border-radius:8px;height:110px;
+  border:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;
+  background-image:repeating-linear-gradient(transparent,transparent 23px,#e5e7eb 23px,#e5e7eb 24px);
+}
+.modal-hint{font-size:11px;color:var(--tx3);text-align:center;margin:10px 0 16px}
+.modal-acts{display:flex;gap:8px}
+.m-cancel{flex:1;background:none;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:10px;color:var(--tx2);font-size:12px}
+.m-confirm{flex:2;background:#22d3a0;border:none;border-radius:9px;padding:10px;color:#0b0d14;font-weight:700;font-size:12px}
+.m-foot{margin-top:10px;text-align:center;font-size:11px;color:var(--tx3)}
+.m-foot strong{color:#f97066}
+
+/* dl modal */
+.dl-row{
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;padding:7px 10px;
+  background:rgba(255,255,255,.035);
+  border-radius:7px;border:1px solid var(--bord);
+  margin-bottom:7px;
+}
+.dl-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.m-confirm-dl{
+  width:100%;background:#6366f1;border:none;
+  border-radius:10px;padding:13px;color:#fff;
+  font-weight:700;font-size:13px;margin-top:14px;
+}
+
+/* pages */
+.pg-body{max-width:520px;margin:0 auto;padding:16px 14px}
+.sec-label{
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tx3);padding:9px 14px;border-bottom:1px solid var(--bord);
+}
+.merge-list{background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;margin-top:10px}
+.merge-row{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 14px;border-top:1px solid var(--bord);font-size:12px;
+}
+.merge-row:first-child{border-top:none}
+.merge-n{font-size:10px;color:var(--tx3);width:14px;flex-shrink:0;font-family:var(--font-mono)}
+.drop-z{
+  border:2px dashed rgba(255,255,255,.1);border-radius:12px;padding:22px;
+  text-align:center;margin-top:12px;transition:border-color .2s;
+}
+.drop-z:hover{border-color:rgba(99,102,241,.4)}
+.proto-lbl{
+  position:fixed;bottom:10px;right:10px;
+  font-size:9px;font-family:var(--font-mono);
+  color:rgba(255,255,255,.18);pointer-events:none;letter-spacing:.1em;z-index:200;
+}
+</style>
+</head>
+<body>
+
+<!-- SVG icon defs (reusable) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-edit" viewBox="0 0 16 16"><path d="M11.5 1.5a1.5 1.5 0 0 1 2.12 2.12l-8.5 8.5-2.83.71.71-2.83 8.5-8.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-sign" viewBox="0 0 16 16"><path d="M2 12c2-3 4-5 5-5s1 2 2 2 2-1 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13 12h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ic-annotate" viewBox="0 0 16 16"><rect x="2" y="5" width="8" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="2" y="8" width="10" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="2" y="11" width="6" height="1.5" rx=".75" fill="currentColor" opacity=".5"/><rect x="1" y="4" width="3" height="9" rx="1.5" fill="currentColor"/></symbol>
+  <symbol id="ic-redact" viewBox="0 0 16 16"><rect x="2" y="5" width="12" height="6" rx="1.5" fill="currentColor"/><line x1="2" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-compress" viewBox="0 0 16 16"><path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-pages" viewBox="0 0 16 16"><rect x="2" y="3" width="7" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="7" y="4" width="7" height="9" rx="1" fill="currentColor" opacity=".25"/><rect x="7" y="4" width="7" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- ════════════════════════ HOME ════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <nav class="nav">
+    <span class="nav-logo">LocalPDF</span>
+    <div style="flex:1"></div>
+    <button style="background:none;font-size:12px;color:var(--tx3);padding:5px 9px">Pricing</button>
+    <button style="background:none;font-size:12px;color:var(--tx3);padding:5px 9px">Privacy</button>
+    <button style="background:none;font-size:12px;color:var(--tx3);padding:5px 9px">About</button>
+  </nav>
+  <div style="overflow-y:auto;flex:1">
+    <div style="max-width:560px;margin:0 auto;padding:44px 18px 40px">
+
+      <p style="font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px;text-align:center">100% local · zero uploads · works offline</p>
+
+      <h1 style="font-family:var(--font-display);font-size:clamp(34px,7vw,48px);font-weight:400;line-height:1.08;letter-spacing:-.4px;text-align:center;margin-bottom:28px">
+        Edit PDFs.<br><em style="font-style:italic;color:rgba(255,255,255,.28)">Your file stays here.</em>
+      </h1>
+
+      <!-- Tool selector -->
+      <div class="sel-rail" id="home-sel" style="margin-bottom:14px">
+        <div class="sel-pill" id="home-pill"></div>
+        <div class="sel-tab active" data-t="edit" onclick="setHTool('edit')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-edit"/></svg>Edit
+        </div>
+        <div class="sel-tab" data-t="sign" onclick="setHTool('sign')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-sign"/></svg>Sign
+        </div>
+        <div class="sel-tab" data-t="annotate" onclick="setHTool('annotate')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-annotate"/></svg>Annotate
+        </div>
+        <div class="sel-tab" data-t="redact" onclick="setHTool('redact')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-redact"/></svg>Redact<span class="pro-pip">PRO</span>
+        </div>
+        <div class="sel-tab" data-t="compress" onclick="setHTool('compress')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-compress"/></svg>Compress
+        </div>
+      </div>
+
+      <!-- Drop zone — hero -->
+      <div class="dz-wrap" id="dz" onclick="gotoWS()">
+        <div class="dz-icon" id="dz-icon">
+          <svg id="dz-svg" width="24" height="24" viewBox="0 0 24 24" style="color:var(--tc)"><use href="#ic-upload"/></svg>
+        </div>
+        <div class="dz-title">Drop your PDF here</div>
+        <div class="dz-hint" id="dz-hint">contracts · invoices · forms · CVs</div>
+        <button class="dz-btn" id="dz-btn" onclick="e=>{e.stopPropagation();gotoWS()}">
+          <svg width="14" height="14" viewBox="0 0 24 24" style="color:#fff"><use href="#ic-upload"/></svg>
+          Browse files
+        </button>
+      </div>
+
+      <!-- Tool descriptor line -->
+      <div class="tool-descriptor" id="tool-desc">
+        <div class="desc-icon" id="desc-icon">
+          <svg width="12" height="12" viewBox="0 0 16 16" id="desc-svg" style="color:var(--tc)"><use href="#ic-edit"/></svg>
+        </div>
+        <span class="desc-name" id="desc-name">Edit</span>
+        <span id="desc-text">— Click any text to edit it directly</span>
+      </div>
+
+      <!-- MORE TOOLS expandable -->
+      <div style="height:1px;background:rgba(255,255,255,.07);margin:4px 0 0"></div>
+      <div id="more-toggle" onclick="toggleMore()" style="display:flex;align-items:center;justify-content:space-between;padding:13px 4px;cursor:pointer;user-select:none;transition:opacity .15s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.14em;color:rgba(255,255,255,.55)">MORE TOOLS</span>
+        <svg id="more-arrow" width="16" height="16" viewBox="0 0 14 14" style="color:rgba(255,255,255,.5);transition:transform .25s var(--spring)">
+          <polyline points="2,4 7,9 12,4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div id="more-drawer" style="overflow:hidden;max-height:0;transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .25s;opacity:0">
+        <div style="padding-bottom:14px">
+          <!-- Pages mini-selector -->
+          <div class="sel-rail" id="more-sel" style="margin-bottom:12px">
+            <div class="sel-pill" id="more-pill"></div>
+            <div class="sel-tab active" data-t="merge" onclick="setMoreMode('merge')">
+              <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-pages"/></svg>Merge
+            </div>
+            <div class="sel-tab" data-t="split" onclick="setMoreMode('split')">
+              <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-pages"/></svg>Split
+            </div>
+          </div>
+          <!-- Pages dropzone -->
+          <div class="dz-wrap" id="more-dz" onclick="gotoPages()" style="padding:28px 24px;border-color:rgba(96,165,250,.28);background:rgba(96,165,250,.03)">
+            <div class="dz-icon" style="background:rgba(96,165,250,.15);margin-bottom:12px">
+              <svg width="22" height="22" viewBox="0 0 24 24" style="color:#60a5fa"><use href="#ic-upload"/></svg>
+            </div>
+            <div class="dz-title" id="more-dz-title" style="font-size:13px">Drop PDFs here to merge</div>
+            <div class="dz-hint" id="more-dz-hint" style="margin-bottom:14px">combine multiple files into one</div>
+            <button class="dz-btn" style="background:#60a5fa;color:#fff;font-size:11px;padding:8px 18px">
+              <svg width="13" height="13" viewBox="0 0 24 24" style="color:#fff"><use href="#ic-upload"/></svg>
+              Browse files
+            </button>
+          </div>
+          <!-- descriptor -->
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);padding:8px 0 2px">
+            <div style="width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(96,165,250,.15);flex-shrink:0">
+              <svg width="12" height="12" viewBox="0 0 16 16" id="more-desc-icon" style="color:#60a5fa"><use href="#ic-pages"/></svg>
+            </div>
+            <span style="font-weight:600;color:#60a5fa" id="more-desc-name">Merge</span>
+            <span id="more-desc-text">— Combine multiple PDFs into one</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="trust-row">
+        <span class="trust-item"><span style="color:#22d3a0;font-size:11px">&#10003;</span>Files never uploaded</span>
+        <span class="trust-item"><span style="color:#22d3a0;font-size:11px">&#10003;</span>No account required</span>
+        <span class="trust-item"><span style="color:#22d3a0;font-size:11px">&#10003;</span>No watermark</span>
+        <span class="trust-item"><span style="color:#22d3a0;font-size:11px">&#10003;</span>Free to use</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ WORKSPACE ════════════════════════ -->
+<div id="screen-workspace" class="screen">
+  <header class="nav">
+    <button class="nav-back" onclick="gotoHome()">&#8592;</button>
+    <span class="nav-filename">contract_draft.pdf</span>
+    <button class="nav-dl dim" id="dl-btn" onclick="openDL()">&#8595; Download</button>
+  </header>
+
+  <div class="l2">
+    <div class="l2-inner">
+      <div class="sel-rail" id="ws-sel">
+        <div class="sel-pill" id="ws-pill"></div>
+        <div class="sel-tab active" data-t="edit" onclick="setWSTool('edit')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-edit"/></svg>Edit
+        </div>
+        <div class="sel-tab" data-t="sign" onclick="setWSTool('sign')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-sign"/></svg>Sign
+        </div>
+        <div class="sel-tab" data-t="annotate" onclick="setWSTool('annotate')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-annotate"/></svg>Annotate
+        </div>
+        <div class="sel-tab" data-t="redact" onclick="setWSTool('redact')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-redact"/></svg>Redact<span class="pro-pip">PRO</span>
+        </div>
+        <div class="sel-tab" data-t="compress" onclick="setWSTool('compress')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-compress"/></svg>Compress
+        </div>
+      </div>
+
+      <div class="l3" id="l3-edit">
+        <span style="font-size:12px;color:#818cf8;font-weight:500">Click any text to edit inline</span>
+        <span id="edit-badge" style="display:none" class="op-badge"></span>
+        <button id="undo-btn" style="display:none;background:none;border:1px solid var(--bord2);border-radius:6px;padding:3px 10px;color:var(--tx3);font-size:11px" onclick="undoEdits()">&#8617; Undo all</button>
+      </div>
+      <div class="l3 hide" id="l3-sign">
+        <button onclick="openSig()" style="background:#22d3a0;color:#0b0d14;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:700">+ Add Signature</button>
+        <span id="sig-badge" style="display:none" class="op-badge"></span>
+        <span style="margin-left:auto;font-size:11px;color:var(--tx3)">Drag to position</span>
+      </div>
+      <div class="l3 hide" id="l3-annotate">
+        <div class="an-rail" id="an-rail">
+          <div class="an-pill" id="an-pill"></div>
+          <div class="an-tab active" data-m="yellow" onclick="setAMode('yellow')"><span class="an-dot" style="background:#fbbf24"></span>Yellow</div>
+          <div class="an-tab" data-m="green" onclick="setAMode('green')"><span class="an-dot" style="background:#4ade80"></span>Green</div>
+          <div class="an-tab" data-m="pink" onclick="setAMode('pink')"><span class="an-dot" style="background:#f472b6"></span>Pink</div>
+          <div class="an-tab" data-m="note" onclick="setAMode('note')">
+            <svg width="11" height="11" viewBox="0 0 16 16" style="flex-shrink:0"><rect x="2" y="2" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="8" y1="12" x2="8" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Note
+          </div>
+          <div class="an-tab" data-m="flag" onclick="setAMode('flag')">
+            <svg width="11" height="11" viewBox="0 0 16 16" style="flex-shrink:0"><polygon points="15,2 3,2 1,8 3,14 15,14" fill="#f97066" opacity=".8"/><line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Flag
+          </div>
+        </div>
+        <span id="an-badge" style="display:none" class="op-badge"></span>
+      </div>
+      <div class="l3 hide" id="l3-redact">
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 14px;background:rgba(249,112,102,.06);border:1px solid rgba(249,112,102,.2);border-radius:9px;width:100%;box-sizing:border-box" id="redact-pro-bar">
+          <svg width="16" height="16" viewBox="0 0 16 16" style="color:#f97066;flex-shrink:0"><use href="#ic-redact"/></svg>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:#f97066">Redact — Pro feature</div>
+            <div style="font-size:11px;color:var(--tx2)">Permanent removal · GDPR &amp; HIPAA compliant</div>
+          </div>
+          <button style="background:#f97066;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;flex-shrink:0">Upgrade &#8594;</button>
+        </div>
+      </div>
+      <div class="l3 hide" id="l3-compress">
+        <button class="toggle-btn on" id="cp-toggle" onclick="toggleCP()"><div class="toggle-k"></div></button>
+        <span id="cp-lbl" style="font-size:12px;font-weight:600;color:#60a5fa">Compress on download</span>
+        <span id="cp-est" style="font-size:11px;color:rgba(96,165,250,.55)">· Est. 30–40% reduction</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ws-body">
+    <!-- Page rail -->
+    <div class="page-rail" id="pg-rail">
+      <div class="pg-thumb active" data-p="1" onclick="selPg(1)">
+        <div class="pg-lines">
+          <div class="pg-line h"></div>
+          <div class="pg-line h" style="width:55%"></div>
+          <div class="pg-line" style="width:82%"></div>
+          <div class="pg-line" style="width:68%"></div>
+          <div class="pg-line" style="width:75%"></div>
+          <div class="pg-line h" style="margin-top:3px;width:50%"></div>
+          <div class="pg-line" style="width:88%"></div>
+        </div>
+        <div class="pg-num">1</div>
+      </div>
+      <div class="pg-thumb" data-p="2" onclick="selPg(2)">
+        <div class="pg-lines">
+          <div class="pg-line h" style="width:45%"></div>
+          <div class="pg-line" style="width:90%"></div>
+          <div class="pg-line" style="width:76%"></div>
+          <div class="pg-line h" style="margin-top:3px;width:48%"></div>
+          <div class="pg-line" style="width:80%"></div>
+        </div>
+        <div class="pg-num">2</div>
+      </div>
+      <div class="pg-thumb" data-p="3" onclick="selPg(3)">
+        <div class="pg-lines">
+          <div class="pg-line" style="width:70%"></div>
+          <div class="pg-line" style="width:85%"></div>
+          <div class="pg-line h" style="margin-top:3px;width:42%"></div>
+          <div class="pg-line" style="width:88%"></div>
+        </div>
+        <div class="pg-num">3</div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-area">
+      <div class="pdf-doc" id="pdf-doc">
+        <div class="pdf-t"><span class="pdf-f" data-f="title" onclick="fClick(this)">Service Agreement</span></div>
+        <div style="margin-bottom:18px">
+          <div class="pdf-meta-line">Dated: <span class="pdf-f" data-f="date" onclick="fClick(this)">March 18, 2026</span></div>
+          <div class="pdf-meta-line">Between: <span class="pdf-f" data-f="p1" onclick="fClick(this)">Lounge Labs UG</span> ("Provider")</div>
+          <div class="pdf-meta-line">And: <span class="pdf-f" data-f="p2" onclick="fClick(this)">Acme Corporation</span> ("Client")</div>
+        </div>
+        <div style="height:1px;background:#e5e7eb;margin-bottom:16px"></div>
+        <div class="pdf-sec">1. Services</div>
+        <div class="pdf-body">Provider agrees to deliver software services as outlined in Schedule A. <span class="pdf-f" data-f="scope" onclick="fClick(this)">The scope includes design, development, and ongoing support.</span></div>
+        <div class="pdf-sec">2. Payment Terms</div>
+        <div class="pdf-body">Total Contract Value: <span class="pdf-f" data-f="val" onclick="fClick(this)">$12,500.00</span><br>Payments due within <span class="pdf-f" data-f="days" onclick="fClick(this)">30 days</span> of invoice. Late fees apply on overdue amounts.</div>
+        <div class="pdf-sec">3. Confidentiality</div>
+        <div class="pdf-body">Both parties maintain strict confidentiality for <span class="pdf-f" data-f="conf" onclick="fClick(this)">3 years</span> following termination of this agreement.</div>
+        <div class="pdf-sec">4. Governing Law</div>
+        <div class="pdf-body">Governed by the laws of <span class="pdf-f" data-f="jur" onclick="fClick(this)">Germany (Berlin)</span>. Disputes resolved by arbitration.</div>
+
+        <div id="annot-layer"></div>
+
+        <div style="position:absolute;bottom:16px;left:38px;right:38px">
+          <div style="display:flex;gap:20px">
+            <div class="sig-zone">
+              <div class="sig-label">Provider — Lounge Labs UG</div>
+              <div id="sig-prov"></div>
+            </div>
+            <div class="sig-zone">
+              <div class="sig-label">Client — Acme Corporation</div>
+              <div id="sig-client"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ PAGES ════════════════════════ -->
+<div id="screen-pages" class="screen">
+  <header class="nav">
+    <button class="nav-back" onclick="gotoHome()">&#8592;</button>
+    <span style="font-size:13px;color:var(--tx2);flex:1">Pages — Merge &amp; Split</span>
+    <button class="nav-dl">&#8595; Download</button>
+  </header>
+  <div class="l2">
+    <div class="l2-inner">
+      <div class="sel-rail" id="pg-sel">
+        <div class="sel-pill" id="pg-pill"></div>
+        <div class="sel-tab active" data-t="merge" onclick="setPGMode('merge')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-pages"/></svg>Merge
+        </div>
+        <div class="sel-tab" data-t="split" onclick="setPGMode('split')">
+          <svg class="tab-icon" viewBox="0 0 16 16"><use href="#ic-pages"/></svg>Split
+        </div>
+      </div>
+      <div class="l3" id="l3-pg-merge"><span style="font-size:12px;color:var(--tx2)">Combine multiple PDFs · drag to reorder</span></div>
+      <div class="l3 hide" id="l3-pg-split"><span style="font-size:12px;color:var(--tx2)">Split into pages or a custom range</span></div>
+    </div>
+  </div>
+  <div style="overflow-y:auto;flex:1">
+    <div class="pg-body">
+      <div id="pg-merge">
+        <div class="drop-z">
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">Drop PDFs here to add them</div>
+          <button style="margin-top:10px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:12px;font-weight:600">Browse files</button>
+        </div>
+        <div class="merge-list">
+          <div class="sec-label">Merge order — drag to reorder</div>
+          <div class="merge-row"><span class="merge-n">1</span><span style="color:var(--tx3)">&#8942;</span><span style="flex:1">service_agreement.pdf</span><span style="font-size:10px;color:var(--tx3);font-family:var(--font-mono)">124 KB</span><button style="background:none;color:var(--tx3);font-size:12px;margin-left:8px">&#215;</button></div>
+          <div class="merge-row"><span class="merge-n">2</span><span style="color:var(--tx3)">&#8942;</span><span style="flex:1">schedule_a.pdf</span><span style="font-size:10px;color:var(--tx3);font-family:var(--font-mono)">88 KB</span><button style="background:none;color:var(--tx3);font-size:12px;margin-left:8px">&#215;</button></div>
+          <div class="merge-row"><span class="merge-n">3</span><span style="color:var(--tx3)">&#8942;</span><span style="flex:1">invoice_march_2026.pdf</span><span style="font-size:10px;color:var(--tx3);font-family:var(--font-mono)">56 KB</span><button style="background:none;color:var(--tx3);font-size:12px;margin-left:8px">&#215;</button></div>
+        </div>
+        <button style="width:100%;margin-top:12px;background:#6366f1;color:#fff;border:none;border-radius:10px;padding:14px;font-size:13px;font-weight:700">Merge 3 files &#8594; 1 PDF</button>
+      </div>
+      <div id="pg-split" style="display:none">
+        <div style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:18px;margin-bottom:10px">
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">contract_draft.pdf · <span style="color:var(--tx3)">12 pages</span></div>
+          <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid var(--bord);border-radius:8px;padding:3px;margin-bottom:14px">
+            <div id="spl-all" onclick="setSplitMode('all')" style="flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;background:#fff;color:#0b0d14;user-select:none">All pages</div>
+            <div id="spl-rng" onclick="setSplitMode('range')" style="flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;color:rgba(255,255,255,.38);user-select:none">Page range</div>
+          </div>
+          <div id="spl-inputs" style="display:none;align-items:center;gap:12px;margin-bottom:14px">
+            <span style="font-size:12px;color:var(--tx2)">Pages</span>
+            <input type="number" value="1" style="width:52px;background:rgba(255,255,255,.07);border:1px solid var(--bord);border-radius:6px;padding:6px 8px;color:var(--tx);font-size:12px;outline:none">
+            <span style="color:var(--tx3);font-size:12px">to</span>
+            <input type="number" value="6" style="width:52px;background:rgba(255,255,255,.07);border:1px solid var(--bord);border-radius:6px;padding:6px 8px;color:var(--tx);font-size:12px;outline:none">
+          </div>
+          <div id="spl-hint" style="font-size:11px;color:var(--tx3);margin-bottom:14px">Outputs 12 individual PDFs · bundled as .zip</div>
+        </div>
+        <button style="width:100%;background:#6366f1;color:#fff;border:none;border-radius:10px;padding:14px;font-size:13px;font-weight:700">Split PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Signature modal -->
+<div class="modal-ov" id="sig-modal">
+  <div class="modal-box">
+    <div class="modal-hd">Draw your signature <button class="modal-x" onclick="closeSig()">&#215;</button></div>
+    <div class="sig-canvas"><span style="font-family:'Brush Script MT',cursive;font-size:28px;color:#1a1a2e">Alex Kim</span></div>
+    <p class="modal-hint">Draw above · click Place to use</p>
+    <div class="modal-acts">
+      <button class="m-cancel" onclick="closeSig()">Cancel</button>
+      <button class="m-confirm" onclick="placeSig()">Place Signature &#8594;</button>
+    </div>
+    <div class="m-foot">Upload image or type · <strong>Pro</strong></div>
+  </div>
+</div>
+
+<!-- Download modal -->
+<div class="modal-ov" id="dl-modal">
+  <div class="modal-box">
+    <div class="modal-hd">Ready to download <button class="modal-x" onclick="closeDL()">&#215;</button></div>
+    <div id="dl-rows"></div>
+    <button class="m-confirm-dl" onclick="closeDL()">&#8595; Download PDF</button>
+  </div>
+</div>
+
+<div class="proto-lbl">LocalPDF · v2 Prototype · Lounge Labs UG</div>
+
+<script>
+const TM={
+  edit:    {color:'#818cf8',icon:'ic-edit',    name:'Edit',     desc:'Click any text to edit it directly'},
+  sign:    {color:'#22d3a0',icon:'ic-sign',    name:'Sign',     desc:'Draw and place your signature'},
+  annotate:{color:'#fbbf24',icon:'ic-annotate',name:'Annotate', desc:'Highlight text · sticky notes · arrow flags'},
+  redact:  {color:'#f97066',icon:'ic-redact',  name:'Redact',   desc:'Permanently remove sensitive content',pro:true},
+  compress:{color:'#60a5fa',icon:'ic-compress',name:'Compress', desc:'Reduce file size before sharing'},
+};
+
+const S={
+  hTool:'edit',wTool:'edit',pgMode:'merge',aMode:'yellow',cpOn:true,
+  edits:{},sigs:[],annots:[],activePg:1,editEl:null,
+};
+
+function pill(railId,pillId,q='.sel-tab.active'){
+  const r=document.getElementById(railId),p=document.getElementById(pillId);
+  if(!r||!p)return;
+  const a=r.querySelector(q);if(!a)return;
+  const rr=r.getBoundingClientRect(),ar=a.getBoundingClientRect();
+  p.style.transform=`translateX(${ar.left-rr.left-3}px)`;
+  p.style.width=ar.width+'px';
+}
+function anPill(){
+  const r=document.getElementById('an-rail'),p=document.getElementById('an-pill');
+  if(!r||!p)return;
+  const a=r.querySelector('.an-tab.active');if(!a)return;
+  const rr=r.getBoundingClientRect(),ar=a.getBoundingClientRect();
+  p.style.transform=`translateX(${ar.left-rr.left-3}px)`;
+  p.style.width=ar.width+'px';
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('screen-'+id);
+  el.classList.add('active');
+  if(id==='home') setTimeout(()=>pill('home-sel','home-pill'),50);
+  if(id==='workspace'){setTimeout(()=>{pill('ws-sel','ws-pill');anPill();updateRail()},50)}
+  if(id==='pages') setTimeout(()=>pill('pg-sel','pg-pill'),50);
+}
+function gotoHome(){show('home')}
+function gotoWS(){S.wTool=S.hTool;show('workspace');setTimeout(()=>{wsActive(S.wTool);updateDL()},60)}
+function gotoPages(){show('pages')}
+
+/* ── HOME TOOL ── */
+function setHTool(t){
+  S.hTool=t;
+  const m=TM[t];
+  document.querySelectorAll('#home-sel .sel-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.t===t));
+  pill('home-sel','home-pill');
+  // update CSS var --tc
+  document.documentElement.style.setProperty('--tc',m.color);
+  // dz button color
+  document.getElementById('dz-btn').style.background=m.color;
+  document.getElementById('dz-btn').style.color=(t==='annotate')?'#0b0d14':'#fff';
+  // descriptor
+  document.getElementById('desc-icon').style.background=m.color+'22';
+  document.getElementById('desc-svg').innerHTML=`<use href="#${m.icon}"/>`;
+  document.getElementById('desc-name').textContent=m.name;
+  document.getElementById('desc-name').style.color=m.color;
+  document.getElementById('desc-text').textContent='— '+m.desc;
+  // dz icon
+  document.getElementById('dz-icon').style.background=m.color+'25';
+  document.getElementById('dz-svg').style.color=m.color;
+  document.getElementById('dz-svg').innerHTML=`<use href="#ic-upload"/>`;
+}
+
+/* ── WS TOOL ── */
+function wsActive(t){
+  const m=TM[t];
+  document.querySelectorAll('#ws-sel .sel-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.t===t));
+  pill('ws-sel','ws-pill');
+  ['edit','sign','annotate','redact','compress'].forEach(id=>{
+    const el=document.getElementById('l3-'+id);
+    if(!el)return;
+    el.classList.toggle('hide',id!==t);
+    if(id===t)el.classList.remove('hide');
+  });
+  document.documentElement.style.setProperty('--tc',m.color);
+  updateRail();
+  fCursors();
+  if(t==='annotate')setTimeout(anPill,30);
+}
+function setWSTool(t){
+  if(t===S.wTool)return;
+  S.editEl&&cancelEdit();
+  S.wTool=t;
+  wsActive(t);
+}
+
+/* ── PAGE RAIL ── */
+function updateRail(){
+  document.querySelectorAll('.pg-thumb').forEach(th=>{
+    th.classList.toggle('active',parseInt(th.dataset.p)===S.activePg);
+  });
+}
+function selPg(n){S.activePg=n;updateRail()}
+
+/* ── FIELD EDIT ── */
+function fCursors(){
+  document.querySelectorAll('.pdf-f').forEach(f=>{
+    if(S.wTool==='edit'){f.classList.add('editable');f.style.cursor='text'}
+    else{f.classList.remove('editable');f.style.cursor=(['annotate','redact'].includes(S.wTool))?'crosshair':'default'}
+  });
+}
+function fClick(el){
+  if(S.wTool==='edit') startEdit(el);
+  else if(S.wTool==='annotate') doAnnot(el);
+  else if(S.wTool==='redact') flashPro();
+}
+function startEdit(el){
+  if(S.editEl===el)return;
+  cancelEdit();
+  S.editEl=el;
+  const orig=el.textContent;
+  const inp=document.createElement('input');
+  inp.className='pdf-ei';inp.value=orig;
+  inp.style.fontSize=getComputedStyle(el).fontSize;
+  inp.style.width=Math.max(orig.length*7.5+20,80)+'px';
+  el.style.display='none';el.parentNode.insertBefore(inp,el.nextSibling);
+  inp.focus();inp.select();
+  inp.onblur=()=>commitEdit(el,inp);
+  inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape')cancelEdit()};
+}
+function commitEdit(el,inp){
+  el.textContent=inp.value||el.textContent;
+  el.classList.add('edited');
+  S.edits[el.dataset.f]=inp.value;
+  inp.remove();el.style.display='';S.editEl=null;
+  updEditBadge();updateDL();
+}
+function cancelEdit(){
+  if(!S.editEl)return;
+  const inp=S.editEl.parentNode.querySelector('.pdf-ei');
+  if(inp)inp.remove();
+  S.editEl.style.display='';S.editEl=null;
+}
+function undoEdits(){
+  S.edits={};
+  document.querySelectorAll('.pdf-f.edited').forEach(f=>f.classList.remove('edited'));
+  updEditBadge();updateDL();
+}
+function updEditBadge(){
+  const n=Object.keys(S.edits).length;
+  const b=document.getElementById('edit-badge'),u=document.getElementById('undo-btn');
+  if(n){b.style.cssText='display:inline-flex;background:rgba(129,140,248,.12);color:#818cf8;border-radius:20px;padding:3px 11px';b.textContent=n+' edit'+(n>1?'s':'');u.style.display='inline-flex'}
+  else{b.style.display='none';u.style.display='none'}
+}
+
+/* ── ANNOTATIONS ── */
+function setAMode(m){
+  S.aMode=m;
+  document.querySelectorAll('.an-tab').forEach(t=>t.classList.toggle('active',t.dataset.m===m));
+  setTimeout(anPill,10);
+}
+function doAnnot(el){
+  const m=S.aMode;
+  if(['yellow','green','pink'].includes(m)){
+    const has=el.classList.contains('hl-yellow')||el.classList.contains('hl-green')||el.classList.contains('hl-pink');
+    if(has){el.classList.remove('hl-yellow','hl-green','hl-pink');S.annots=S.annots.filter(a=>a.f!==el.dataset.f)}
+    else{el.classList.add('hl-'+m);S.annots.push({id:Date.now(),type:'hl',f:el.dataset.f,c:m})}
+  } else if(m==='note'){dropNote(el)}
+  else if(m==='flag'){dropFlag(el)}
+  updAnnotBadge();updateDL();
+}
+function dropNote(el){
+  const id='n'+Date.now();
+  const doc=document.getElementById('pdf-doc').getBoundingClientRect();
+  const er=el.getBoundingClientRect();
+  const top=er.top-doc.top;
+  const n=document.createElement('div');
+  n.className='sticky-note';n.id=id;n.style.top=(top-6)+'px';
+  n.innerHTML='<div style="font-weight:600;font-size:9px;color:#78716c;margin-bottom:3px">Review needed</div><div style="font-size:10px;color:#a8a29e">Tap to remove</div>';
+  n.onclick=()=>{n.remove();S.annots=S.annots.filter(a=>a.id!==id);updAnnotBadge();updateDL()};
+  document.getElementById('pdf-doc').appendChild(n);
+  S.annots.push({id,type:'note'});
+}
+function dropFlag(el){
+  const id='f'+Date.now();
+  const doc=document.getElementById('pdf-doc').getBoundingClientRect();
+  const er=el.getBoundingClientRect();
+  const top=er.top-doc.top;
+  const f=document.createElement('div');
+  f.className='arrow-flag';f.id=id;f.style.top=(top-2)+'px';f.title='Click to remove';
+  f.innerHTML=`<svg width="100" height="28" viewBox="0 0 100 28" xmlns="http://www.w3.org/2000/svg"><polygon points="100,0 22,0 2,14 22,28 100,28" fill="#f97066"/><text x="26" y="19" fill="white" font-size="10" font-family="system-ui,sans-serif" font-weight="800" letter-spacing="1.5">SIGN HERE</text></svg>`;
+  f.onclick=()=>{f.remove();S.annots=S.annots.filter(a=>a.id!==id);updAnnotBadge();updateDL()};
+  document.getElementById('pdf-doc').appendChild(f);
+  S.annots.push({id,type:'flag'});
+}
+function updAnnotBadge(){
+  const n=S.annots.length;
+  const b=document.getElementById('an-badge');
+  if(n){b.style.cssText='display:inline-flex;background:rgba(251,191,36,.1);color:#fbbf24;border-radius:20px;padding:3px 11px';b.textContent=n+' mark'+(n>1?'s':'')}
+  else b.style.display='none';
+}
+
+/* ── REDACT FLASH ── */
+function flashPro(){
+  const b=document.getElementById('redact-pro-bar');
+  b.style.boxShadow='0 0 0 2px rgba(249,112,102,.6)';
+  setTimeout(()=>b.style.boxShadow='',600);
+}
+
+/* ── COMPRESS ── */
+function toggleCP(){
+  S.cpOn=!S.cpOn;
+  const t=document.getElementById('cp-toggle');
+  t.classList.toggle('on',S.cpOn);t.classList.toggle('off',!S.cpOn);
+  document.getElementById('cp-lbl').style.color=S.cpOn?'#60a5fa':'var(--tx3)';
+  document.getElementById('cp-est').style.display=S.cpOn?'inline':'none';
+  updateDL();
+}
+
+/* ── SIGS ── */
+function openSig(){document.getElementById('sig-modal').classList.add('open')}
+function closeSig(){document.getElementById('sig-modal').classList.remove('open')}
+function placeSig(){
+  closeSig();
+  document.getElementById('sig-client').innerHTML='<div class="sig-placed">Alex Kim</div>';
+  document.getElementById('sig-prov').innerHTML='<div class="sig-placed">S. Chen</div>';
+  S.sigs=['prov','client'];
+  const b=document.getElementById('sig-badge');
+  b.style.cssText='display:inline-flex;background:rgba(34,211,160,.1);color:#22d3a0;border-radius:20px;padding:3px 11px';
+  b.textContent='2 signatures ✓';
+  updateDL();
+}
+
+/* ── DL BTN ── */
+function updateDL(){
+  const nE=Object.keys(S.edits).length,nS=S.sigs.length,nA=S.annots.length;
+  const parts=[];
+  if(nE)parts.push(nE+' edit'+(nE>1?'s':''));
+  if(nS)parts.push(nS+' sig'+(nS>1?'s':''));
+  if(nA)parts.push(nA+' mark'+(nA>1?'s':''));
+  if(S.cpOn)parts.push('compress');
+  const btn=document.getElementById('dl-btn');
+  btn.textContent=(parts.length?'&#8595; '+parts.join(' · '):'&#8595; Download');
+  btn.innerHTML=(parts.length?'&#8595; '+parts.join(' · '):'&#8595; Download');
+  btn.classList.toggle('dim',!parts.length);
+}
+function openDL(){
+  const rows=[];
+  const nE=Object.keys(S.edits).length,nS=S.sigs.length,nA=S.annots.length;
+  if(nE)rows.push({c:'#818cf8',l:'Text edits applied',n:nE});
+  if(nS)rows.push({c:'#22d3a0',l:'Signatures embedded',n:nS});
+  if(nA)rows.push({c:'#fbbf24',l:'Annotations included',n:nA});
+  if(S.cpOn)rows.push({c:'#60a5fa',l:'File compressed',n:'~35%'});
+  if(!rows.length)rows.push({c:'var(--tx3)',l:'No changes — original file',n:''});
+  document.getElementById('dl-rows').innerHTML=rows.map(r=>`<div class="dl-row"><div class="dl-dot" style="background:${r.c}"></div><span style="flex:1">${r.l}</span><span style="font-size:11px;color:var(--tx3)">${r.n}</span></div>`).join('');
+  document.getElementById('dl-modal').classList.add('open');
+}
+function closeDL(){document.getElementById('dl-modal').classList.remove('open')}
+
+/* ── MORE TOOLS DRAWER ── */
+const MORE_META={
+  merge:{title:'Drop PDFs here to merge',hint:'combine multiple files into one',name:'Merge',desc:'Combine multiple PDFs into one'},
+  split:{title:'Drop your PDF to split',hint:'divide into pages or a custom range',name:'Split',desc:'Divide a PDF into pages or sections'},
+};
+let moreOpen=false;
+function toggleMore(){
+  moreOpen=!moreOpen;
+  const drawer=document.getElementById('more-drawer');
+  const arrow=document.getElementById('more-arrow');
+  if(moreOpen){
+    drawer.style.maxHeight='420px';
+    drawer.style.opacity='1';
+    arrow.style.transform='rotate(180deg)';
+    setTimeout(()=>pill('more-sel','more-pill'),60);
+  } else {
+    drawer.style.maxHeight='0';
+    drawer.style.opacity='0';
+    arrow.style.transform='rotate(0deg)';
+  }
+}
+function setMoreMode(m){
+  document.querySelectorAll('#more-sel .sel-tab').forEach(t=>t.classList.toggle('active',t.dataset.t===m));
+  pill('more-sel','more-pill');
+  const meta=MORE_META[m];
+  document.getElementById('more-dz-title').textContent=meta.title;
+  document.getElementById('more-dz-hint').textContent=meta.hint;
+  document.getElementById('more-desc-name').textContent=meta.name;
+  document.getElementById('more-desc-text').textContent='— '+meta.desc;
+}
+
+/* ── PAGES ── */
+function setPGMode(m){
+  document.querySelectorAll('#pg-sel .sel-tab').forEach(t=>t.classList.toggle('active',t.dataset.t===m));
+  pill('pg-sel','pg-pill');
+  document.getElementById('pg-merge').style.display=m==='merge'?'block':'none';
+  document.getElementById('pg-split').style.display=m==='split'?'block':'none';
+  document.getElementById('l3-pg-merge').classList.toggle('hide',m!=='merge');
+  document.getElementById('l3-pg-split').classList.toggle('hide',m!=='split');
+}
+function setSplitMode(m){
+  const all=document.getElementById('spl-all'),rng=document.getElementById('spl-rng');
+  const inp=document.getElementById('spl-inputs'),hint=document.getElementById('spl-hint');
+  if(m==='all'){
+    all.style.cssText='flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;background:#fff;color:#0b0d14;user-select:none';
+    rng.style.cssText='flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;color:rgba(255,255,255,.38);user-select:none';
+    inp.style.display='none';hint.textContent='Outputs 12 individual PDFs · bundled as .zip';
+  } else {
+    rng.style.cssText='flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;background:#fff;color:#0b0d14;user-select:none';
+    all.style.cssText='flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;color:rgba(255,255,255,.38);user-select:none';
+    inp.style.display='flex';hint.textContent='Selected range saved as a single PDF';
+  }
+}
+
+/* ── INIT ── */
+window.addEventListener('load',()=>{
+  setHTool('edit');
+  fCursors();
+  setTimeout(()=>pill('home-sel','home-pill'),120);
+});
+window.addEventListener('resize',()=>{
+  pill('home-sel','home-pill');pill('ws-sel','ws-pill');pill('pg-sel','pg-pill');anPill();
+});
+</script>
+</body>
+</html>
