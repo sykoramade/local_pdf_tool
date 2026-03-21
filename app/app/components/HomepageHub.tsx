@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { setPendingFile } from '@/lib/pending-file'
+import { TOOL_HEX, type ToolKey } from '@/lib/ui/tool-colors'
 
 /* ─── Types ─── */
-type ToolKey = 'edit' | 'sign' | 'annotate' | 'redact' | 'compress'
 type MoreKey = 'merge' | 'split'
 
 interface ToolDef {
@@ -26,11 +26,11 @@ interface MoreTool {
 
 /* ─── Tool data (v2 TM spec) ─── */
 const TOOLS: Record<ToolKey, ToolDef> = {
-  edit:     { color: '#818cf8', name: 'Edit',     desc: 'Click any text to edit it directly',       hint: 'contracts · invoices · forms · CVs',         href: '/workspace?tool=edit' },
-  sign:     { color: '#22d3a0', name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/workspace?tool=sign' },
-  annotate: { color: '#fbbf24', name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/workspace?tool=annotate' },
-  redact:   { color: '#f97066', name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
-  compress: { color: '#60a5fa', name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/workspace?tool=compress' },
+  edit:     { color: TOOL_HEX.edit,     name: 'Edit',     desc: 'Click any text to edit it directly',       hint: 'contracts · invoices · forms · CVs',         href: '/workspace?tool=edit' },
+  sign:     { color: TOOL_HEX.sign,     name: 'Sign',     desc: 'Draw and place your signature',             hint: 'contracts · agreements · forms',               href: '/workspace?tool=sign' },
+  annotate: { color: TOOL_HEX.annotate, name: 'Annotate', desc: 'Highlight text · sticky notes · flags',     hint: 'research · reviews · legal documents',         href: '/workspace?tool=annotate' },
+  redact:   { color: TOOL_HEX.redact,   name: 'Redact',   desc: 'Permanently remove sensitive content',      hint: 'GDPR · HIPAA · legal redaction',               href: null, pro: true },
+  compress: { color: TOOL_HEX.compress, name: 'Compress', desc: 'Reduce file size before sharing',           hint: 'any PDF · any size',                           href: '/workspace?tool=compress' },
 }
 
 const MORE_TOOLS: Record<MoreKey, MoreTool> = {

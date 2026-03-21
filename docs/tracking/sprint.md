@@ -298,6 +298,23 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 18 — COMPLETE ✅
+**Completed:** 2026-03-21
+**Goal:** Sign tool (typed-name) wired into WorkspaceShell + shared color tokens.
+
+### Done
+- [x] Pre-S18 micro-refactor: `lib/ui/tool-colors.ts` — single source of truth for TOOL_HEX + TOOL_BG; resolves annotate color mismatch (#fbbf24 canonical per V2 spec)
+- [x] `HomepageHub.tsx` — removed local ToolKey type, imports TOOL_HEX from tool-colors.ts
+- [x] `WorkspaceShell.tsx` — imports TOOL_HEX/TOOL_BG, replaces local TOOL_COLORS const
+- [x] `lib/pdf/signature.ts` — added TypedSignatureEntry interface + embedTypedSignature() (TimesRomanItalic, auto-sizes font to fit widthPct, Y-axis flip, useObjectStreams:false)
+- [x] Sign state machine: SigMode (idle → naming → placing → idle) + SigEntry[] state in WorkspaceShell
+- [x] L3Strip sign section: 3-phase UI — idle (button + count badge), naming (input + live serif preview + Place button), placing (pulsing dot + instruction)
+- [x] CanvasArea: transparent crosshair overlay in placing mode; click resolves page + % coords via pageRefs getBoundingClientRect()
+- [x] Download handler: embedTypedSignature() applied if sigs.length > 0; dynamic import for code splitting; output renamed _signed.pdf
+- [x] Bug fixes from code review: `sigs` added to handleDownload deps array (stale closure fix); empty text guard in embedTypedSignature; Array.from() fix for MapIterator TS error
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
@@ -308,7 +325,7 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 - Free placement mode (drag signatures off-grid — Pro feature)
 - Encrypted PDF unlock flow
 - **Workspace text editing — full word selection** — PDF.js extracts text in small sub-word chunks; clicking a "word" only activates one chunk. Requires multi-chunk selection merge. Complex; deferred from S16.
-- **Workspace Sign + Annotate full tools** — S18 target (typed-name Sign + Annotate UI shell)
+- **Workspace Sign + Annotate full tools** — S18 COMPLETE (see Sprint 18)
 
 ---
 
