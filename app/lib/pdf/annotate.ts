@@ -11,7 +11,7 @@
  */
 
 import { PDFDocument, rgb } from 'pdf-lib'
-import type { Annotation, TextHighlight, StickyNote } from './types'
+import type { Annotation, TextHighlight, StickyNote, CheckAnnotation } from './types'
 
 const HIGHLIGHT_COLORS = [
   rgb(1, 0.93, 0.2),      // yellow
@@ -90,6 +90,24 @@ export async function applyAnnotations(
           lineHeight: fs * 1.3,
         })
       }
+    } else if (ann.type === 'check') {
+      const ck = ann as CheckAnnotation
+      const cx = (ck.xPct / 100) * pageW
+      const cy = pageH - (ck.yPct / 100) * pageH
+      const sz = 14 // checkmark size in PDF points
+      // Draw ✓ as two lines: short down-left stroke + long up-right stroke
+      page.drawLine({
+        start: { x: cx, y: cy + sz * 0.35 },
+        end: { x: cx + sz * 0.38, y: cy },
+        thickness: 2.2,
+        color: rgb(0.08, 0.55, 0.18),
+      })
+      page.drawLine({
+        start: { x: cx + sz * 0.38, y: cy },
+        end: { x: cx + sz, y: cy + sz * 0.75 },
+        thickness: 2.2,
+        color: rgb(0.08, 0.55, 0.18),
+      })
     }
   }
 

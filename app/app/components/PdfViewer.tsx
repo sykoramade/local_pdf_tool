@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
+import SigOverlay from './SigOverlay'
 
 interface PdfViewerProps {
   pdfBytes: Uint8Array
@@ -13,6 +14,13 @@ interface PdfViewerProps {
   onLoad?: (pageCount: number) => void
   onFieldSelect?: (id: string) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
+  sigs?: SigEntry[]
+  onSigMove?: (id: string, xPct: number, yPct: number) => void
+  onSigDelete?: (id: string) => void
+  isPro?: boolean
+  annotateMode?: 'yellow' | 'green' | 'pink' | 'note' | 'check' | null
+  annotations?: Annotation[]
+  onAnnotate?: (ann: Annotation) => void
 }
 
 interface PageData {
@@ -20,6 +28,12 @@ interface PageData {
   width: number
   height: number
   items: ExtractedTextItem[]
+}
+
+const HIGHLIGHT_OVERLAY_COLORS: Record<string, string> = {
+  yellow: 'rgba(251,191,36,0.35)',
+  green: 'rgba(74,222,128,0.35)',
+  pink: 'rgba(244,114,182,0.35)',
 }
 
 const PDF_ERRORS: Record<string, string> = {
@@ -45,6 +59,13 @@ export default function PdfViewer({
   onLoad,
   onFieldSelect,
   pageRefs,
+  sigs,
+  onSigMove,
+  onSigDelete,
+  isPro = false,
+  annotateMode,
+  annotations,
+  onAnnotate,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -241,9 +262,111 @@ export default function PdfViewer({
                     onEdit={onEdit}
                     onFieldSelect={onFieldSelect}
                     scale={scale}
+                    annotateMode={
+                      annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink'
+                        ? annotateMode
+                        : null
+                    }
+                    onHighlight={item => {
+                      if (!onAnnotate) return
+                      const hl: TextHighlight = {
+                        type: 'highlight',
+                        id: crypto.randomUUID(),
+                        pageNum,
+                        colorIndex: annotateMode === 'green' ? 1 : annotateMode === 'pink' ? 2 : 0,
+                        xPct: (item.canvasX / width) * 100,
+                        yPct: (item.canvasY / height) * 100,
+                        widthPct: (item.canvasWidth / width) * 100,
+                        heightPct: ((item.canvasFontSize * 1.4) / height) * 100,
+                      }
+                      onAnnotate(hl)
+                    }}
                   />
                 </div>
               </div>
+              {/* Signature overlays for this page */}
+              {sigs && onSigMove && onSigDelete && sigs
+                .filter(sig => sig.pageNum === pageNum)
+                .map(sig => (
+                  <SigOverlay
+                    key={sig.id}
+                    sig={sig}
+                    onMove={onSigMove}
+                    onDelete={onSigDelete}
+                    isPro={isPro}
+                  />
+                ))}
+
+              {/* Annotation overlays for this page */}
+              {annotations && annotations
+                .filter(ann => ann.pageNum === pageNum)
+                .map(ann => {
+                  if (ann.type === 'highlight') {
+                    const hl = ann as TextHighlight
+                    return (
+                      <div
+                        key={hl.id}
+                        style={{
+                          position: 'absolute',
+                          left: hl.xPct + '%',
+                          top: hl.yPct + '%',
+                          width: hl.widthPct + '%',
+                          height: hl.heightPct + '%',
+                          background: HIGHLIGHT_OVERLAY_COLORS[['yellow', 'green', 'pink'][hl.colorIndex] ?? 'yellow'],
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                        }}
+                      />
+                    )
+                  }
+                  if (ann.type === 'sticky-note') {
+                    return (
+                      <div
+                        key={ann.id}
+                        style={{
+                          position: 'absolute',
+                          left: ann.xPct + '%',
+                          top: ann.yPct + '%',
+                          width: '15%',
+                          minHeight: '9%',
+                          background: 'rgba(251,191,36,0.9)',
+                          borderRadius: 4,
+                          padding: '4px 6px',
+                          fontSize: 10,
+                          color: '#1a1a1a',
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                          wordBreak: 'break-word',
+                          boxShadow: '0 2px 6px rgba(0,0,0,.25)',
+                        }}
+                      >
+                        {ann.text || '📝'}
+                      </div>
+                    )
+                  }
+                  if (ann.type === 'check') {
+                    return (
+                      <div
+                        key={ann.id}
+                        style={{
+                          position: 'absolute',
+                          left: ann.xPct + '%',
+                          top: ann.yPct + '%',
+                          fontSize: 18,
+                          lineHeight: 1,
+                          color: '#15803d',
+                          fontWeight: 700,
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                          textShadow: '0 1px 3px rgba(0,0,0,.2)',
+                        }}
+                      >
+                        ✓
+                      </div>
+                    )
+                  }
+                  return null
+                })}
             </div>
           </div>
         )

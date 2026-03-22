@@ -10,9 +10,11 @@ interface PdfTextLayerProps {
   onEdit: (id: string, fieldData: FieldData) => void
   onFieldSelect?: (id: string) => void
   scale: number
+  annotateMode?: 'yellow' | 'green' | 'pink' | null
+  onHighlight?: (item: ExtractedTextItem) => void
 }
 
-export default function PdfTextLayer({ items, editMap, onEdit, onFieldSelect, scale }: PdfTextLayerProps) {
+export default function PdfTextLayer({ items, editMap, onEdit, onFieldSelect, scale, annotateMode, onHighlight }: PdfTextLayerProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   function handleBlur(id: string, value: string) {
@@ -63,7 +65,7 @@ export default function PdfTextLayer({ items, editMap, onEdit, onFieldSelect, sc
           fontStyle: fontMatch.italic ? 'italic' : 'normal',
           lineHeight: 1,
           whiteSpace: 'nowrap',
-          cursor: 'text',
+          cursor: annotateMode ? 'crosshair' : 'text',
           boxSizing: 'border-box',
         }
 
@@ -96,12 +98,20 @@ export default function PdfTextLayer({ items, editMap, onEdit, onFieldSelect, sc
             className="hover:bg-indigo-50/40 hover:border-b hover:border-indigo-300/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
             title={isEdited ? `Edited: "${currentText}"` : 'Click to edit'}
             onClick={() => {
+              if (annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink') {
+                onHighlight?.(item)
+                return
+              }
               setActiveId(item.id)
               onFieldSelect?.(item.id)
             }}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
+                if (annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink') {
+                  onHighlight?.(item)
+                  return
+                }
                 setActiveId(item.id)
                 onFieldSelect?.(item.id)
               }
