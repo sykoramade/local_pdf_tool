@@ -2,6 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { SigEntry } from '@/lib/pdf/types'
+import {
+  getSavedSignatures,
+  saveSignature,
+  deleteSignature,
+  type StoredSignature,
+} from '@/lib/signatures-store'
 
 interface SignatureModalProps {
   open: boolean
@@ -31,6 +37,8 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
   const [isDesktop, setIsDesktop] = useState(true)
   const [typedName, setTypedName] = useState('')
   const [hasStrokes, setHasStrokes] = useState(false)
+  const [saveForLater, setSaveForLater] = useState(false)
+  const [savedSigs, setSavedSigs] = useState<StoredSignature[]>([])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDrawingRef = useRef(false)
@@ -64,12 +72,15 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
     }
   }, [open, activeTab, isDesktop])
 
-  // Reset on close
+  // Load saved sigs on open; reset state on close
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setSavedSigs(getSavedSignatures())
+    } else {
       setActiveTab('draw')
       setTypedName('')
       setHasStrokes(false)
+      setSaveForLater(false)
       currentStrokeRef.current = []
       strokesRef.current = []
       if (canvasRef.current) {
@@ -210,12 +221,19 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
     if (!canvas) return
 
     const dataUrl = canvas.toDataURL('image/png')
+    if (saveForLater) {
+      saveSignature({ drawingDataUrl: dataUrl })
+    }
     onConfirm({ drawingDataUrl: dataUrl })
-  }, [onConfirm])
+  }, [onConfirm, saveForLater])
 
   const handleConfirmType = useCallback(() => {
-    onConfirm({ text: typedName.trim() })
-  }, [typedName, onConfirm])
+    const text = typedName.trim()
+    if (saveForLater) {
+      saveSignature({ text })
+    }
+    onConfirm({ text })
+  }, [typedName, onConfirm, saveForLater])
 
   if (!open) return null
 
@@ -388,8 +406,86 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
           </div>
         )}
 
+        {/* Recent signatures */}
+        {savedSigs.length > 0 && (
+          <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 12 }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Recent
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {savedSigs.map(sig => (
+                <div key={sig.id} style={{ position: 'relative', display: 'inline-flex' }}>
+                  <button
+                    onClick={() => onConfirm({ text: sig.text, drawingDataUrl: sig.drawingDataUrl })}
+                    title="Use this signature"
+                    style={{
+                      background: '#fff',
+                      border: '1px solid rgba(255,255,255,.15)',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      minWidth: 80,
+                      height: 40,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {sig.drawingDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sig.drawingDataUrl} alt="Saved signature" style={{ maxHeight: 32, maxWidth: 120, objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 14, color: '#0b0d14' }}>
+                        {sig.text}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteSignature(sig.id)
+                      setSavedSigs(getSavedSignatures())
+                    }}
+                    title="Remove"
+                    style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -6,
+                      background: 'rgba(30,27,75,.9)',
+                      border: '1px solid rgba(255,255,255,.2)',
+                      borderRadius: '50%',
+                      width: 16,
+                      height: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      color: 'rgba(255,255,255,.6)',
+                      cursor: 'pointer',
+                      padding: 0,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 20, alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={saveForLater}
+              onChange={e => setSaveForLater(e.target.checked)}
+              style={{ accentColor: '#6366f1', width: 14, height: 14 }}
+            />
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.5)' }}>Save for later</span>
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={onClose}
             style={{
@@ -423,5 +519,6 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
         </div>
       </div>
     </div>
+  </div>
   )
 }
