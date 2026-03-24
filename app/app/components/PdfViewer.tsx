@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
 import SigOverlay from './SigOverlay'
+import AnnotationOverlay from './AnnotationOverlay'
 
 interface PdfViewerProps {
   pdfBytes: Uint8Array
@@ -21,6 +22,8 @@ interface PdfViewerProps {
   annotateMode?: 'yellow' | 'green' | 'pink' | 'note' | 'check' | null
   annotations?: Annotation[]
   onAnnotate?: (ann: Annotation) => void
+  onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
+  onAnnotationDelete?: (id: string) => void
 }
 
 interface PageData {
@@ -66,6 +69,8 @@ export default function PdfViewer({
   annotateMode,
   annotations,
   onAnnotate,
+  onAnnotationMove,
+  onAnnotationDelete,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,7 +159,7 @@ export default function PdfViewer({
                 pdfWidth: raw.width,
                 pdfFontSize,
                 canvasX: tx[4],
-                canvasY: tx[5] - canvasFontSize,
+                canvasY: tx[5] - canvasFontSize * 0.8,
                 canvasWidth: Math.max(raw.width * scale, 4),
                 canvasFontSize,
               }
@@ -272,6 +277,7 @@ export default function PdfViewer({
                       const hl: TextHighlight = {
                         type: 'highlight',
                         id: crypto.randomUUID(),
+                        itemId: item.id,
                         pageNum,
                         colorIndex: annotateMode === 'green' ? 1 : annotateMode === 'pink' ? 2 : 0,
                         xPct: (item.canvasX / width) * 100,
@@ -319,7 +325,18 @@ export default function PdfViewer({
                       />
                     )
                   }
-                  if (ann.type === 'sticky-note') {
+                  if (ann.type === 'sticky-note' || ann.type === 'check') {
+                    if (onAnnotationMove && onAnnotationDelete) {
+                      return (
+                        <AnnotationOverlay
+                          key={ann.id}
+                          annotation={ann as StickyNote | CheckAnnotation}
+                          onMove={onAnnotationMove}
+                          onDelete={onAnnotationDelete}
+                        />
+                      )
+                    }
+                    // Fallback: static render if no handlers provided
                     return (
                       <div
                         key={ann.id}
@@ -327,41 +344,11 @@ export default function PdfViewer({
                           position: 'absolute',
                           left: ann.xPct + '%',
                           top: ann.yPct + '%',
-                          width: '15%',
-                          minHeight: '9%',
-                          background: 'rgba(251,191,36,0.9)',
-                          borderRadius: 4,
-                          padding: '4px 6px',
-                          fontSize: 10,
-                          color: '#1a1a1a',
                           pointerEvents: 'none',
                           zIndex: 3,
-                          wordBreak: 'break-word',
-                          boxShadow: '0 2px 6px rgba(0,0,0,.25)',
                         }}
                       >
-                        {ann.text || '📝'}
-                      </div>
-                    )
-                  }
-                  if (ann.type === 'check') {
-                    return (
-                      <div
-                        key={ann.id}
-                        style={{
-                          position: 'absolute',
-                          left: ann.xPct + '%',
-                          top: ann.yPct + '%',
-                          fontSize: 18,
-                          lineHeight: 1,
-                          color: '#15803d',
-                          fontWeight: 700,
-                          pointerEvents: 'none',
-                          zIndex: 3,
-                          textShadow: '0 1px 3px rgba(0,0,0,.2)',
-                        }}
-                      >
-                        ✓
+                        {ann.type === 'sticky-note' ? (ann as StickyNote).text || '📝' : '✓'}
                       </div>
                     )
                   }

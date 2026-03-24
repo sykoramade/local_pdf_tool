@@ -57,7 +57,7 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
 
     const ctx = canvas.getContext('2d')
     if (ctx) {
-      ctx.strokeStyle = '#f4f6fc'
+      ctx.strokeStyle = '#000000'
       ctx.lineWidth = 2.5
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -318,7 +318,7 @@ export default function SignatureModal({ open, onClose, onConfirm }: SignatureMo
               style={{
                 width: '100%',
                 height: canvasHeight,
-                background: 'rgba(255,255,255,.04)',
+                background: '#fff',
                 border: '1px solid rgba(255,255,255,.12)',
                 borderRadius: 10,
                 display: 'block',

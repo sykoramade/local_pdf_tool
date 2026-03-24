@@ -47,6 +47,17 @@ S10-3 + S10-4. Created /privacy-architecture as a standalone page (not a guide) 
 The GDPR Art. 25 statement was added to both /privacy-architecture (full text) and /about (summary + link), so it is discoverable from the main trust page without requiring a dedicated visit.
 The /about "How it actually works" section was extended with a link to /privacy-architecture rather than duplicating the detailed content — keeps /about concise while providing a clear path to the technical detail for regulated-industry users.
 
+**2026-03-23 DECISION: Free tier — anonymous use, no signup required**
+Context: Positioning says "no upload, no account needed." AuthModal gate contradicted this.
+Options: A) Anonymous free (3 exports/day via localStorage, no email), B) Email gate.
+Decision: Option A. Anonymous free tier. Email required only at Pro checkout.
+Reasoning: Preserves the privacy brand story. "No account needed" is a differentiator vs. competitors. Conversion path: anonymous → hit limit → upgrade prompt → pay. MD approved 2026-03-23.
+
+**2026-03-23 DECISION: A/B test annotation limits — Sprint 20**
+Decision: Run A/B test in Sprint 20. Variant A = unlimited free tier (control). Variant B = 5 sticky notes/doc limit. Duration: 2 weeks. Success metric: Variant B free→Pro conversion ≥ 1.5× Variant A.
+See docs/guidelines/ab-test-annotation-limit.md for full test spec.
+MD approved 2026-03-23.
+
 **2026-03-11 DECISION: Coordination via markdown files**
 No automated agent orchestration. All coordination through docs/tasks/ and docs/messages/.
 Reasoning: simpler, reviewable, works with a single Claude Code instance. Managing Director can see all state at any time just by reading files.

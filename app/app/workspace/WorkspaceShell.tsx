@@ -593,6 +593,8 @@ function CanvasArea({
   annotateMode,
   onAnnotate,
   annotations,
+  onAnnotationMove,
+  onAnnotationDelete,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -619,6 +621,8 @@ function CanvasArea({
   annotateMode?: AMode | null
   onAnnotate?: (ann: Annotation) => void
   annotations?: Annotation[]
+  onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
+  onAnnotationDelete?: (id: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -772,6 +776,8 @@ function CanvasArea({
         annotateMode={activeTool.key === 'annotate' ? annotateMode : null}
         onAnnotate={onAnnotate}
         annotations={annotations}
+        onAnnotationMove={onAnnotationMove}
+        onAnnotationDelete={onAnnotationDelete}
       />
     )
   }
@@ -1042,7 +1048,22 @@ export default function WorkspaceShell() {
   /* Annotate handlers */
   const handleAnnotateModeChange = useCallback((m: AMode) => setAnnotateMode(m), [])
   const handleAnnotate = useCallback((ann: Annotation) => {
-    setAnnotations(prev => [...prev, ann])
+    setAnnotations(prev => {
+      // Toggle highlights: clicking the same text item again removes the existing highlight
+      if (ann.type === 'highlight' && ann.itemId) {
+        const exists = prev.find(a => a.type === 'highlight' && (a as typeof ann).itemId === ann.itemId)
+        if (exists) return prev.filter(a => a.id !== exists.id)
+      }
+      return [...prev, ann]
+    })
+  }, [])
+
+  const handleAnnotationMove = useCallback((id: string, xPct: number, yPct: number) => {
+    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, xPct, yPct } : a))
+  }, [])
+
+  const handleAnnotationDelete = useCallback((id: string) => {
+    setAnnotations(prev => prev.filter(a => a.id !== id))
   }, [])
 
   /* Compute compress stats when compress tool is active and pdfBytes available */
@@ -1324,6 +1345,8 @@ export default function WorkspaceShell() {
             annotateMode={annotateMode}
             onAnnotate={handleAnnotate}
             annotations={annotations}
+            onAnnotationMove={handleAnnotationMove}
+            onAnnotationDelete={handleAnnotationDelete}
           />
         </div>
       </div>

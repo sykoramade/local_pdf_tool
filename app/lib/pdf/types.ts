@@ -41,6 +41,7 @@ export type EditMap = Map<string, FieldData>
 export interface TextHighlight {
   type: 'highlight'
   id: string
+  itemId?: string     // ExtractedTextItem.id — used for toggle deduplication
   pageNum: number
   colorIndex: number  // 0=yellow, 1=green, 2=pink
   xPct: number

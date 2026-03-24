@@ -163,7 +163,7 @@ export async function embedTypedSignature(
       y: cy - textH / 2,
       size,
       font,
-      color: rgb(0.1, 0.1, 0.14),
+      color: rgb(0, 0, 0),
     })
   }
 

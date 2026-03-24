@@ -100,13 +100,13 @@ export async function applyAnnotations(
         start: { x: cx, y: cy + sz * 0.35 },
         end: { x: cx + sz * 0.38, y: cy },
         thickness: 2.2,
-        color: rgb(0.08, 0.55, 0.18),
+        color: rgb(0, 0, 0),
       })
       page.drawLine({
         start: { x: cx + sz * 0.38, y: cy },
         end: { x: cx + sz, y: cy + sz * 0.75 },
         thickness: 2.2,
-        color: rgb(0.08, 0.55, 0.18),
+        color: rgb(0, 0, 0),
       })
     }
   }
