@@ -235,9 +235,6 @@ export default function PdfViewer({
         return (
           <div
             key={pageNum}
-            ref={el => {
-              if (el && pageRefs) pageRefs.current.set(pageNum, el)
-            }}
             className="flex flex-col items-center gap-1 w-full"
             style={{ maxWidth: width }}
           >
@@ -247,6 +244,9 @@ export default function PdfViewer({
               </div>
             )}
             <div
+              ref={el => {
+                if (el && pageRefs) pageRefs.current.set(pageNum, el)
+              }}
               className="relative shadow-lg bg-white"
               style={{ width, height }}
             >

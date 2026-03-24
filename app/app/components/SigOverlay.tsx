@@ -46,8 +46,9 @@ export default function SigOverlay({ sig, onMove, onDelete, isPro }: SigOverlayP
       const dx = moveEvent.clientX - dragStartRef.current.mouseX
       const dy = moveEvent.clientY - dragStartRef.current.mouseY
 
-      const newXPct = Math.max(0, Math.min(100 - sig.widthPct, dragStartRef.current.xPct + (dx / rect.width) * 100))
-      const newYPct = Math.max(0, dragStartRef.current.yPct + (dy / rect.height) * 100)
+      const halfW = sig.widthPct / 2
+      const newXPct = Math.max(halfW, Math.min(100 - halfW, dragStartRef.current.xPct + (dx / rect.width) * 100))
+      const newYPct = Math.max(0, Math.min(100, dragStartRef.current.yPct + (dy / rect.height) * 100))
 
       // Update position visually with direct DOM manipulation for smooth drag
       containerRef.current.style.left = newXPct + '%'
@@ -84,6 +85,7 @@ export default function SigOverlay({ sig, onMove, onDelete, isPro }: SigOverlayP
         left: sig.xPct + '%',
         top: sig.yPct + '%',
         width: sig.widthPct + '%',
+        transform: 'translate(-50%, -50%)',
         cursor: isDragging ? 'grabbing' : 'move',
         userSelect: 'none',
         zIndex: 5,
