@@ -109,3 +109,25 @@ Each entry: what went wrong, what the fix was, and the rule going forward.
 - The task file must exist and be reviewed by the Managing Director before implementation begins on any sprint involving a new layout component.
 - Confidence must be rated on every answer. If confidence is below 8/10, bring in the co-CEO and project manager agents before proceeding.
 - "No good answer" for skipping a mandatory step is a signal to stop and ask, not to continue.
+
+---
+
+## 2026-03-24 — Tool Switch Cleared Loaded PDF (React Routing Regression)
+
+**What went wrong:** Clicking a tool button in the workspace (Edit → Sign, Sign → Annotate, etc.) caused the loaded PDF to disappear and the drop-zone to reappear, as if the user had just landed on the workspace with no file. This was a regression from the initial tool implementation.
+
+**Root cause:** A `useEffect` that synced the active tool to the URL query param (`?tool=sign` etc.) used `router.replace()` from Next.js App Router. This triggered a soft navigation, which caused React to remount the `WorkspaceShell` component inside its Suspense boundary — resetting all local state including `file`, `pdfBytes`, `editMap`, `sigs`, etc.
+
+**How it should have been caught:** An E2E test for the basic workspace flow:
+1. Load a PDF
+2. Switch to each tool tab
+3. Assert the document is still visible (no drop zone shown, page count unchanged)
+
+This is a two-minute manual smoke test and a straightforward Playwright spec. Neither existed. The bug shipped and was caught by the Managing Director on first use.
+
+**Fix:** Replace `router.replace()` with `window.history.replaceState()`. The History API updates the URL bar without going through React's routing machinery, so no Suspense boundary remount occurs.
+
+**Rules going forward:**
+- Never use `router.replace()` or `router.push()` to sync UI state to URL params inside a component that holds critical session state (loaded files, edit history, etc.). Use `window.history.replaceState()` instead.
+- The workspace smoke test (load PDF → switch tools → verify document still present) is now a mandatory manual check before any sprint involving WorkspaceShell is marked COMPLETE.
+- Any future E2E spec for the workspace MUST include: load file → switch to every tool → assert file name still visible + drop zone hidden.

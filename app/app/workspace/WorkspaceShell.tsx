@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
@@ -280,7 +280,6 @@ function L3Strip({
                 {sigCount} sig{sigCount > 1 ? 's' : ''} ✓
               </span>
             )}
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>Click to place</span>
           </div>
         </div>
       )
@@ -891,7 +890,7 @@ export default function WorkspaceShell() {
   const [annotations, setAnnotations] = useState<Annotation[]>([])
 
   /* Compress state */
-  const [compressEnabled, setCompressEnabled] = useState(false)
+  const [compressEnabled, setCompressEnabled] = useState(true)
   const [compressStats, setCompressStats] = useState<{ original: number; compressed: number; pct: number } | null>(null)
   const [compressLoading, setCompressLoading] = useState(false)
 
@@ -966,14 +965,12 @@ export default function WorkspaceShell() {
     return () => { cancelled = true }
   }, [file])
 
-  /* Keep ?tool= URL param in sync */
+  /* Keep ?tool= URL param in sync — use history API to avoid React remounting */
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tool', activeTool.key)
-    router.replace(`/workspace?${params.toString()}`, { scroll: false })
+    window.history.replaceState(null, '', `/workspace?${params.toString()}`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // intentionally omits searchParams — adding it causes an infinite loop
-  // (replace changes searchParams → triggers effect → replace again)
   }, [activeTool.key])
 
   const handleSelectTool = useCallback((key: ToolKey) => {
@@ -1252,28 +1249,6 @@ export default function WorkspaceShell() {
             </span>
           )}
 
-          <button
-            disabled={!file}
-            aria-label="Download PDF"
-            onClick={handleDownload}
-            style={{
-              background: file ? '#6366f1' : 'rgba(99,102,241,.35)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '7px 14px',
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '.03em',
-              whiteSpace: 'nowrap',
-              cursor: file ? 'pointer' : 'default',
-              opacity: file ? 1 : 0.6,
-              transition: 'background .25s, opacity .25s',
-              flexShrink: 0,
-            }}
-          >
-            <span aria-hidden="true">↓ </span>Download
-          </button>
         </header>
 
         {/* ── L2: horizontal selector rail + L3 inline strip ── */}
@@ -1350,6 +1325,46 @@ export default function WorkspaceShell() {
           />
         </div>
       </div>
+
+      {/* Floating Save PDF button */}
+      {file && (
+        <button
+          aria-label="Save PDF"
+          onClick={handleDownload}
+          style={{
+            position: 'fixed',
+            bottom: 28,
+            right: 28,
+            zIndex: 40,
+            background: '#6366f1',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 14,
+            padding: '14px 28px',
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: '.02em',
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            boxShadow: '0 4px 24px rgba(99,102,241,.45)',
+            transition: 'background .2s, box-shadow .2s, transform .1s',
+          }}
+          onMouseEnter={e => {
+            const b = e.currentTarget
+            b.style.background = '#4f46e5'
+            b.style.boxShadow = '0 6px 32px rgba(99,102,241,.6)'
+            b.style.transform = 'translateY(-1px)'
+          }}
+          onMouseLeave={e => {
+            const b = e.currentTarget
+            b.style.background = '#6366f1'
+            b.style.boxShadow = '0 4px 24px rgba(99,102,241,.45)'
+            b.style.transform = 'none'
+          }}
+        >
+          Save PDF
+        </button>
+      )}
     </>
   )
 }
