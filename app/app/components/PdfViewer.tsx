@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
+import SigOverlay from './SigOverlay'
+import AnnotationOverlay from './AnnotationOverlay'
 
 interface PdfViewerProps {
   pdfBytes: Uint8Array
@@ -13,6 +15,15 @@ interface PdfViewerProps {
   onLoad?: (pageCount: number) => void
   onFieldSelect?: (id: string) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
+  sigs?: SigEntry[]
+  onSigMove?: (id: string, xPct: number, yPct: number) => void
+  onSigDelete?: (id: string) => void
+  isPro?: boolean
+  annotateMode?: 'yellow' | 'green' | 'pink' | 'note' | 'check' | null
+  annotations?: Annotation[]
+  onAnnotate?: (ann: Annotation) => void
+  onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
+  onAnnotationDelete?: (id: string) => void
 }
 
 interface PageData {
@@ -20,6 +31,12 @@ interface PageData {
   width: number
   height: number
   items: ExtractedTextItem[]
+}
+
+const HIGHLIGHT_OVERLAY_COLORS: Record<string, string> = {
+  yellow: 'rgba(251,191,36,0.35)',
+  green: 'rgba(74,222,128,0.35)',
+  pink: 'rgba(244,114,182,0.35)',
 }
 
 const PDF_ERRORS: Record<string, string> = {
@@ -45,6 +62,15 @@ export default function PdfViewer({
   onLoad,
   onFieldSelect,
   pageRefs,
+  sigs,
+  onSigMove,
+  onSigDelete,
+  isPro = false,
+  annotateMode,
+  annotations,
+  onAnnotate,
+  onAnnotationMove,
+  onAnnotationDelete,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,7 +159,7 @@ export default function PdfViewer({
                 pdfWidth: raw.width,
                 pdfFontSize,
                 canvasX: tx[4],
-                canvasY: tx[5] - canvasFontSize,
+                canvasY: tx[5] - canvasFontSize * 0.8,
                 canvasWidth: Math.max(raw.width * scale, 4),
                 canvasFontSize,
               }
@@ -209,9 +235,6 @@ export default function PdfViewer({
         return (
           <div
             key={pageNum}
-            ref={el => {
-              if (el && pageRefs) pageRefs.current.set(pageNum, el)
-            }}
             className="flex flex-col items-center gap-1 w-full"
             style={{ maxWidth: width }}
           >
@@ -221,6 +244,9 @@ export default function PdfViewer({
               </div>
             )}
             <div
+              ref={el => {
+                if (el && pageRefs) pageRefs.current.set(pageNum, el)
+              }}
               className="relative shadow-lg bg-white"
               style={{ width, height }}
             >
@@ -241,9 +267,93 @@ export default function PdfViewer({
                     onEdit={onEdit}
                     onFieldSelect={onFieldSelect}
                     scale={scale}
+                    annotateMode={
+                      annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink'
+                        ? annotateMode
+                        : null
+                    }
+                    onHighlight={item => {
+                      if (!onAnnotate) return
+                      const hl: TextHighlight = {
+                        type: 'highlight',
+                        id: crypto.randomUUID(),
+                        itemId: item.id,
+                        pageNum,
+                        colorIndex: annotateMode === 'green' ? 1 : annotateMode === 'pink' ? 2 : 0,
+                        xPct: (item.canvasX / width) * 100,
+                        yPct: (item.canvasY / height) * 100,
+                        widthPct: (item.canvasWidth / width) * 100,
+                        heightPct: ((item.canvasFontSize * 1.4) / height) * 100,
+                      }
+                      onAnnotate(hl)
+                    }}
                   />
                 </div>
               </div>
+              {/* Signature overlays for this page */}
+              {sigs && onSigMove && onSigDelete && sigs
+                .filter(sig => sig.pageNum === pageNum)
+                .map(sig => (
+                  <SigOverlay
+                    key={sig.id}
+                    sig={sig}
+                    onMove={onSigMove}
+                    onDelete={onSigDelete}
+                    isPro={isPro}
+                  />
+                ))}
+
+              {/* Annotation overlays for this page */}
+              {annotations && annotations
+                .filter(ann => ann.pageNum === pageNum)
+                .map(ann => {
+                  if (ann.type === 'highlight') {
+                    const hl = ann as TextHighlight
+                    return (
+                      <div
+                        key={hl.id}
+                        style={{
+                          position: 'absolute',
+                          left: hl.xPct + '%',
+                          top: hl.yPct + '%',
+                          width: hl.widthPct + '%',
+                          height: hl.heightPct + '%',
+                          background: HIGHLIGHT_OVERLAY_COLORS[['yellow', 'green', 'pink'][hl.colorIndex] ?? 'yellow'],
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                        }}
+                      />
+                    )
+                  }
+                  if (ann.type === 'sticky-note' || ann.type === 'check') {
+                    if (onAnnotationMove && onAnnotationDelete) {
+                      return (
+                        <AnnotationOverlay
+                          key={ann.id}
+                          annotation={ann as StickyNote | CheckAnnotation}
+                          onMove={onAnnotationMove}
+                          onDelete={onAnnotationDelete}
+                        />
+                      )
+                    }
+                    // Fallback: static render if no handlers provided
+                    return (
+                      <div
+                        key={ann.id}
+                        style={{
+                          position: 'absolute',
+                          left: ann.xPct + '%',
+                          top: ann.yPct + '%',
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                        }}
+                      >
+                        {ann.type === 'sticky-note' ? (ann as StickyNote).text || '📝' : '✓'}
+                      </div>
+                    )
+                  }
+                  return null
+                })}
             </div>
           </div>
         )

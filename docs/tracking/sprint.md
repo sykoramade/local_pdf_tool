@@ -315,6 +315,111 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 19 — COMPLETE ✅
+**Committed:** 2026-03-22 (`fece287`)
+**Goal:** Signature modal (draw + type), SigOverlay drag/delete, PageRail scroll sync, annotate tool fully wired.
+
+### Done
+- [x] S19-2/3: `SignatureModal.tsx` — Draw tab (quadratic Bezier canvas) + Type tab; typed name stored as `SigEntry.text`
+- [x] S19-4: `SigOverlay.tsx` — drag-to-reposition + × delete button + `widthPct` resize handle (Pro-gated)
+- [x] S19-5: `IntersectionObserver` scroll sync — PageRail active thumbnail tracks canvas scroll in real time
+- [x] S19-6: Annotate tool fully wired:
+  - `CheckAnnotation` type + `annotate.ts` drawLine ✓ (avoids WinAnsi U+2713 encoding issue)
+  - `PdfTextLayer`: `annotateMode` + `onHighlight` props, crosshair cursor, conditional click routing
+  - `PdfViewer`: annotation overlays per page (highlight rect, sticky note box, check mark)
+  - `WorkspaceShell`: `AMode` lifted, `annotations[]` state, note/check click overlay, `applyAnnotations()` in download chain
+
+---
+
+## Sprint 20 — LAUNCH READY 🚀
+**Reframed:** 2026-03-23 — MD directive: stop polishing, ship to paying users.
+**Goal:** Minimum viable launch. Auth pages, Stripe sandbox E2E, annotation/sig stability, line-grouping text editor, 1 real blog post. Drop S20-11 to backlog.
+
+### Haiku delegation protocol: docs/guidelines/haiku-confidence.md
+### Cost estimate: ~$3.50–$4.50 total (6 Haiku tasks + 5 Sonnet tasks)
+### Token estimate: ~15,000–18,000 tokens
+
+---
+
+### Bug Fixes — 🟡 Haiku (review gate: Sonnet before merge)
+
+- [x] S20-1: Typed signature → true black — `rgb(0,0,0)` in `lib/pdf/signature.ts` + canvas stroke in `SignatureModal.tsx`
+  **Model:** 🟡 Haiku | **Confidence:** 9/10 | **Tokens:** ~100
+  **Verify:** Place typed sig → download → confirm black in PDF
+
+- [x] S20-4: Highlight deduplication — check `annotations[]` for existing highlight on same `itemId` before adding; toggle off on re-click
+  **Model:** 🟡 Haiku | **Confidence:** 8/10 | **Tokens:** ~150
+  **Verify:** Click same text item twice → second click removes highlight
+
+- [x] S20-5: Bold/italic retention — use `mapFont(item.fontName).bold/.italic` as fallback in `PdfTextLayer.handleBlur` instead of hardcoded `false`
+  **Model:** 🟡 Haiku | **Confidence:** 8/10 | **Tokens:** ~120
+  **Verify:** Open a bold-text PDF → click field → first edit preserves bold
+
+- [x] S20-6: Checkmark color → black — CSS overlay `color: #111` in `PdfViewer.tsx` + `drawLine` color param in `annotate.ts`; use `var(--tx)` where possible
+  **Model:** 🟡 Haiku | **Confidence:** 9/10 | **Tokens:** ~100
+  **Verify:** Place checkmark → confirm visually black overlay + black in downloaded PDF
+
+---
+
+### Annotation Overlay — 🟡 Haiku (7/10, Sonnet review mandatory before browser test)
+
+- [x] S20-2: `AnnotationOverlay` component (~120 lines) — drag-to-move + × delete for sticky notes and checkmarks; follows SigOverlay pattern from S19-4
+  **Model:** 🟡 Haiku | **Confidence:** 7/10 | **Tokens:** ~400
+  **Risk:** drag boundary clamping, z-index layering, scroll offset
+  **Verify:** Drag sticky note on 3-page PDF (scroll to page 2 first) → confirm position holds; × deletes
+
+- [x] S20-3: Wire `onAnnotationMove` / `onAnnotationDelete` to `WorkspaceShell`; remove + re-add annotation on move
+  **Model:** 🟡 Haiku | **Confidence:** 7/10 | **Tokens:** ~350
+  **Risk:** stale refs to `annotations[]`, scroll-relative coords
+  **Verify:** Move annotation → scroll canvas → confirm overlay position correct; delete → not in downloaded PDF
+
+---
+
+### Launch Gaps — 🔵 Sonnet only
+
+- [x] S20-7: Off-center text investigation — inspect `canvasY: tx[5] - canvasFontSize` in PdfViewer; compare against PDF.js canvas render; determine if fix is safe
+  **Model:** 🔵 Sonnet | **Confidence:** 5/10 for Haiku | **Tokens:** ~1,500
+  **Note:** Research task. May produce a fix or a documented decision to defer.
+
+- [x] S20-8/9/10: Line-grouping text editor (3 tasks as one Sonnet session)
+  - Group `ExtractedTextItem[]` by Y-proximity (tolerance: `canvasFontSize × 0.6`)
+  - Click any item → activates whole line as single `<textarea>` spanning bounding box
+  - On save → distribute replacement: first item = new value, remaining items = `''`
+  **Model:** 🔵 Sonnet | **Confidence:** 2–4/10 for Haiku | **Tokens:** ~6,000
+  **Verify:** Edit a line of text → download → confirm full line replaced, no orphan characters
+
+- [x] S20-A: Auth pages — `/login` and `/signup` dedicated routes (currently modal-only)
+  - `/login` — magic link + Google OAuth, redirect back to `/workspace` or referring page
+  - `/signup` — same form, different heading, email confirmation state
+  - Magic link callback route must handle redirect correctly (Supabase `/auth/callback`)
+  - Password reset page (`/auth/reset-password`)
+  **Model:** 🔵 Sonnet | **Confidence:** auth is security-adjacent | **Tokens:** ~3,000
+  **Verify:** Sign up with email → receive magic link → click → land on `/workspace`; Google OAuth full round-trip
+
+- [ ] S20-B: Stripe sandbox E2E test + fix
+  - Run `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+  - Complete checkout with Stripe test card `4242 4242 4242 4242`
+  - Verify: `checkout.session.completed` webhook fires → `user_profiles.is_pro = true` in Supabase
+  - Test subscription cancel → `is_pro` reverts
+  - Test failed payment card `4000 0000 0000 9995` → user NOT upgraded
+  - Fix any webhook or DB issues found
+  **Model:** 🔵 Sonnet | **Confidence:** integration test | **Tokens:** ~2,000
+  **Note:** MD must have `stripe` CLI installed and `.env.local` populated before this task runs
+
+- [x] S20-C: Blog seed post — 1 real article (not "Coming soon")
+  - Title: "Why your PDF editor shouldn't need a server" (privacy + trust angle)
+  - ~600 words, dark-themed, matches design system
+  - Proper meta/OG tags, canonical URL, sitemap updated
+  **Model:** 🟡 Haiku (content only) | **Confidence:** 8/10 | **Tokens:** ~500
+  **Verify:** `/blog` renders article, not "Coming soon" stub
+
+---
+
+### Moved to Backlog
+- S20-11: Drag-select sweep — too complex for launch sprint, deferred
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF

@@ -107,11 +107,12 @@ export function pctToPdfCoords(
   const widthPdf = (widthPct / 100) * pageWidthPdf
   const heightPdf = aspectRatio > 0 ? widthPdf / aspectRatio : widthPdf
 
-  // xPct/yPct are the centre point; pdf-lib drawImage uses bottom-left anchor
+  // xPct/yPct are the CENTRE point of the element (SigOverlay renders with
+  // transform: translate(-50%, -50%) so the visual centre is at these coords).
+  // pdf-lib drawImage() anchors at bottom-left, so shift by half dimensions.
   const centrePdfX = (xPct / 100) * pageWidthPdf
   const centrePdfY_fromTop = (yPct / 100) * pageHeightPdf
 
-  // Convert centre-top to bottom-left in PDF space (Y flipped, anchored at bottom)
   const x = centrePdfX - widthPdf / 2
   const y = pageHeightPdf - centrePdfY_fromTop - heightPdf / 2
 

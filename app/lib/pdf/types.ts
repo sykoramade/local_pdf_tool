@@ -41,6 +41,7 @@ export type EditMap = Map<string, FieldData>
 export interface TextHighlight {
   type: 'highlight'
   id: string
+  itemId?: string     // ExtractedTextItem.id — used for toggle deduplication
   pageNum: number
   colorIndex: number  // 0=yellow, 1=green, 2=pink
   xPct: number
@@ -59,4 +60,26 @@ export interface StickyNote {
   yPct: number        // from top of page
 }
 
-export type Annotation = TextHighlight | StickyNote
+/** A checkmark placed at a point on the page. xPct/yPct are % of page from top-left. */
+export interface CheckAnnotation {
+  type: 'check'
+  id: string
+  pageNum: number
+  xPct: number
+  yPct: number
+}
+
+export type Annotation = TextHighlight | StickyNote | CheckAnnotation
+
+// ─── Signature types ────────────────────────────────────────────────────────
+
+/** A signature entry that can be either typed text or a hand-drawn image. */
+export interface SigEntry {
+  id: string
+  text?: string           // typed name (optional)
+  drawingDataUrl?: string // PNG from canvas draw (optional)
+  pageNum: number
+  xPct: number
+  yPct: number
+  widthPct: number
+}

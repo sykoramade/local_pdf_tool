@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
-import type { EditMap, ExtractedTextItem, FieldData } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation } from '@/lib/pdf/types'
 import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
+import SignatureModal from '@/app/components/SignatureModal'
 import { formatBytes } from '@/lib/pdf/compress'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
@@ -34,8 +35,10 @@ const TOOLS: ToolDef[] = [
 // TOOL_HEX and TOOL_BG imported above
 
 /* ─── Sign types ─── */
-type SigMode = 'idle' | 'naming' | 'placing'
-interface SigEntry { pageNum: number; xPct: number; yPct: number; text: string }
+type SigMode = 'idle' | 'placing'
+
+/* ─── Annotate types ─── */
+type AMode = 'yellow' | 'green' | 'pink' | 'note' | 'check'
 
 /* ─── Inline SVG symbols (V2 icon set) ─── */
 const SVG_DEFS = `
@@ -207,9 +210,10 @@ function L3Strip({
   onToggleCompress,
   sigMode,
   sigCount,
-  onOpenSigNaming,
-  onConfirmSigName,
+  onOpenSigModal,
   onCancelSig,
+  annotateMode,
+  onAnnotateModeChange,
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -225,15 +229,11 @@ function L3Strip({
   onToggleCompress: () => void
   sigMode: SigMode
   sigCount: number
-  onOpenSigNaming: () => void
-  onConfirmSigName: (name: string) => void
+  onOpenSigModal: () => void
   onCancelSig: () => void
+  annotateMode: AMode
+  onAnnotateModeChange: (m: AMode) => void
 }) {
-  const [sigName, setSigName] = useState('')
-
-  useEffect(() => {
-    if (sigMode !== 'naming') setSigName('')
-  }, [sigMode])
 
   const base: React.CSSProperties = {
     height: 52,
@@ -270,7 +270,7 @@ function L3Strip({
         <div style={base}>
           <div key="sign-idle" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', animation: 'strip-appear .2s ease both' }}>
             <button
-              onClick={onOpenSigNaming}
+              onClick={onOpenSigModal}
               style={{ background: '#22d3a0', color: '#0b0d14', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
             >
               + Add Signature
@@ -280,43 +280,6 @@ function L3Strip({
                 {sigCount} sig{sigCount > 1 ? 's' : ''} ✓
               </span>
             )}
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.28)' }}>Click to place</span>
-          </div>
-        </div>
-      )
-    }
-
-    if (sigMode === 'naming') {
-      return (
-        <div style={base}>
-          <div key="sign-naming" style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', animation: 'strip-appear .2s ease both' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)', flexShrink: 0 }}>Type name:</span>
-            <input
-              autoFocus
-              value={sigName}
-              onChange={e => setSigName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && sigName.trim()) onConfirmSigName(sigName.trim()) }}
-              placeholder="Your name"
-              style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 6, padding: '5px 10px', fontSize: 12, color: '#fff', outline: 'none', fontFamily: 'var(--font-sans)' }}
-            />
-            {sigName.trim() && (
-              <span style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontSize: 18, color: '#0b0d14', background: '#fff', padding: '2px 10px', borderRadius: 4, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {sigName}
-              </span>
-            )}
-            <button
-              onClick={() => sigName.trim() && onConfirmSigName(sigName.trim())}
-              disabled={!sigName.trim()}
-              style={{ background: sigName.trim() ? '#22d3a0' : 'rgba(34,211,160,.3)', color: '#0b0d14', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: sigName.trim() ? 'pointer' : 'default', flexShrink: 0 }}
-            >
-              Place →
-            </button>
-            <button
-              onClick={onCancelSig}
-              style={{ background: 'none', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: 'rgba(255,255,255,.5)', cursor: 'pointer', flexShrink: 0 }}
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )
@@ -346,7 +309,7 @@ function L3Strip({
     return (
       <div style={base}>
         <div key={animKey} style={{ animation: 'strip-appear .2s ease both' }}>
-          <AnnotateSubRail />
+          <AnnotateSubRail mode={annotateMode} onModeChange={onAnnotateModeChange} />
         </div>
       </div>
     )
@@ -430,10 +393,8 @@ function L3Strip({
   return null
 }
 
-/* Annotate sub-rail (yellow / green / pink / note / flag) */
-function AnnotateSubRail() {
-  type AMode = 'yellow' | 'green' | 'pink' | 'note' | 'flag'
-  const [mode, setMode] = useState<AMode>('yellow')
+/* Annotate sub-rail (yellow / green / pink / note / check) */
+function AnnotateSubRail({ mode, onModeChange }: { mode: AMode; onModeChange: (m: AMode) => void }) {
   const tabRefs = useRef<(HTMLDivElement | null)[]>([])
   const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ left: 0, width: 0 })
 
@@ -442,7 +403,7 @@ function AnnotateSubRail() {
     { key: 'green',  label: 'Green',  dot: '#4ade80' },
     { key: 'pink',   label: 'Pink',   dot: '#f472b6' },
     { key: 'note',   label: 'Note'   },
-    { key: 'flag',   label: 'Arrow'  },
+    { key: 'check',  label: 'Check'  },
   ]
 
   useLayoutEffect(() => {
@@ -486,8 +447,8 @@ function AnnotateSubRail() {
           role="tab"
           aria-selected={mode === m.key}
           tabIndex={0}
-          onClick={() => setMode(m.key)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(m.key) } }}
+          onClick={() => onModeChange(m.key)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onModeChange(m.key) } }}
           style={{
             position: 'relative',
             zIndex: 1,
@@ -516,13 +477,9 @@ function AnnotateSubRail() {
               <line x1="8" y1="12" x2="8" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           )}
-          {m.key === 'flag' && (
-            /* Arrow post-it note icon */
+          {m.key === 'check' && (
             <svg width="11" height="11" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
-              <rect x="2" y="3" width="9" height="8" rx="1.2" fill="currentColor" opacity=".25"/>
-              <rect x="2" y="3" width="9" height="8" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M4 13 L8 13 L8 16 Z" fill="currentColor" opacity=".4"/>
-              <path d="M7 7 L10 7 M9 5.5 L11 7 L9 8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 8 L6 12 L14 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           )}
           {m.label}
@@ -627,6 +584,16 @@ function CanvasArea({
   pageRefs,
   sigMode,
   onSigPlace,
+  sigs,
+  onSigMove,
+  onSigDelete,
+  isPro,
+  canvasScrollRef,
+  annotateMode,
+  onAnnotate,
+  annotations,
+  onAnnotationMove,
+  onAnnotationDelete,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -645,6 +612,16 @@ function CanvasArea({
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
   sigMode?: SigMode
   onSigPlace?: (pageNum: number, xPct: number, yPct: number) => void
+  sigs: SigEntry[]
+  onSigMove: (id: string, xPct: number, yPct: number) => void
+  onSigDelete: (id: string) => void
+  isPro: boolean
+  canvasScrollRef?: React.RefObject<HTMLDivElement>
+  annotateMode?: AMode | null
+  onAnnotate?: (ann: Annotation) => void
+  annotations?: Annotation[]
+  onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
+  onAnnotationDelete?: (id: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -791,12 +768,22 @@ function CanvasArea({
         onTextItems={onTextItems}
         onFieldSelect={isEdit ? onFieldSelect : undefined}
         pageRefs={pageRefs}
+        sigs={sigs}
+        onSigMove={onSigMove}
+        onSigDelete={onSigDelete}
+        isPro={isPro}
+        annotateMode={activeTool.key === 'annotate' ? annotateMode : null}
+        onAnnotate={onAnnotate}
+        annotations={annotations}
+        onAnnotationMove={onAnnotationMove}
+        onAnnotationDelete={onAnnotationDelete}
       />
     )
   }
 
   return (
     <div
+      ref={canvasScrollRef}
       style={{
         flex: 1,
         overflowY: 'auto',
@@ -841,6 +828,34 @@ function CanvasArea({
             </span>
           </div>
         )}
+        {activeTool.key === 'annotate' && (annotateMode === 'note' || annotateMode === 'check') && onAnnotate && (
+          <div
+            onClick={(e: React.MouseEvent) => {
+              if (!pageRefs) return
+              const pages = pageRefs.current
+              for (const [pageNum, el] of Array.from(pages.entries())) {
+                const rect = el.getBoundingClientRect()
+                if (e.clientY >= rect.top && e.clientY <= rect.bottom &&
+                    e.clientX >= rect.left && e.clientX <= rect.right) {
+                  const xPct = ((e.clientX - rect.left) / rect.width) * 100
+                  const yPct = ((e.clientY - rect.top) / rect.height) * 100
+                  if (annotateMode === 'note') {
+                    onAnnotate({ type: 'sticky-note', id: crypto.randomUUID(), pageNum, text: '', xPct, yPct })
+                  } else {
+                    onAnnotate({ type: 'check', id: crypto.randomUUID(), pageNum, xPct, yPct })
+                  }
+                  return
+                }
+              }
+            }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              cursor: 'crosshair',
+              zIndex: 10,
+            }}
+          />
+        )}
       </div>
     </div>
   )
@@ -849,7 +864,6 @@ function CanvasArea({
 /* ─── Main component ─── */
 export default function WorkspaceShell() {
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const initialKey = (searchParams.get('tool') ?? 'edit') as ToolKey
   const resolvedTool = TOOLS.find(t => t.key === initialKey) ?? TOOLS[0]
@@ -866,11 +880,16 @@ export default function WorkspaceShell() {
 
   /* Sign state */
   const [sigMode, setSigMode] = useState<SigMode>('idle')
-  const [pendingSigText, setPendingSigText] = useState('')
+  const [sigModalOpen, setSigModalOpen] = useState(false)
+  const [pendingSigPayload, setPendingSigPayload] = useState<Pick<SigEntry, 'text' | 'drawingDataUrl'> | null>(null)
   const [sigs, setSigs] = useState<SigEntry[]>([])
 
+  /* Annotate state */
+  const [annotateMode, setAnnotateMode] = useState<AMode>('yellow')
+  const [annotations, setAnnotations] = useState<Annotation[]>([])
+
   /* Compress state */
-  const [compressEnabled, setCompressEnabled] = useState(false)
+  const [compressEnabled, setCompressEnabled] = useState(true)
   const [compressStats, setCompressStats] = useState<{ original: number; compressed: number; pct: number } | null>(null)
   const [compressLoading, setCompressLoading] = useState(false)
 
@@ -899,8 +918,29 @@ export default function WorkspaceShell() {
     setEditMap(histRef.current[newIdx])
   }, [hIdx])
 
-  /* Page refs for scroll-to-page */
+  /* Page refs for scroll-to-page + canvas scroll container ref */
   const pageRefsMap = useRef<Map<number, HTMLDivElement>>(new Map())
+  const canvasScrollRef = useRef<HTMLDivElement>(null)
+
+  /* Sync active page thumbnail when user scrolls canvas */
+  useEffect(() => {
+    if (!pageRefsMap.current.size) return
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (visible) {
+          const pageNum = Array.from(pageRefsMap.current.entries())
+            .find(([, el]) => el === visible.target)?.[0]
+          if (pageNum !== undefined) setActivePage(pageNum)
+        }
+      },
+      { root: canvasScrollRef.current, threshold: [0.3, 0.6] },
+    )
+    pageRefsMap.current.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [pageCount]) // re-run when PDF loads (pageCount changes)
 
   const handlePageClick = useCallback((n: number) => {
     setActivePage(n)
@@ -924,14 +964,12 @@ export default function WorkspaceShell() {
     return () => { cancelled = true }
   }, [file])
 
-  /* Keep ?tool= URL param in sync */
+  /* Keep ?tool= URL param in sync — use history API to avoid React remounting */
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tool', activeTool.key)
-    router.replace(`/workspace?${params.toString()}`, { scroll: false })
+    window.history.replaceState(null, '', `/workspace?${params.toString()}`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // intentionally omits searchParams — adding it causes an infinite loop
-  // (replace changes searchParams → triggers effect → replace again)
   }, [activeTool.key])
 
   const handleSelectTool = useCallback((key: ToolKey) => {
@@ -978,20 +1016,51 @@ export default function WorkspaceShell() {
   const handleTextItems = useCallback((items: ExtractedTextItem[]) => setTextItems(items), [])
 
   /* Sign handlers */
-  const handleOpenSigNaming = useCallback(() => setSigMode('naming'), [])
-  const handleConfirmSigName = useCallback((name: string) => {
-    setPendingSigText(name)
+  const handleOpenSigModal = useCallback(() => setSigModalOpen(true), [])
+  const handleSigModalConfirm = useCallback((sig: Pick<SigEntry, 'text' | 'drawingDataUrl'>) => {
+    setPendingSigPayload(sig)
+    setSigModalOpen(false)
     setSigMode('placing')
   }, [])
   const handleCancelSig = useCallback(() => {
     setSigMode('idle')
-    setPendingSigText('')
+    setPendingSigPayload(null)
   }, [])
   const handleSigPlace = useCallback((pageNum: number, xPct: number, yPct: number) => {
-    setSigs(prev => [...prev, { pageNum, xPct, yPct, text: pendingSigText }])
+    if (!pendingSigPayload) return
+    setSigs(prev => [...prev, { id: crypto.randomUUID(), ...pendingSigPayload, pageNum, xPct, yPct, widthPct: 20 }])
     setSigMode('idle')
-    setPendingSigText('')
-  }, [pendingSigText])
+    setPendingSigPayload(null)
+  }, [pendingSigPayload])
+
+  const handleSigMove = useCallback((id: string, xPct: number, yPct: number) => {
+    setSigs(prev => prev.map(s => s.id === id ? { ...s, xPct, yPct } : s))
+  }, [])
+
+  const handleSigDelete = useCallback((id: string) => {
+    setSigs(prev => prev.filter(s => s.id !== id))
+  }, [])
+
+  /* Annotate handlers */
+  const handleAnnotateModeChange = useCallback((m: AMode) => setAnnotateMode(m), [])
+  const handleAnnotate = useCallback((ann: Annotation) => {
+    setAnnotations(prev => {
+      // Toggle highlights: clicking the same text item again removes the existing highlight
+      if (ann.type === 'highlight' && ann.itemId) {
+        const exists = prev.find(a => a.type === 'highlight' && (a as typeof ann).itemId === ann.itemId)
+        if (exists) return prev.filter(a => a.id !== exists.id)
+      }
+      return [...prev, ann]
+    })
+  }, [])
+
+  const handleAnnotationMove = useCallback((id: string, xPct: number, yPct: number) => {
+    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, xPct, yPct } : a))
+  }, [])
+
+  const handleAnnotationDelete = useCallback((id: string) => {
+    setAnnotations(prev => prev.filter(a => a.id !== id))
+  }, [])
 
   /* Compute compress stats when compress tool is active and pdfBytes available */
   useEffect(() => {
@@ -1049,10 +1118,43 @@ export default function WorkspaceShell() {
         outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
       }
       if (sigs.length > 0) {
-        const { embedTypedSignature } = await import('@/lib/pdf/signature')
-        outputBytes = await embedTypedSignature(outputBytes, sigs)
+        const typedSigs = sigs.filter(s => s.text)
+        const drawnSigs = sigs.filter(s => s.drawingDataUrl)
+        if (typedSigs.length > 0) {
+          const { embedTypedSignature } = await import('@/lib/pdf/signature')
+          outputBytes = await embedTypedSignature(
+            outputBytes,
+            typedSigs.map(s => ({
+              pageNum: s.pageNum,
+              xPct: s.xPct,
+              yPct: s.yPct,
+              text: s.text!,
+              widthPct: s.widthPct,
+            })),
+          )
+        }
+        if (drawnSigs.length > 0) {
+          const { applySignatures } = await import('@/lib/pdf/signature')
+          outputBytes = await applySignatures(
+            outputBytes,
+            drawnSigs.map(s => ({
+              pageNum: s.pageNum,
+              xPct: s.xPct,
+              yPct: s.yPct,
+              widthPct: s.widthPct,
+              dataUrl: s.drawingDataUrl!,
+            })),
+          )
+        }
         if (outputName === file.name) {
           outputName = file.name.replace(/\.pdf$/i, '_signed.pdf')
+        }
+      }
+      if (annotations.length > 0) {
+        const { applyAnnotations } = await import('@/lib/pdf/annotate')
+        outputBytes = await applyAnnotations(outputBytes, annotations)
+        if (outputName === file.name) {
+          outputName = file.name.replace(/\.pdf$/i, '_annotated.pdf')
         }
       }
       if (compressEnabled) {
@@ -1072,11 +1174,17 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, sigs, compressEnabled])
+  }, [pdfBytes, file, editMap, textItems, sigs, annotations, compressEnabled])
 
   return (
     <>
       <div dangerouslySetInnerHTML={{ __html: SVG_DEFS }} />
+
+      <SignatureModal
+        open={sigModalOpen}
+        onClose={() => setSigModalOpen(false)}
+        onConfirm={handleSigModalConfirm}
+      />
 
       <div
         style={{
@@ -1140,28 +1248,6 @@ export default function WorkspaceShell() {
             </span>
           )}
 
-          <button
-            disabled={!file}
-            aria-label="Download PDF"
-            onClick={handleDownload}
-            style={{
-              background: file ? '#6366f1' : 'rgba(99,102,241,.35)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '7px 14px',
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '.03em',
-              whiteSpace: 'nowrap',
-              cursor: file ? 'pointer' : 'default',
-              opacity: file ? 1 : 0.6,
-              transition: 'background .25s, opacity .25s',
-              flexShrink: 0,
-            }}
-          >
-            <span aria-hidden="true">↓ </span>Download
-          </button>
         </header>
 
         {/* ── L2: horizontal selector rail + L3 inline strip ── */}
@@ -1191,9 +1277,10 @@ export default function WorkspaceShell() {
               onToggleCompress={handleToggleCompress}
               sigMode={sigMode}
               sigCount={sigs.length}
-              onOpenSigNaming={handleOpenSigNaming}
-              onConfirmSigName={handleConfirmSigName}
+              onOpenSigModal={handleOpenSigModal}
               onCancelSig={handleCancelSig}
+              annotateMode={annotateMode}
+              onAnnotateModeChange={handleAnnotateModeChange}
             />
           </div>
         </div>
@@ -1224,9 +1311,59 @@ export default function WorkspaceShell() {
             pageRefs={pageRefsMap}
             sigMode={sigMode}
             onSigPlace={handleSigPlace}
+            sigs={sigs}
+            onSigMove={handleSigMove}
+            onSigDelete={handleSigDelete}
+            isPro={false}
+            canvasScrollRef={canvasScrollRef}
+            annotateMode={annotateMode}
+            onAnnotate={handleAnnotate}
+            annotations={annotations}
+            onAnnotationMove={handleAnnotationMove}
+            onAnnotationDelete={handleAnnotationDelete}
           />
         </div>
       </div>
+
+      {/* Floating Save PDF button */}
+      {file && (
+        <button
+          aria-label="Save PDF"
+          onClick={handleDownload}
+          style={{
+            position: 'fixed',
+            bottom: 28,
+            right: 28,
+            zIndex: 40,
+            background: '#6366f1',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 14,
+            padding: '14px 28px',
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: '.02em',
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            boxShadow: '0 4px 24px rgba(99,102,241,.45)',
+            transition: 'background .2s, box-shadow .2s, transform .1s',
+          }}
+          onMouseEnter={e => {
+            const b = e.currentTarget
+            b.style.background = '#4f46e5'
+            b.style.boxShadow = '0 6px 32px rgba(99,102,241,.6)'
+            b.style.transform = 'translateY(-1px)'
+          }}
+          onMouseLeave={e => {
+            const b = e.currentTarget
+            b.style.background = '#6366f1'
+            b.style.boxShadow = '0 4px 24px rgba(99,102,241,.45)'
+            b.style.transform = 'none'
+          }}
+        >
+          Save PDF
+        </button>
+      )}
     </>
   )
 }
