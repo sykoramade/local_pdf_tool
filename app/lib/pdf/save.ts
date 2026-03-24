@@ -7,7 +7,7 @@
 
 import { PDFDocument, rgb } from 'pdf-lib'
 import type { ExtractedTextItem, EditMap } from './types'
-import { mapFont } from './fonts/font-map'
+import { mapFont, resolveStandardFont } from './fonts/font-map'
 
 export async function applyEditsAndSave(
   originalBytes: Uint8Array,
@@ -36,17 +36,26 @@ export async function applyEditsAndSave(
     if (!page) continue
 
     const fontMatch = mapFont(item.fontName)
-    const font = await getFont(fontMatch.standardFont)
+    // Apply user bold/italic overrides from the toolbar (FieldData) on top of
+    // the auto-detected values from the original font name.
+    const effectiveBold = fieldData.bold ?? fontMatch.bold
+    const effectiveItalic = fieldData.italic ?? fontMatch.italic
+    const standardFont = resolveStandardFont(fontMatch.standardFont, effectiveBold, effectiveItalic)
+    const font = await getFont(standardFont)
 
     const fs = fieldData.size || item.pdfFontSize || 12
     const originalWidth = font.widthOfTextAtSize(item.str, fs)
 
-    // Mask original text with white rectangle sized to original text
+    // Mask original text with white rectangle.
+    // Descenders (g, p, q, y, j) extend ~25% of font size below the baseline.
+    // Using a fixed -2 under-covers larger font sizes — use proportional offset.
+    const descenderDepth = Math.max(2, fs * 0.25)
+    const ascenderHeight = fs * 0.85
     page.drawRectangle({
       x: item.pdfX - 1,
-      y: item.pdfY - 2,
+      y: item.pdfY - descenderDepth,
       width: originalWidth + 4,
-      height: fs + 4,
+      height: ascenderHeight + descenderDepth + 2,
       color: rgb(1, 1, 1),
       opacity: 1,
     })

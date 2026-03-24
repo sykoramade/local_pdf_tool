@@ -16,7 +16,7 @@ const POSTS = [
     title: "Why Your PDF Editor Shouldn't Need a Server",
     date: 'March 2026',
     excerpt:
-      'Every time you upload a PDF to an online editor, you're trusting a stranger with your documents. Here's why that's a problem — and how browser-based processing fixes it.',
+      "Every time you upload a PDF to an online editor, you're trusting a stranger with your documents. Here's why that's a problem — and how browser-based processing fixes it.",
   },
 ]
 

@@ -40,6 +40,33 @@ const WEB_FONT_RULES: Array<{
   { match: ['zapf', 'dingbat', 'wingding'],        bold: false, css: 'Wingdings, ZapfDingbats',                   standard: 'ZapfDingbats' },
 ]
 
+/**
+ * Given a base standard font name (from mapFont) and user-specified bold/italic
+ * overrides, return the correct pdf-lib standard font string.
+ * Respects the Oblique/Italic rule for Helvetica/Courier vs Times.
+ */
+export function resolveStandardFont(
+  baseStandardFont: string,
+  bold: boolean,
+  italic: boolean,
+): string {
+  // Identify family from the base name
+  let family: string
+  if (baseStandardFont.startsWith('Times')) family = 'Times'
+  else if (baseStandardFont.startsWith('Courier')) family = 'Courier'
+  else if (baseStandardFont.startsWith('Symbol')) return 'Symbol'
+  else if (baseStandardFont.startsWith('ZapfDingbats')) return 'ZapfDingbats'
+  else family = 'Helvetica'
+
+  // Helvetica and Courier use Oblique; Times uses Italic
+  const italicSuffix = family === 'Times' ? 'Italic' : 'Oblique'
+
+  if (!bold && !italic) return family === 'Times' ? 'Times-Roman' : family
+  if (bold && !italic) return `${family}-Bold`
+  if (!bold && italic) return `${family}-${italicSuffix}`
+  return `${family}-Bold${italicSuffix}`
+}
+
 /** Strip subset prefix (ABCDEF+FontName → FontName) and normalise separators */
 function normaliseName(raw: string): string {
   return raw.replace(/^[A-Z]{6}\+/, '').replace(/,/g, '-').trim()
