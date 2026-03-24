@@ -10,6 +10,7 @@ import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
 import SignatureModal from '@/app/components/SignatureModal'
 import { formatBytes } from '@/lib/pdf/compress'
+import { addBlankPage } from '@/lib/pdf/pages'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
 
@@ -494,10 +495,12 @@ function PageRail({
   pageCount,
   activePage,
   onPageClick,
+  onAddPage,
 }: {
   pageCount: number
   activePage: number
   onPageClick: (n: number) => void
+  onAddPage?: (afterPage: number) => void
 }) {
   const count = pageCount > 0 ? pageCount : 1  // always show at least 1 placeholder
 
@@ -561,6 +564,36 @@ function PageRail({
           </div>
         )
       })}
+
+      {/* Add blank page button — only shown when a PDF is loaded */}
+      {pageCount > 0 && onAddPage && (
+        <button
+          onClick={() => onAddPage(pageCount)}
+          title="Add blank page at end"
+          style={{
+            background: 'none',
+            border: '1.5px dashed rgba(255,255,255,.15)',
+            borderRadius: 4,
+            color: 'rgba(255,255,255,.3)',
+            cursor: 'pointer',
+            fontSize: 16,
+            lineHeight: 1,
+            padding: '6px 0',
+            textAlign: 'center',
+            transition: 'border-color .15s, color .15s',
+          }}
+          onMouseEnter={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(129,140,248,.5)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#818cf8'
+          }}
+          onMouseLeave={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,.15)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,.3)'
+          }}
+        >
+          +
+        </button>
+      )}
     </div>
   )
 }
@@ -948,6 +981,12 @@ export default function WorkspaceShell() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
+  const handleAddPage = useCallback(async (afterPage: number) => {
+    if (!pdfBytes) return
+    const newBytes = await addBlankPage(pdfBytes, afterPage - 1)
+    setPdfBytes(newBytes)
+  }, [pdfBytes])
+
   /* Consume file handed off from homepage hub */
   useEffect(() => {
     const pending = consumePendingFile()
@@ -1291,6 +1330,7 @@ export default function WorkspaceShell() {
             pageCount={pageCount}
             activePage={activePage}
             onPageClick={handlePageClick}
+            onAddPage={handleAddPage}
           />
 
           <CanvasArea
