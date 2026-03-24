@@ -864,7 +864,6 @@ function CanvasArea({
 /* ─── Main component ─── */
 export default function WorkspaceShell() {
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const initialKey = (searchParams.get('tool') ?? 'edit') as ToolKey
   const resolvedTool = TOOLS.find(t => t.key === initialKey) ?? TOOLS[0]
