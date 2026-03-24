@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
-import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation, ImageEntry } from '@/lib/pdf/types'
 import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
 import SignatureModal from '@/app/components/SignatureModal'
@@ -215,6 +215,8 @@ function L3Strip({
   onCancelSig,
   annotateMode,
   onAnnotateModeChange,
+  imageCount,
+  onInsertImageClick,
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -234,6 +236,8 @@ function L3Strip({
   onCancelSig: () => void
   annotateMode: AMode
   onAnnotateModeChange: (m: AMode) => void
+  imageCount: number
+  onInsertImageClick: () => void
 }) {
 
   const base: React.CSSProperties = {
@@ -276,9 +280,20 @@ function L3Strip({
             >
               + Add Signature
             </button>
+            <button
+              onClick={onInsertImageClick}
+              style={{ background: 'none', color: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Insert Image
+            </button>
             {sigCount > 0 && (
               <span style={{ fontSize: 11, fontWeight: 600, color: '#22d3a0', background: 'rgba(34,211,160,.12)', border: '1px solid rgba(34,211,160,.25)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
                 {sigCount} sig{sigCount > 1 ? 's' : ''} ✓
+              </span>
+            )}
+            {imageCount > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
+                {imageCount} img{imageCount > 1 ? 's' : ''} ✓
               </span>
             )}
           </div>
@@ -627,6 +642,9 @@ function CanvasArea({
   annotations,
   onAnnotationMove,
   onAnnotationDelete,
+  images,
+  onImageMove,
+  onImageDelete,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -655,6 +673,9 @@ function CanvasArea({
   annotations?: Annotation[]
   onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
   onAnnotationDelete?: (id: string) => void
+  images?: ImageEntry[]
+  onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageDelete?: (id: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -810,6 +831,9 @@ function CanvasArea({
         annotations={annotations}
         onAnnotationMove={onAnnotationMove}
         onAnnotationDelete={onAnnotationDelete}
+        images={images}
+        onImageMove={onImageMove}
+        onImageDelete={onImageDelete}
       />
     )
   }
@@ -920,6 +944,10 @@ export default function WorkspaceShell() {
   /* Annotate state */
   const [annotateMode, setAnnotateMode] = useState<AMode>('yellow')
   const [annotations, setAnnotations] = useState<Annotation[]>([])
+
+  /* Image state */
+  const [images, setImages] = useState<ImageEntry[]>([])
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   /* Compress state */
   const [compressEnabled, setCompressEnabled] = useState(true)
@@ -1101,6 +1129,36 @@ export default function WorkspaceShell() {
     setAnnotations(prev => prev.filter(a => a.id !== id))
   }, [])
 
+  /* Image handlers */
+  const handleInsertImageClick = useCallback(() => {
+    imageInputRef.current?.click()
+  }, [])
+
+  const handleImageFileSelect = useCallback((file: File) => {
+    const mimeType: ImageEntry['mimeType'] = file.type === 'image/png' ? 'png' : 'jpeg'
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        dataUrl: reader.result as string,
+        mimeType,
+        page: activePage,
+        xPct: 50,
+        yPct: 50,
+        widthPct: 30,
+      }])
+    }
+    reader.readAsDataURL(file)
+  }, [activePage])
+
+  const handleImageMove = useCallback((id: string, xPct: number, yPct: number) => {
+    setImages(prev => prev.map(img => img.id === id ? { ...img, xPct, yPct } : img))
+  }, [])
+
+  const handleImageDelete = useCallback((id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id))
+  }, [])
+
   /* Compute compress stats when compress tool is active and pdfBytes available */
   useEffect(() => {
     if (activeTool.key !== 'compress' || !pdfBytes) return
@@ -1189,6 +1247,13 @@ export default function WorkspaceShell() {
           outputName = file.name.replace(/\.pdf$/i, '_signed.pdf')
         }
       }
+      if (images.length > 0) {
+        const { embedImages } = await import('@/lib/pdf/image')
+        outputBytes = await embedImages(outputBytes, images)
+        if (outputName === file.name) {
+          outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+        }
+      }
       if (annotations.length > 0) {
         const { applyAnnotations } = await import('@/lib/pdf/annotate')
         outputBytes = await applyAnnotations(outputBytes, annotations)
@@ -1213,7 +1278,7 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, sigs, annotations, compressEnabled])
+  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled])
 
   return (
     <>
@@ -1223,6 +1288,18 @@ export default function WorkspaceShell() {
         open={sigModalOpen}
         onClose={() => setSigModalOpen(false)}
         onConfirm={handleSigModalConfirm}
+      />
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg"
+        style={{ display: 'none' }}
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) handleImageFileSelect(f)
+          e.target.value = ''
+        }}
       />
 
       <div
@@ -1320,6 +1397,8 @@ export default function WorkspaceShell() {
               onCancelSig={handleCancelSig}
               annotateMode={annotateMode}
               onAnnotateModeChange={handleAnnotateModeChange}
+              imageCount={images.length}
+              onInsertImageClick={handleInsertImageClick}
             />
           </div>
         </div>
@@ -1361,6 +1440,9 @@ export default function WorkspaceShell() {
             annotations={annotations}
             onAnnotationMove={handleAnnotationMove}
             onAnnotationDelete={handleAnnotationDelete}
+            images={images}
+            onImageMove={handleImageMove}
+            onImageDelete={handleImageDelete}
           />
         </div>
       </div>

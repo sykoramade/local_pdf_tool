@@ -83,3 +83,16 @@ export interface SigEntry {
   yPct: number
   widthPct: number
 }
+
+// ─── Image types ─────────────────────────────────────────────────────────────
+
+/** A raster image placed on a page. xPct/yPct are the CENTER point (0–100). */
+export interface ImageEntry {
+  id: string
+  dataUrl: string
+  mimeType: 'png' | 'jpeg'
+  page: number
+  xPct: number
+  yPct: number
+  widthPct: number
+}

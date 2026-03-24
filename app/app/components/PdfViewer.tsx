@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
 import SigOverlay from './SigOverlay'
 import AnnotationOverlay from './AnnotationOverlay'
+import ImageOverlay from './ImageOverlay'
 
 interface PdfViewerProps {
   pdfBytes: Uint8Array
@@ -24,6 +25,9 @@ interface PdfViewerProps {
   onAnnotate?: (ann: Annotation) => void
   onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
   onAnnotationDelete?: (id: string) => void
+  images?: ImageEntry[]
+  onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageDelete?: (id: string) => void
 }
 
 interface PageData {
@@ -71,6 +75,9 @@ export default function PdfViewer({
   onAnnotate,
   onAnnotationMove,
   onAnnotationDelete,
+  images,
+  onImageMove,
+  onImageDelete,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -300,6 +307,18 @@ export default function PdfViewer({
                     onMove={onSigMove}
                     onDelete={onSigDelete}
                     isPro={isPro}
+                  />
+                ))}
+
+              {/* Image overlays for this page */}
+              {images && onImageMove && onImageDelete && images
+                .filter(img => img.page === pageNum)
+                .map(img => (
+                  <ImageOverlay
+                    key={img.id}
+                    image={img}
+                    onMove={onImageMove}
+                    onDelete={onImageDelete}
                   />
                 ))}
 
