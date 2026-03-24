@@ -7,7 +7,7 @@
 
 import { PDFDocument, rgb } from 'pdf-lib'
 import type { ExtractedTextItem, EditMap } from './types'
-import { mapFont } from './fonts/font-map'
+import { mapFont, resolveStandardFont } from './fonts/font-map'
 
 export async function applyEditsAndSave(
   originalBytes: Uint8Array,
@@ -36,7 +36,12 @@ export async function applyEditsAndSave(
     if (!page) continue
 
     const fontMatch = mapFont(item.fontName)
-    const font = await getFont(fontMatch.standardFont)
+    // Apply user bold/italic overrides from the toolbar (FieldData) on top of
+    // the auto-detected values from the original font name.
+    const effectiveBold = fieldData.bold ?? fontMatch.bold
+    const effectiveItalic = fieldData.italic ?? fontMatch.italic
+    const standardFont = resolveStandardFont(fontMatch.standardFont, effectiveBold, effectiveItalic)
+    const font = await getFont(standardFont)
 
     const fs = fieldData.size || item.pdfFontSize || 12
     const originalWidth = font.widthOfTextAtSize(item.str, fs)
