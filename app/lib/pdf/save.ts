@@ -46,12 +46,16 @@ export async function applyEditsAndSave(
     const fs = fieldData.size || item.pdfFontSize || 12
     const originalWidth = font.widthOfTextAtSize(item.str, fs)
 
-    // Mask original text with white rectangle sized to original text
+    // Mask original text with white rectangle.
+    // Descenders (g, p, q, y, j) extend ~25% of font size below the baseline.
+    // Using a fixed -2 under-covers larger font sizes — use proportional offset.
+    const descenderDepth = Math.max(2, fs * 0.25)
+    const ascenderHeight = fs * 0.85
     page.drawRectangle({
       x: item.pdfX - 1,
-      y: item.pdfY - 2,
+      y: item.pdfY - descenderDepth,
       width: originalWidth + 4,
-      height: fs + 4,
+      height: ascenderHeight + descenderDepth + 2,
       color: rgb(1, 1, 1),
       opacity: 1,
     })
