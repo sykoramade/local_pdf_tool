@@ -13,6 +13,7 @@ import { formatBytes } from '@/lib/pdf/compress'
 import { addBlankPage } from '@/lib/pdf/pages'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
+const DrawingCanvas = dynamic(() => import('@/app/components/DrawingCanvas'), { ssr: false })
 
 /* ─── Types ─── */
 // ToolKey imported from lib/ui/tool-colors
@@ -217,6 +218,8 @@ function L3Strip({
   onAnnotateModeChange,
   imageCount,
   onInsertImageClick,
+  drawMode,
+  onDrawClick,
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -238,6 +241,8 @@ function L3Strip({
   onAnnotateModeChange: (m: AMode) => void
   imageCount: number
   onInsertImageClick: () => void
+  drawMode: boolean
+  onDrawClick: () => void
 }) {
 
   const base: React.CSSProperties = {
@@ -285,6 +290,12 @@ function L3Strip({
               style={{ background: 'none', color: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
             >
               Insert Image
+            </button>
+            <button
+              onClick={onDrawClick}
+              style={{ background: drawMode ? 'rgba(99,102,241,.18)' : 'none', color: drawMode ? '#818cf8' : 'rgba(255,255,255,.5)', border: drawMode ? '1px solid rgba(129,140,248,.4)' : '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Draw
             </button>
             {sigCount > 0 && (
               <span style={{ fontSize: 11, fontWeight: 600, color: '#22d3a0', background: 'rgba(34,211,160,.12)', border: '1px solid rgba(34,211,160,.25)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
@@ -1159,6 +1170,22 @@ export default function WorkspaceShell() {
     setImages(prev => prev.filter(img => img.id !== id))
   }, [])
 
+  /* Draw state */
+  const [drawMode, setDrawMode] = useState(false)
+  const handleDrawClick = useCallback(() => setDrawMode(prev => !prev), [])
+  const handleDrawDone = useCallback((dataUrl: string) => {
+    setImages(prev => [...prev, {
+      id: crypto.randomUUID(),
+      dataUrl,
+      mimeType: 'png' as const,
+      page: activePage,
+      xPct: 50,
+      yPct: 50,
+      widthPct: 100,
+    }])
+    setDrawMode(false)
+  }, [activePage])
+
   /* Compute compress stats when compress tool is active and pdfBytes available */
   useEffect(() => {
     if (activeTool.key !== 'compress' || !pdfBytes) return
@@ -1302,6 +1329,19 @@ export default function WorkspaceShell() {
         }}
       />
 
+      {drawMode && (() => {
+        const pageEl = pageRefsMap.current.get(activePage)
+        const rect = pageEl?.getBoundingClientRect()
+        if (!rect) return null
+        return (
+          <DrawingCanvas
+            pageRect={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
+            onDone={handleDrawDone}
+            onCancel={() => setDrawMode(false)}
+          />
+        )
+      })()}
+
       <div
         style={{
           height: '100vh',
@@ -1399,6 +1439,8 @@ export default function WorkspaceShell() {
               onAnnotateModeChange={handleAnnotateModeChange}
               imageCount={images.length}
               onInsertImageClick={handleInsertImageClick}
+              drawMode={drawMode}
+              onDrawClick={handleDrawClick}
             />
           </div>
         </div>

@@ -78,17 +78,14 @@ export default function BlogPage() {
                 style={{ textDecoration: 'none' }}
               >
                 <h2
+                  className="text-[#f4f6fc] hover:text-[#818cf8] transition-colors duration-150"
                   style={{
                     fontSize: 22,
                     fontWeight: 600,
-                    color: '#f4f6fc',
                     margin: '0 0 12px',
                     letterSpacing: '-0.01em',
                     lineHeight: 1.3,
-                    transition: 'color .15s',
                   }}
-                  onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = '#818cf8')}
-                  onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = '#f4f6fc')}
                 >
                   {post.title}
                 </h2>
