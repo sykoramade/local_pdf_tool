@@ -420,6 +420,54 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 21 — COMPLETE ✅
+**Committed:** `faf0974`, `992a818` (2026-03-23)
+**Goal:** Sig overlay stability + workspace state fixes.
+
+### Done
+- [x] S21: Sig stroke color fix (black rendered correctly)
+- [x] S21: Center-anchor sig overlay (transform: translate(-50%, -50%))
+- [x] S21: pageRef-based placement coordinates (accurate pct coords)
+- [x] S21: Tool-switch PDF state reset (switching tools no longer loses edits)
+- [x] S21: Floating "Save PDF" button in CanvasArea
+- [x] S21: Compress default-on behaviour
+
+---
+
+## Sprint 22 — COMPLETE ✅
+**Committed:** `c0f97fb`, `4e8af4f`, `41d3bd8`, `33f3651` (2026-03-23)
+**Goal:** Save quality fixes + stored signatures + blank page insert.
+
+### Done
+- [x] S22-1: Bold/italic preserved in saved PDF via `resolveStandardFont()` (fixes long-standing font regression)
+- [x] S22-2: Proportional descender mask in `save.ts` + full Y-position audit
+- [x] S22-3: Stored signatures — `localStorage` persistence + signature picker in SignatureModal
+- [x] S22-4: Blank page insertion via PageRail + button (pdf-lib `addPage`)
+
+---
+
+## Sprint 23 — COMPLETE ✅
+**Committed (S23-1):** `81c8ede` (2026-03-24)
+**Goal:** Image insertion + freehand drawing tools.
+
+### Done
+- [x] S23-1: Image insertion — drag-to-place `ImageOverlay`, `ImageEntry` type, `embedImages()` in `lib/pdf/image.ts`, wired into WorkspaceShell (insert button + download chain)
+- [x] S23-2: Freehand drawing — `DrawingCanvas` full-viewport canvas overlay (pen colors, sizes, dpr-aware crop to page rect); stored as `ImageEntry` with `widthPct: 100`; "Draw" toggle in L3Strip sign-idle section; dynamic import (`ssr: false`)
+- [x] S23-3: Pro gate audit — image insert and draw are free features; `isPro={false}` hardcode correct until MD populates `.env.local` for real auth (S20-B blocked on MD)
+
+---
+
+## Sprint 24 — COMPLETE ✅
+**Committed:** 2026-03-25
+**Goal:** PDF text overlay fidelity — metric-compatible font embedding.
+
+### Done
+- [x] S24-1: Investigated `canvasWidth` formula (`raw.width * scale`) — source analysis of PDF.js v3.11 worker confirmed `raw.width` is in PDF user-space (points). Formula `raw.width * scale` is mathematically correct. No change needed. (CTO agent Option 0 was incorrect; applying `tx[0]` would multiply font size twice.)
+- [x] S24-2: Added Arimo, Tinos, Cousine (metric-compatible fonts) via `next/font/google` in `layout.tsx`. CSS variables: `--font-arimo`, `--font-tinos`, `--font-cousine`. Applied to `<body>` so they cascade into PDF viewer overlays.
+- [x] S24-3: Updated `font-map.ts` CSS stacks to prefix metric-compatible fonts: `var(--font-arimo)` for Helvetica/Arial, `var(--font-tinos)` for Times, `var(--font-cousine)` for Courier. System font fallbacks preserved. Build passes.
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF

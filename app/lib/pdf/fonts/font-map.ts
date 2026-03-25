@@ -24,12 +24,13 @@ const WEB_FONT_RULES: Array<{
   css: string
   standard: string
 }> = [
-  { match: ['helvetica', 'arial', 'swiss'],        bold: false, css: 'Arial, Helvetica, sans-serif',              standard: 'Helvetica' },
-  { match: ['helvetica', 'arial', 'swiss'],        bold: true,  css: '"Arial Bold", "Helvetica Bold", sans-serif', standard: 'Helvetica-Bold' },
-  { match: ['times', 'roman', 'minion'],           bold: false, css: '"Times New Roman", Times, serif',            standard: 'Times-Roman' },
-  { match: ['times', 'roman', 'minion'],           bold: true,  css: '"Times New Roman", Times, serif',            standard: 'Times-Bold' },
-  { match: ['courier', 'mono', 'typewriter'],      bold: false, css: '"Courier New", Courier, monospace',          standard: 'Courier' },
-  { match: ['courier', 'mono', 'typewriter'],      bold: true,  css: '"Courier New", Courier, monospace',          standard: 'Courier-Bold' },
+  // Arimo/Tinos/Cousine are metric-compatible with Arial/Times/Courier — loaded via next/font CSS vars
+  { match: ['helvetica', 'arial', 'swiss'],        bold: false, css: 'var(--font-arimo), Arial, Helvetica, sans-serif',               standard: 'Helvetica' },
+  { match: ['helvetica', 'arial', 'swiss'],        bold: true,  css: 'var(--font-arimo), "Arial Bold", "Helvetica Bold", sans-serif',  standard: 'Helvetica-Bold' },
+  { match: ['times', 'roman', 'minion'],           bold: false, css: 'var(--font-tinos), "Times New Roman", Times, serif',             standard: 'Times-Roman' },
+  { match: ['times', 'roman', 'minion'],           bold: true,  css: 'var(--font-tinos), "Times New Roman", Times, serif',             standard: 'Times-Bold' },
+  { match: ['courier', 'mono', 'typewriter'],      bold: false, css: 'var(--font-cousine), "Courier New", Courier, monospace',         standard: 'Courier' },
+  { match: ['courier', 'mono', 'typewriter'],      bold: true,  css: 'var(--font-cousine), "Courier New", Courier, monospace',         standard: 'Courier-Bold' },
   { match: ['georgia'],                            bold: false, css: 'Georgia, serif',                             standard: 'Times-Roman' },
   { match: ['verdana'],                            bold: false, css: 'Verdana, Geneva, sans-serif',                standard: 'Helvetica' },
   { match: ['calibri'],                            bold: false, css: 'Calibri, "Gill Sans", sans-serif',           standard: 'Helvetica' },
@@ -113,7 +114,7 @@ export function mapFont(rawName: string): FontMatch {
   return {
     rawName,
     cleanName: clean,
-    cssFont: bold ? '"Arial Bold", Arial, sans-serif' : 'Arial, sans-serif',
+    cssFont: bold ? 'var(--font-arimo), "Arial Bold", Arial, sans-serif' : 'var(--font-arimo), Arial, sans-serif',
     standardFont: bold ? 'Helvetica-Bold' : 'Helvetica',
     bold,
     italic,
