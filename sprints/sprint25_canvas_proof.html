@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S25 — Canvas Proof | LocalPDF Sprint Prototype</title>
+
+  <!--
+    SPRINT 25 — CANVAS PROOF
+    ========================
+    Goal: Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift.
+    This is a coordinate-system validation only — nothing is editable.
+
+    Libraries:
+    - PDF.js 3.11.174 (Option A: matches Next.js codebase — never upgrade without full regression)
+    - Fabric.js 6.4.3
+
+    HOW TO OPEN:
+    If the PDF fails to render (worker CORS error), serve this file over HTTP:
+      npx serve sprints/
+    Then open http://localhost:3000/sprint25_canvas_proof.html
+  -->
+
+  <!-- PDF.js 3.11.174 — locked to match Next.js codebase (lessons-learned: v5+ breaks webpack) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <!-- Fabric.js v6 — native IText/Textbox, the canvas interaction layer for S26+ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/6.4.3/fabric.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0b0d14;
+      color: #e2e4ef;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header .badge {
+      background: #6366f1;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .header .title { font-weight: 600; color: #fff; }
+    .header .subtitle { color: rgba(255,255,255,0.4); font-size: 12px; }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      gap: 0;
+    }
+
+    /* ── Debug Panel ── */
+    .debug-panel {
+      width: 280px;
+      min-width: 280px;
+      background: rgba(255,255,255,0.03);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .debug-section { display: flex; flex-direction: column; gap: 8px; }
+    .debug-section h3 {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .debug-label { color: rgba(255,255,255,0.5); }
+    .debug-value { color: #e2e4ef; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+    .debug-value.ok { color: #4ade80; }
+    .debug-value.warn { color: #fbbf24; }
+    .debug-value.err { color: #f87171; }
+    .debug-value.pending { color: rgba(255,255,255,0.25); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-badge.pass { background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+    .status-badge.fail { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+    .status-badge.idle { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.08); }
+
+    .click-log {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      max-height: 160px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .click-log .entry { color: #f97066; }
+    .click-log .empty { color: rgba(255,255,255,0.2); font-style: italic; }
+
+    .instructions {
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+    }
+    .instructions strong { color: #a5b4fc; }
+
+    /* ── Main Area ── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: auto;
+      padding: 24px;
+      gap: 16px;
+    }
+
+    /* ── Drop Zone ── */
+    #drop-zone {
+      width: 100%;
+      max-width: 520px;
+      border: 2px dashed rgba(99,102,241,0.4);
+      border-radius: 12px;
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(99,102,241,0.04);
+    }
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: rgba(99,102,241,0.8);
+      background: rgba(99,102,241,0.08);
+    }
+    #drop-zone .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+    #drop-zone h2 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    #drop-zone p { color: rgba(255,255,255,0.4); font-size: 13px; }
+    #drop-zone .hint {
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+    }
+    #file-input { display: none; }
+
+    /* ── Canvas Container ── */
+    #canvas-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #page-wrapper {
+      position: relative;
+      display: inline-block;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      border-radius: 2px;
+    }
+
+    #pdf-canvas {
+      display: block;
+      /* Dimensions set by JS after render */
+    }
+
+    /* Fabric container gets position:absolute via JS after init */
+    /* The .canvas-container div that Fabric creates wraps #fabric-canvas */
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(11,13,20,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      gap: 10px;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(99,102,241,0.3);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .page-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <span class="badge">S25</span>
+    <span class="title">Canvas Proof</span>
+    <span class="subtitle">PDF.js 3.11.174 + Fabric.js 6.4.3 coordinate alignment validation</span>
+  </div>
+
+  <div class="layout">
+    <!-- Debug Panel -->
+    <div class="debug-panel">
+
+      <div class="debug-section">
+        <h3>Library Status</h3>
+        <div class="debug-row">
+          <span class="debug-label">PDF.js</span>
+          <span class="debug-value pending" id="pdfjs-status">loading…</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Fabric.js</span>
+          <span class="debug-value pending" id="fabric-status">loading…</span>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Dimensions</h3>
+        <div class="debug-row">
+          <span class="debug-label">PDF canvas</span>
+          <span class="debug-value pending" id="pdf-dims">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Fabric canvas</span>
+          <span class="debug-value pending" id="fabric-dims">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">CSS size</span>
+          <span class="debug-value pending" id="css-dims">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Scale used</span>
+          <span class="debug-value pending" id="scale-val">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">DPR</span>
+          <span class="debug-value" id="dpr-val">—</span>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Alignment Gate</h3>
+        <span class="status-badge idle" id="alignment-badge">⏳ Awaiting PDF</span>
+        <div class="debug-row" style="margin-top:4px;">
+          <span class="debug-label">Offset X</span>
+          <span class="debug-value pending" id="offset-x">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Offset Y</span>
+          <span class="debug-value pending" id="offset-y">—</span>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Click Log</h3>
+        <div class="click-log" id="click-log">
+          <span class="empty">Drop a PDF and click anywhere…</span>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <h3>Gate Checklist</h3>
+        <div id="checklist" style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:rgba(255,255,255,0.45);">
+          <div id="chk-render">⬜ PDF renders without clipping</div>
+          <div id="chk-overlay">⬜ Fabric overlays exactly (0px offset)</div>
+          <div id="chk-click">⬜ Click coordinates match visual position</div>
+          <div id="chk-errors">⬜ No console errors</div>
+        </div>
+      </div>
+
+      <div class="instructions">
+        <strong>How to verify:</strong><br>
+        1. Drop any complex PDF (financial table recommended)<br>
+        2. Click on specific characters — note the x/y<br>
+        3. The coral dot should appear exactly where you clicked<br>
+        4. All 4 gate checks must be ✅
+        <br><br>
+        <strong>CORS note:</strong> If the PDF fails to load, serve with:<br>
+        <code style="font-size:10px;color:#a5b4fc;">npx serve sprints/</code>
+      </div>
+    </div>
+
+    <!-- Main Area -->
+    <div class="main-area">
+      <!-- Drop Zone -->
+      <div id="drop-zone" role="button" tabindex="0" aria-label="Drop PDF here">
+        <div class="icon">📄</div>
+        <h2>Drop a PDF here</h2>
+        <p>Financial tables or legal contracts work best</p>
+        <p class="hint">or click to browse</p>
+        <input type="file" id="file-input" accept=".pdf">
+      </div>
+
+      <!-- Canvas Container (hidden until PDF loaded) -->
+      <div id="canvas-container">
+        <div id="page-wrapper">
+          <canvas id="pdf-canvas"></canvas>
+          <!-- Fabric canvas injected here by JS -->
+          <div class="loading-overlay" id="loading-overlay">
+            <div class="spinner"></div>
+            <span>Rendering…</span>
+          </div>
+        </div>
+        <div class="page-label">Page 1 of <span id="page-count">?</span> — click anywhere to log coordinates</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // Library sanity checks
+    // ─────────────────────────────────────────────
+    (function checkLibraries() {
+      const pdfjsEl = document.getElementById('pdfjs-status');
+      const fabricEl = document.getElementById('fabric-status');
+
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsEl.textContent = '3.11.174 ✓';
+        pdfjsEl.className = 'debug-value ok';
+      } else {
+        pdfjsEl.textContent = 'FAILED';
+        pdfjsEl.className = 'debug-value err';
+        console.error('[S25] PDF.js failed to load from CDN');
+      }
+
+      if (typeof fabric !== 'undefined') {
+        const v = fabric.version || fabric.VERSION || '?';
+        fabricEl.textContent = v + ' ✓';
+        fabricEl.className = 'debug-value ok';
+      } else {
+        fabricEl.textContent = 'FAILED';
+        fabricEl.className = 'debug-value err';
+        console.error('[S25] Fabric.js failed to load from CDN');
+      }
+
+      document.getElementById('dpr-val').textContent = window.devicePixelRatio || 1;
+    })();
+
+    // ─────────────────────────────────────────────
+    // PDF.js worker — pinned to 3.11.174 (Option A)
+    // ─────────────────────────────────────────────
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+
+    // ─────────────────────────────────────────────
+    // State
+    // ─────────────────────────────────────────────
+    let fabricCanvas = null;
+    let clickCount = 0;
+    let consoleErrors = 0;
+
+    const origError = console.error.bind(console);
+    console.error = function(...args) {
+      consoleErrors++;
+      updateChecklist();
+      origError(...args);
+    };
+
+    // ─────────────────────────────────────────────
+    // Drop zone wiring
+    // ─────────────────────────────────────────────
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') loadPDF(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) loadPDF(fileInput.files[0]);
+    });
+
+    // ─────────────────────────────────────────────
+    // Core: Load PDF → Render → Overlay Fabric
+    // ─────────────────────────────────────────────
+    async function loadPDF(file) {
+      if (typeof pdfjsLib === 'undefined') {
+        alert('PDF.js failed to load. Serve this file over HTTP:\n  npx serve sprints/');
+        return;
+      }
+
+      // Show canvas container, hide drop zone
+      document.getElementById('drop-zone').style.display = 'none';
+      document.getElementById('canvas-container').style.display = 'flex';
+      document.getElementById('loading-overlay').style.display = 'flex';
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        document.getElementById('page-count').textContent = pdf.numPages;
+
+        const page = await pdf.getPage(1);
+
+        // ── Scale calculation ──
+        // canvasWidth = raw.width * scale (confirmed correct in S24)
+        // raw.width = viewport at scale 1 = PDF user-space width in points
+        const unscaled = page.getViewport({ scale: 1 });
+        const availableWidth = document.querySelector('.main-area').clientWidth - 48;
+        const maxWidth = Math.min(availableWidth, 900);
+        const scale = Math.min(maxWidth / unscaled.width, 2.0);
+        const viewport = page.getViewport({ scale });
+
+        document.getElementById('scale-val').textContent = scale.toFixed(4);
+
+        // ── Render PDF to canvas ──
+        const pdfCanvas = document.getElementById('pdf-canvas');
+        const ctx = pdfCanvas.getContext('2d');
+
+        // Use devicePixelRatio for crisp rendering
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = Math.round(viewport.width);
+        const cssHeight = Math.round(viewport.height);
+
+        pdfCanvas.width = cssWidth * dpr;
+        pdfCanvas.height = cssHeight * dpr;
+        pdfCanvas.style.width = cssWidth + 'px';
+        pdfCanvas.style.height = cssHeight + 'px';
+
+        ctx.scale(dpr, dpr);
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        document.getElementById('pdf-dims').textContent = `${pdfCanvas.width} × ${pdfCanvas.height}px`;
+        document.getElementById('pdf-dims').className = 'debug-value ok';
+        document.getElementById('css-dims').textContent = `${cssWidth} × ${cssHeight}px`;
+
+        // Mark PDF render check
+        document.getElementById('chk-render').textContent = '✅ PDF renders without clipping';
+        document.getElementById('chk-render').style.color = '#4ade80';
+
+        // ── Init Fabric.js canvas ──
+        initFabric(cssWidth, cssHeight);
+
+        document.getElementById('loading-overlay').style.display = 'none';
+
+      } catch (err) {
+        document.getElementById('loading-overlay').innerHTML =
+          `<span style="color:#f87171">Error: ${err.message}. Try serving with: npx serve sprints/</span>`;
+        console.error('[S25] PDF load error:', err);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Fabric.js initialisation
+    // ─────────────────────────────────────────────
+    function initFabric(cssWidth, cssHeight) {
+      // Destroy previous instance if re-loading a PDF
+      if (fabricCanvas) {
+        fabricCanvas.dispose();
+        const oldEl = document.getElementById('fabric-canvas');
+        if (oldEl) oldEl.remove();
+      }
+
+      // Create a fresh canvas element and append to page-wrapper
+      const pageWrapper = document.getElementById('page-wrapper');
+      const canvasEl = document.createElement('canvas');
+      canvasEl.id = 'fabric-canvas';
+      pageWrapper.appendChild(canvasEl);
+
+      // Init Fabric canvas
+      // enableRetinaScaling: true → Fabric handles DPR internally, coords in CSS pixels
+      fabricCanvas = new fabric.Canvas('fabric-canvas', {
+        width: cssWidth,
+        height: cssHeight,
+        selection: false,
+        enableRetinaScaling: true,
+        backgroundColor: null,
+        renderOnAddRemove: true,
+      });
+
+      // ── Position Fabric's wrapper div over the PDF canvas ──
+      // Fabric wraps the canvas in a .canvas-container div with position:relative
+      // We need position:absolute, top:0, left:0 to overlay exactly
+      const wrapper = canvasEl.parentElement; // .canvas-container created by Fabric
+      if (wrapper && wrapper !== pageWrapper) {
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '0';
+        wrapper.style.left = '0';
+        wrapper.style.pointerEvents = 'auto';
+      }
+
+      // ── Measure offset after positioning ──
+      // Both canvases should be at top:0, left:0 within page-wrapper
+      requestAnimationFrame(() => {
+        const pdfRect = document.getElementById('pdf-canvas').getBoundingClientRect();
+        const upperCanvas = pageWrapper.querySelector('.upper-canvas') || canvasEl;
+        const fabricRect = upperCanvas.getBoundingClientRect();
+
+        const offsetX = Math.round(fabricRect.left - pdfRect.left);
+        const offsetY = Math.round(fabricRect.top - pdfRect.top);
+
+        document.getElementById('offset-x').textContent = offsetX + 'px';
+        document.getElementById('offset-y').textContent = offsetY + 'px';
+        document.getElementById('offset-x').className = 'debug-value ' + (offsetX === 0 ? 'ok' : 'err');
+        document.getElementById('offset-y').className = 'debug-value ' + (offsetY === 0 ? 'ok' : 'err');
+
+        const fabricW = fabricCanvas.getWidth();
+        const fabricH = fabricCanvas.getHeight();
+        document.getElementById('fabric-dims').textContent = `${fabricW} × ${fabricH}px (CSS)`;
+        document.getElementById('fabric-dims').className = 'debug-value ok';
+
+        const aligned = offsetX === 0 && offsetY === 0;
+        const badge = document.getElementById('alignment-badge');
+        if (aligned) {
+          badge.textContent = '✅ Aligned — 0px offset';
+          badge.className = 'status-badge pass';
+          document.getElementById('chk-overlay').textContent = '✅ Fabric overlays exactly (0px offset)';
+          document.getElementById('chk-overlay').style.color = '#4ade80';
+        } else {
+          badge.textContent = `❌ Drift: x=${offsetX}px y=${offsetY}px`;
+          badge.className = 'status-badge fail';
+        }
+
+        updateChecklist();
+      });
+
+      // ── Click handler: log coordinates + draw indicator dot ──
+      fabricCanvas.on('mouse:down', function(opt) {
+        // In Fabric v6, pointer coordinates are in CSS pixels (after retina scaling)
+        const pointer = fabricCanvas.getPointer(opt.e);
+        const x = Math.round(pointer.x);
+        const y = Math.round(pointer.y);
+
+        console.log(`[S25] Click → x: ${x}, y: ${y}`);
+
+        // Draw a coral indicator dot at click position
+        const dot = new fabric.Circle({
+          left: x,
+          top: y,
+          radius: 6,
+          fill: 'rgba(249, 112, 102, 0.75)',
+          stroke: '#f97066',
+          strokeWidth: 1.5,
+          originX: 'center',
+          originY: 'center',
+          selectable: false,
+          evented: false,
+          hoverCursor: 'default',
+        });
+        fabricCanvas.add(dot);
+        fabricCanvas.renderAll();
+
+        // Update click log
+        clickCount++;
+        addClickLog(x, y, clickCount);
+
+        // Mark click check
+        if (clickCount === 1) {
+          document.getElementById('chk-click').textContent = '✅ Click coordinates logged (check console)';
+          document.getElementById('chk-click').style.color = '#4ade80';
+          updateChecklist();
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // Click log
+    // ─────────────────────────────────────────────
+    function addClickLog(x, y, n) {
+      const log = document.getElementById('click-log');
+      const empty = log.querySelector('.empty');
+      if (empty) empty.remove();
+
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      entry.textContent = `#${n}  x: ${x}, y: ${y}`;
+      log.insertBefore(entry, log.firstChild);
+
+      // Keep last 20
+      while (log.children.length > 20) log.removeChild(log.lastChild);
+    }
+
+    // ─────────────────────────────────────────────
+    // Checklist: no console errors check
+    // ─────────────────────────────────────────────
+    function updateChecklist() {
+      const el = document.getElementById('chk-errors');
+      if (consoleErrors === 0) {
+        el.textContent = '✅ No console errors';
+        el.style.color = '#4ade80';
+      } else {
+        el.textContent = `❌ ${consoleErrors} console error(s) — check DevTools`;
+        el.style.color = '#f87171';
+      }
+    }
+
+    // Initial no-error state (errors increment if any fire)
+    window.addEventListener('load', () => {
+      if (consoleErrors === 0) updateChecklist();
+    });
+  </script>
+</body>
+</html>

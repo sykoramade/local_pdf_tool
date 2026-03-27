@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
-import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation, ImageEntry } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
 import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
 import SignatureModal from '@/app/components/SignatureModal'
@@ -29,7 +29,7 @@ const TOOLS: ToolDef[] = [
   { key: 'edit',     label: 'Edit'     },
   { key: 'sign',     label: 'Sign'     },
   { key: 'annotate', label: 'Annotate' },
-  { key: 'redact',   label: 'Redact',  pro: true },
+  { key: 'redact',   label: 'Redact' },
   { key: 'compress', label: 'Compress' },
 ]
 
@@ -656,6 +656,11 @@ function CanvasArea({
   images,
   onImageMove,
   onImageDelete,
+  redactTargets = [],
+  redactInput = '',
+  onRedactTargetsChange,
+  onRedactInputChange,
+  fabricLayerRefs,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -687,6 +692,11 @@ function CanvasArea({
   images?: ImageEntry[]
   onImageMove?: (id: string, xPct: number, yPct: number) => void
   onImageDelete?: (id: string) => void
+  redactTargets?: string[]
+  redactInput?: string
+  onRedactTargetsChange?: (targets: string[]) => void
+  onRedactInputChange?: (val: string) => void
+  fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -814,10 +824,50 @@ function CanvasArea({
     )
   } else if (activeTool.key === 'redact') {
     toolContent = (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 560, padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 12 }}>PRO</div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 8 }}>Redact sensitive content</div>
-        <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>Permanently remove text and images — not just visually hidden. Available on the Pro plan.</div>
+      <div style={{ fontFamily: 'var(--font-sans)' }}>
+        <div style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3', padding: '12px 16px' }}>
+          <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: '#b91c1c', textTransform: 'uppercase', margin: 0 }}>
+              Redaction — text is permanently removed from the PDF data layer
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={redactInput}
+                onChange={e => onRedactInputChange?.(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = redactInput.trim()
+                    if (val && !redactTargets.includes(val)) onRedactTargetsChange?.([...redactTargets, val])
+                    onRedactInputChange?.('')
+                  }
+                }}
+                placeholder="Type a word or phrase to redact, then press Enter"
+                style={{ flex: 1, fontSize: 13, padding: '6px 10px', border: '1px solid #fca5a5', borderRadius: 6, outline: 'none', background: '#fff' }}
+              />
+              <button
+                onClick={() => {
+                  const val = redactInput.trim()
+                  if (val && !redactTargets.includes(val)) onRedactTargetsChange?.([...redactTargets, val])
+                  onRedactInputChange?.('')
+                }}
+                style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+              >
+                Add
+              </button>
+            </div>
+            {redactTargets.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {redactTargets.map(t => (
+                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 9999 }}>
+                    {t}
+                    <button onClick={() => onRedactTargetsChange?.(redactTargets.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     )
   } else {
@@ -845,6 +895,8 @@ function CanvasArea({
         images={images}
         onImageMove={onImageMove}
         onImageDelete={onImageDelete}
+        useCanvasLayer={isEdit}
+        fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
       />
     )
   }
@@ -964,6 +1016,13 @@ export default function WorkspaceShell() {
   const [compressEnabled, setCompressEnabled] = useState(true)
   const [compressStats, setCompressStats] = useState<{ original: number; compressed: number; pct: number } | null>(null)
   const [compressLoading, setCompressLoading] = useState(false)
+
+  /* Redact state */
+  const [redactTargets, setRedactTargets] = useState<string[]>([])
+  const [redactInput, setRedactInput] = useState('')
+
+  /* Canvas layer refs — one per rendered page, keyed by pageNum */
+  const fabricLayerRefs = useRef<Map<number, FabricLayerRef>>(new Map())
 
   /* History stack */
   const histRef = useRef<EditMap[]>([new Map()])
@@ -1241,6 +1300,14 @@ export default function WorkspaceShell() {
         outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
         outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
       }
+      // Canvas layer edits (CanvasTextLayer active in edit mode — replaces editMap path)
+      const canvasTextboxes = Array.from(fabricLayerRefs.current.values())
+        .flatMap(layer => layer.getTextboxes())
+      if (canvasTextboxes.length > 0) {
+        const { applyCanvasEditsAndSave } = await import('@/lib/pdf/canvas-save')
+        outputBytes = await applyCanvasEditsAndSave(outputBytes, canvasTextboxes, 1.5)
+        outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+      }
       if (sigs.length > 0) {
         const typedSigs = sigs.filter(s => s.text)
         const drawnSigs = sigs.filter(s => s.drawingDataUrl)
@@ -1288,6 +1355,12 @@ export default function WorkspaceShell() {
           outputName = file.name.replace(/\.pdf$/i, '_annotated.pdf')
         }
       }
+      if (activeTool.key === 'redact' && redactTargets.length > 0) {
+        const { redactPdf } = await import('@/lib/pdf/redact')
+        const result = await redactPdf(outputBytes, redactTargets)
+        outputBytes = result.bytes
+        outputName = file.name.replace(/\.pdf$/i, '_redacted.pdf')
+      }
       if (compressEnabled) {
         const { compressPdf } = await import('@/lib/pdf/compress')
         const result = await compressPdf(outputBytes)
@@ -1305,7 +1378,7 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled])
+  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets])
 
   return (
     <>
@@ -1485,6 +1558,11 @@ export default function WorkspaceShell() {
             images={images}
             onImageMove={handleImageMove}
             onImageDelete={handleImageDelete}
+            redactTargets={redactTargets}
+            redactInput={redactInput}
+            onRedactTargetsChange={setRedactTargets}
+            onRedactInputChange={setRedactInput}
+            fabricLayerRefs={fabricLayerRefs}
           />
         </div>
       </div>
@@ -1494,12 +1572,13 @@ export default function WorkspaceShell() {
         <button
           aria-label="Save PDF"
           onClick={handleDownload}
+          disabled={activeTool.key === 'redact' && redactTargets.length === 0}
           style={{
             position: 'fixed',
             bottom: 28,
             right: 28,
             zIndex: 40,
-            background: '#6366f1',
+            background: activeTool.key === 'redact' ? '#dc2626' : '#6366f1',
             color: '#fff',
             border: 'none',
             borderRadius: 14,
@@ -1507,25 +1586,31 @@ export default function WorkspaceShell() {
             fontSize: 15,
             fontWeight: 700,
             letterSpacing: '.02em',
+            opacity: activeTool.key === 'redact' && redactTargets.length === 0 ? 0.5 : 1,
             whiteSpace: 'nowrap',
             cursor: 'pointer',
             boxShadow: '0 4px 24px rgba(99,102,241,.45)',
             transition: 'background .2s, box-shadow .2s, transform .1s',
           }}
           onMouseEnter={e => {
+            if (activeTool.key === 'redact' && redactTargets.length === 0) return
             const b = e.currentTarget
-            b.style.background = '#4f46e5'
+            b.style.background = activeTool.key === 'redact' ? '#b91c1c' : '#4f46e5'
             b.style.boxShadow = '0 6px 32px rgba(99,102,241,.6)'
             b.style.transform = 'translateY(-1px)'
           }}
           onMouseLeave={e => {
             const b = e.currentTarget
-            b.style.background = '#6366f1'
+            b.style.background = activeTool.key === 'redact' ? '#dc2626' : '#6366f1'
             b.style.boxShadow = '0 4px 24px rgba(99,102,241,.45)'
             b.style.transform = 'none'
           }}
         >
-          Save PDF
+          {activeTool.key === 'redact'
+            ? redactTargets.length > 0
+              ? `Redact & Download (${redactTargets.length})`
+              : 'Add words to redact'
+            : 'Save PDF'}
         </button>
       )}
     </>

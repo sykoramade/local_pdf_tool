@@ -131,3 +131,85 @@ This is a two-minute manual smoke test and a straightforward Playwright spec. Ne
 - Never use `router.replace()` or `router.push()` to sync UI state to URL params inside a component that holds critical session state (loaded files, edit history, etc.). Use `window.history.replaceState()` instead.
 - The workspace smoke test (load PDF → switch tools → verify document still present) is now a mandatory manual check before any sprint involving WorkspaceShell is marked COMPLETE.
 - Any future E2E spec for the workspace MUST include: load file → switch to every tool → assert file name still visible + drop zone hidden.
+
+---
+
+## S25–S29: Canvas Layer Pivot Degraded Text Editing UX (2026-03-26)
+
+**What happened:** S25–S29 replaced the working `PdfTextLayer` (per-item span clicking) with a new `CanvasTextLayer` backed by Fabric.js. The canvas layer grouped individual text items into "blocks" using Y-band + X-gap heuristics, then rendered invisible Rect hit targets per block. Clicking a block replaced the rect with a Fabric Textbox containing all block text joined with spaces.
+
+**Why it was worse than the original:**
+- The old layer let users click individual text spans precisely. The new layer groups unrelated text into blocks — multi-column layouts, headers, and tables collapse into wrong groupings.
+- Hit zones were invisible until hover. The old layer's spans were always visible and obviously clickable.
+- Several sprints of work produced a regression: text editing felt noticeably worse, not better.
+
+**How it should have been caught:** A before/after UX comparison on a representative PDF (multi-column, table, form) before marking any canvas sprint COMPLETE. The MD never got a side-by-side demo — the change shipped into the default `useCanvasLayer={true}` path without explicit sign-off on UX quality.
+
+**Fix:** Removed `useCanvasLayer` from `PdfEditor.tsx`. NOTE: `PdfEditor.tsx` is dead code — see the entry below for the bigger architecture mistake this exposed.
+
+**Rules going forward:**
+- Any sprint that replaces a working UX component requires a before/after demo reviewed by the MD before the flag is flipped in production code.
+- `useCanvasLayer` remains `false` until the canvas layer UX is demonstrably better than `PdfTextLayer` on a multi-column PDF test case.
+- New architecture investments (Fabric.js, block detection) must not degrade existing features. When in doubt, gate behind a feature flag and default to the proven path.
+
+---
+
+## S30B: Entire Sprint Delivered to Dead Component — PdfEditor.tsx Orphaned (2026-03-26)
+
+**What happened:** S30B (and prior session work) wired the redact feature into `PdfEditor.tsx`. This component is not imported anywhere in the live app. The live app runs through `WorkspaceShell.tsx` at `/workspace`. When the user ran the app, they saw zero changes despite the code being correct, because the code was in the wrong file.
+
+**Root cause:** The architecture shifted from `PdfEditor.tsx` → `WorkspaceShell.tsx` during a prior sprint (V6 design audit / homepage V3). `PdfEditor.tsx` was left in `app/components/` as an orphan. No agent checked whether `PdfEditor.tsx` was actually imported before spending multiple sessions modifying it.
+
+**How it should have been caught:**
+- Run `grep -rn "PdfEditor" app/app/` before touching the file. Zero import hits = dead code.
+- The component tree check (page.tsx → HomepageHub → /workspace → WorkspaceShell) takes 2 minutes and would have revealed this immediately.
+
+**Fix:** Wired redact (`redactPdf`, state, UI panel, download button) directly into `WorkspaceShell.tsx`. `PdfEditor.tsx` left in place as dead code — will be deleted in a future cleanup sprint.
+
+**Rules going forward:**
+- **Before modifying any component, verify it is imported in the live app.** Run `grep -rn "ComponentName" app/app/` and trace to a page route. If no route imports it, it is dead code.
+- `PdfEditor.tsx` is confirmed dead code. Do not modify it.
+- The live editor entry point is `app/app/workspace/WorkspaceShell.tsx` rendered at `/workspace`.
+- Session start checklist must include: confirm which component is actually rendered at the route being worked on.
+
+---
+
+## HomepageHub Redact Still Pro-Gated After Feature Was Built (2026-03-26)
+
+**What happened:** S30B built and wired redact into WorkspaceShell. But `HomepageHub.tsx` still had `redact: { href: null, pro: true }` — so navigating to Redact from the homepage silently did nothing. The workspace was only reachable by typing `/workspace` directly.
+
+**Root cause:** Feature was delivered in two halves (WorkspaceShell + HomepageHub) but the HomepageHub half was never updated. No end-to-end test of the user flow (homepage → drop file → click Redact → workspace).
+
+**Fix:** Changed HomepageHub redact to `href: '/workspace?tool=redact'` with no `pro` flag.
+
+**Rules going forward:**
+- Every new tool unlock requires TWO changes: WorkspaceShell (remove pro gate) AND HomepageHub (update href, remove pro flag). Treat them as a pair.
+- Completion test for any tool unlock: start at homepage, drop a file, click the tool, confirm it reaches the workspace with the correct tool active.
+
+---
+
+## PdfTextLayer Hit Zones Were Invisible — Text Editing Felt Broken (2026-03-26)
+
+**What happened:** `PdfTextLayer` rendered hit zones with `color: transparent` and `hover:bg-indigo-50/40`. Users had no visual signal that text was clickable. This was the actual cause of "clicking text feels like shit" — not the canvas layer.
+
+**Root cause:** The transparent color is intentional (don't overlay the rendered PDF text) but the hover state was too subtle to be meaningful feedback.
+
+**Fix:** Added `borderBottom: '1px solid rgba(99,102,241,0.25)'` to all inactive text items (permanent subtle underline showing editable zones) and strengthened the hover state to `hover:bg-indigo-100/60 hover:border-b-2 hover:border-indigo-400`.
+
+**Rules going forward:**
+- Any text interaction component must be tested on a real PDF with a non-developer. "Users can find and click editable text without being told where to click" is the acceptance criterion.
+- The canvas layer experiment (S25–S29) is permanently shelved. The problem it tried to solve (invisible hit zones) is now fixed in PdfTextLayer directly.
+
+---
+
+## 2026-03-26 — Prop Threading Never Verified (Mandatory Prop Audit Rule)
+
+**What went wrong:** `fabricLayerRefs` was defined in `WorkspaceShell` but never added to `CanvasArea`'s prop type or call site. Enabling `useCanvasLayer={true}` would have activated the canvas UI but silently discarded every edit on download, because the save pipeline (`getTextboxes → applyCanvasEditsAndSave`) was unreachable. TypeScript didn't catch it — the prop was optional. The same class of failure caused S30B to be delivered to a dead component.
+
+**Pattern:** Feature built at definition site. Prop not threaded through intermediate component. Feature silently does nothing at runtime. TypeScript passes. No warning.
+
+**Rule going forward — Mandatory Prop Audit before marking any task done:**
+1. Run `grep -rn "PropName" app/app/` — confirm it appears at: (a) definition, (b) type signature of every component it passes through, (c) each call site, (d) usage in render or handler.
+2. If the receiving component is not directly rendered by a page route, trace one level up: confirm the parent threads it through too.
+3. If no page route imports the component being modified, stop — it is dead code. Do not proceed.
+4. This audit takes 3 minutes. The cost of skipping it is a sprint of invisible work.

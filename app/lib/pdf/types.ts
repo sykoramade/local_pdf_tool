@@ -96,3 +96,27 @@ export interface ImageEntry {
   yPct: number
   widthPct: number
 }
+
+// ─── Canvas layer types (S29 canvas pivot) ───────────────────────────────────
+
+/** Data exported from a Fabric Textbox for PDF save. */
+export interface FabricTextboxExport {
+  text: string
+  anchorItem: ExtractedTextItem          // pdfX/pdfY used for text placement
+  blockBounds: {                          // canvas-pixel coords of original block
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+  fontSize: number                        // canvas px (divide by scale → PDF pt)
+  fontFamily: string
+  fontWeight: string                      // 'normal' | 'bold'
+  fontStyle: string                       // 'normal' | 'italic'
+  fill: string                            // hex color string e.g. '#000000'
+}
+
+/** Ref handle exposed by CanvasTextLayer for collecting edits at export time. */
+export interface FabricLayerRef {
+  getTextboxes: () => FabricTextboxExport[]
+}

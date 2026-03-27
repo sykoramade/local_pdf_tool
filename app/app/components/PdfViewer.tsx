@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
+import CanvasTextLayer from './CanvasTextLayer'
 import SigOverlay from './SigOverlay'
 import AnnotationOverlay from './AnnotationOverlay'
 import ImageOverlay from './ImageOverlay'
@@ -28,6 +29,8 @@ interface PdfViewerProps {
   images?: ImageEntry[]
   onImageMove?: (id: string, xPct: number, yPct: number) => void
   onImageDelete?: (id: string) => void
+  useCanvasLayer?: boolean
+  fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
 }
 
 interface PageData {
@@ -78,6 +81,8 @@ export default function PdfViewer({
   images,
   onImageMove,
   onImageDelete,
+  useCanvasLayer = false,
+  fabricLayerRefs,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -268,33 +273,46 @@ export default function PdfViewer({
               />
               <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
                 <div style={{ position: 'relative', width, height, pointerEvents: 'all' }}>
-                  <PdfTextLayer
-                    items={items}
-                    editMap={editMap}
-                    onEdit={onEdit}
-                    onFieldSelect={onFieldSelect}
-                    scale={scale}
-                    annotateMode={
-                      annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink'
-                        ? annotateMode
-                        : null
-                    }
-                    onHighlight={item => {
-                      if (!onAnnotate) return
-                      const hl: TextHighlight = {
-                        type: 'highlight',
-                        id: crypto.randomUUID(),
-                        itemId: item.id,
-                        pageNum,
-                        colorIndex: annotateMode === 'green' ? 1 : annotateMode === 'pink' ? 2 : 0,
-                        xPct: (item.canvasX / width) * 100,
-                        yPct: (item.canvasY / height) * 100,
-                        widthPct: (item.canvasWidth / width) * 100,
-                        heightPct: ((item.canvasFontSize * 1.4) / height) * 100,
+                  {useCanvasLayer ? (
+                    <CanvasTextLayer
+                      ref={el => {
+                        if (el) fabricLayerRefs?.current.set(pageNum, el)
+                        else fabricLayerRefs?.current.delete(pageNum)
+                      }}
+                      items={items}
+                      pageWidth={width}
+                      pageHeight={height}
+                      scale={scale}
+                    />
+                  ) : (
+                    <PdfTextLayer
+                      items={items}
+                      editMap={editMap}
+                      onEdit={onEdit}
+                      onFieldSelect={onFieldSelect}
+                      scale={scale}
+                      annotateMode={
+                        annotateMode === 'yellow' || annotateMode === 'green' || annotateMode === 'pink'
+                          ? annotateMode
+                          : null
                       }
-                      onAnnotate(hl)
-                    }}
-                  />
+                      onHighlight={item => {
+                        if (!onAnnotate) return
+                        const hl: TextHighlight = {
+                          type: 'highlight',
+                          id: crypto.randomUUID(),
+                          itemId: item.id,
+                          pageNum,
+                          colorIndex: annotateMode === 'green' ? 1 : annotateMode === 'pink' ? 2 : 0,
+                          xPct: (item.canvasX / width) * 100,
+                          yPct: (item.canvasY / height) * 100,
+                          widthPct: (item.canvasWidth / width) * 100,
+                          heightPct: ((item.canvasFontSize * 1.4) / height) * 100,
+                        }
+                        onAnnotate(hl)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               {/* Signature overlays for this page */}
