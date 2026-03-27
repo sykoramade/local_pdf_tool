@@ -87,10 +87,11 @@ interface CanvasTextLayerProps {
   pageWidth: number
   pageHeight: number
   scale: number
+  searchQuery?: string
 }
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, scale }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, scale, searchQuery }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -115,14 +116,76 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       },
     }), [])
 
+    // Search highlight effect — runs when searchQuery changes
+    useEffect(() => {
+      const fc = fabricRef.current
+      if (!fc) return
+      const canvas = fc // captured non-null reference for async use
+
+      async function updateHighlights() {
+        const { Rect } = await import('fabric')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const old = (canvas.getObjects() as any[]).filter(o => o.data?.type === 'search-highlight')
+        old.forEach(o => canvas.remove(o as Parameters<typeof canvas.remove>[0]))
+        if (!searchQuery || searchQuery.length < 2) { canvas.renderAll(); return }
+        const q = searchQuery.toLowerCase()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(canvas.getObjects() as any[])
+          .filter(o => o.data?.type === 'edited-text' && (o.text ?? '').toLowerCase().includes(q))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .forEach((o: any) => {
+            const rect = new Rect({
+              left: o.left as number,
+              top: o.top as number,
+              width: (o.width as number) || 40,
+              height: (o.height as number) || (o.fontSize as number) * 1.4,
+              fill: 'rgba(251,191,36,0.3)',
+              stroke: 'rgba(251,191,36,0.7)',
+              strokeWidth: 1,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(rect as any).data = { type: 'search-highlight' }
+            canvas.add(rect)
+            canvas.sendObjectToBack(rect)
+          })
+        canvas.renderAll()
+      }
+
+      updateHighlights()
+    }, [searchQuery])
+
     useEffect(() => {
       const el = canvasElRef.current
       if (!el) return
 
       let fc: FabricCanvas | null = null
 
+      // Ctrl+L/E/R text alignment when an IText is actively being edited
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (!(e.ctrlKey || e.metaKey)) return
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const active = fabricRef.current?.getActiveObject() as any
+        if (!active || active.type !== 'i-text' || !active.isEditing) return
+        if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault()
+          active.set('textAlign', 'left')
+          fabricRef.current?.renderAll()
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault()
+          active.set('textAlign', 'center')
+          fabricRef.current?.renderAll()
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault()
+          active.set('textAlign', 'right')
+          fabricRef.current?.renderAll()
+        }
+      }
+      window.addEventListener('keydown', handleKeydown)
+
       async function init() {
-        const { Canvas, Rect, Textbox } = await import('fabric')
+        const { Canvas, IText } = await import('fabric')
         if (!canvasElRef.current) return
 
         fc = new Canvas(el!, {
@@ -139,61 +202,22 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         const blocks = detectBlocks(items)
 
         for (const block of blocks) {
-          const rect = new Rect({
-            left: block.left,
-            top: block.top,
-            width: block.width,
-            height: block.height,
-            fill: 'transparent',
-            stroke: 'rgba(99,102,241,0.35)',
-            strokeWidth: 1,
-            selectable: false,
-            hoverCursor: 'pointer',
-          })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(rect as any).data = { type: 'block-rect', block }
-          fc.add(rect)
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:over', (e: any) => {
-          const obj = e.target
-          if (!obj || obj.data?.type !== 'block-rect') return
-          obj.set('fill', 'rgba(99,102,241,0.12)')
-          fc!.renderAll()
-        })
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:out', (e: any) => {
-          const obj = e.target
-          if (!obj || obj.data?.type !== 'block-rect') return
-          obj.set('fill', 'transparent')
-          fc!.renderAll()
-        })
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:down', (e: any) => {
-          const obj = e.target
-          if (!obj || obj.data?.type !== 'block-rect') return
-
-          const block = obj.data.block as Block
-          fc!.remove(obj)
-
           const text = block.items.map(i => i.str).join(' ')
 
-          // Use the item nearest the click X for font/size — more accurate than always taking items[0]
-          const clickX = (e.pointer?.x ?? block.left) as number
+          // Use the item nearest the center X for font/size (more representative than items[0])
+          const centerX = block.left + block.width / 2
           const anchor = block.items.reduce((closest, item) => {
             const itemMid = item.canvasX + item.canvasWidth / 2
             const closestMid = closest.canvasX + closest.canvasWidth / 2
-            return Math.abs(itemMid - clickX) < Math.abs(closestMid - clickX) ? item : closest
+            return Math.abs(itemMid - centerX) < Math.abs(closestMid - centerX) ? item : closest
           }, block.items[0])
 
           const fnLower = anchor.fontName.toLowerCase()
           const bold = /bold|black|heavy/.test(fnLower)
           const italic = /italic|oblique|slant/.test(fnLower)
 
-          const tb = new Textbox(text, {
+          // Create IText with opacity:0.001 for invisible hit zone (not 0 — Fabric v6 skips hit detection for true-zero opacity)
+          const itext = new IText(text, {
             left: block.left,
             top: block.top,
             width: Math.max(block.width, 20),
@@ -202,18 +226,16 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             fontWeight: bold ? 'bold' : 'normal',
             fontStyle: italic ? 'italic' : 'normal',
             fill: '#000000',
-            editable: true,
-            selectable: true,
+            opacity: 0.001, // invisible hit zone
+            editable: false,
+            selectable: false,
+            hoverCursor: 'text',
+            underline: true, // discoverability signal
+            stroke: 'rgba(99,102,241,0.25)', // underline color
           })
 
-          // Auto-grow width as user types
-          tb.on('changed', function (this: typeof tb) {
-            const newWidth = Math.max((this as any).calcTextWidth() + 8, block.width)
-            this.set('width', newWidth)
-            fc!.renderAll()
-          })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(tb as any).data = {
+          ;(itext as any).data = {
             type: 'edited-text',
             originalItem: anchor,
             blockBounds: {
@@ -224,9 +246,38 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             },
           }
 
-          fc!.add(tb)
-          fc!.setActiveObject(tb)
-          tb.enterEditing()
+          fc.add(itext)
+        }
+
+        // Handle IText activation on click
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fc.on('mouse:down', (e: any) => {
+          const obj = e.target
+          if (!obj || obj.type !== 'i-text' || obj.data?.type !== 'edited-text') return
+
+          // Activate inline editing
+          obj.set({ opacity: 1, editable: true, selectable: true })
+          fc!.setActiveObject(obj)
+          obj.enterEditing()
+
+          // Auto-grow width as user types
+          obj.on('changed', function (this: typeof obj) {
+            const newWidth = Math.max((this as any).calcTextWidth() + 8, obj.data.blockBounds.width)
+            this.set('width', newWidth)
+            fc!.renderAll()
+          })
+
+          fc!.renderAll()
+        })
+
+        // Handle deactivation on selection:cleared (click outside any object)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fc.on('selection:cleared', () => {
+          fc!.forEachObject((obj: any) => {
+            if (obj.type === 'i-text' && obj.data?.type === 'edited-text') {
+              obj.set({ opacity: 0.001, editable: false, selectable: false })
+            }
+          })
           fc!.renderAll()
         })
 
@@ -236,6 +287,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       init()
 
       return () => {
+        window.removeEventListener('keydown', handleKeydown)
         try {
           fc?.dispose()
         } catch {

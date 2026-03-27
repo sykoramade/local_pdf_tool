@@ -31,6 +31,7 @@ interface PdfViewerProps {
   onImageDelete?: (id: string) => void
   useCanvasLayer?: boolean
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
+  searchQuery?: string
 }
 
 interface PageData {
@@ -83,6 +84,7 @@ export default function PdfViewer({
   onImageDelete,
   useCanvasLayer = false,
   fabricLayerRefs,
+  searchQuery,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -283,6 +285,7 @@ export default function PdfViewer({
                       pageWidth={width}
                       pageHeight={height}
                       scale={scale}
+                      searchQuery={searchQuery}
                     />
                   ) : (
                     <PdfTextLayer
