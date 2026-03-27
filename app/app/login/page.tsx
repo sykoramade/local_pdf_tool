@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/auth/client'
 
 type Step = 'entry' | 'check-email'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/workspace'
@@ -291,5 +291,17 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#0d0f17', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', color: 'rgba(255,255,255,.5)' }}>
+        Loading...
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

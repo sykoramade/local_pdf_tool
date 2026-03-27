@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S27 — PDF Text Block Selection</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: #1e293b; color: #f1f5f9; padding: 12px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header h1 { font-size: 15px; font-weight: 600; }
+    .badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: #6366f1; color: white; font-weight: 600;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    .layout { display: flex; height: calc(100vh - 44px); overflow: hidden; }
+    .sidebar {
+      width: 280px; background: #fff; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; overflow-y: auto; padding: 16px; gap: 14px;
+    }
+    .main { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+    /* ── Drop zone ───────────────────────────────────────────── */
+    .drop-zone {
+      width: 100%; max-width: 720px; border: 2px dashed #cbd5e1;
+      border-radius: 12px; padding: 32px; text-align: center;
+      cursor: pointer; transition: all .2s; background: #fff;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #6366f1; background: #eef2ff;
+    }
+    .drop-zone p { font-size: 14px; color: #64748b; margin-top: 8px; }
+    .drop-zone strong { font-size: 16px; color: #334155; }
+    #file-input { display: none; }
+
+    /* ── Toolbar ─────────────────────────────────────────────── */
+    .toolbar {
+      display: none; width: 100%; max-width: 720px;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 8px 12px; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .toolbar.visible { display: flex; }
+    .toolbar select, .toolbar input[type=number] {
+      border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 6px;
+      font-size: 13px; background: #fff; cursor: pointer;
+    }
+    .toolbar input[type=number] { width: 52px; }
+    .toolbar input[type=color] { width: 28px; height: 28px; border: none; cursor: pointer; padding: 0; background: none; }
+    .tb-btn {
+      border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 8px;
+      font-size: 13px; background: #fff; cursor: pointer; line-height: 1.4;
+    }
+    .tb-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+    .tb-sep { width: 1px; height: 20px; background: #e2e8f0; }
+    .tb-mode {
+      display: flex; gap: 4px; align-items: center;
+      font-size: 11px; color: #64748b; padding-left: 8px;
+    }
+
+    /* ── Page wrapper ────────────────────────────────────────── */
+    .page-wrapper {
+      position: relative;
+      display: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .page-wrapper.visible { display: block; }
+    #pdf-canvas { display: block; }
+
+    /* ── Sidebar sections ────────────────────────────────────── */
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: #94a3b8; margin-bottom: 6px;
+    }
+    .stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .stat-row span:last-child { font-weight: 600; color: #6366f1; }
+
+    /* ── Gate checklist ──────────────────────────────────────── */
+    .gate-item {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .gate-item:last-child { border-bottom: none; }
+    .gate-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0;
+      background: #e2e8f0;
+    }
+    .gate-dot.pass { background: #22c55e; }
+    .gate-dot.fail { background: #ef4444; }
+
+    /* ── Block list ──────────────────────────────────────────── */
+    .block-item {
+      font-size: 11px; padding: 4px 6px; border-radius: 4px;
+      background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 4px;
+      cursor: pointer; transition: background .15s;
+    }
+    .block-item:hover { background: #eef2ff; border-color: #a5b4fc; }
+    .block-item .block-text {
+      font-weight: 600; color: #334155; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+    }
+    .block-item .block-meta { color: #94a3b8; margin-top: 1px; }
+
+    /* ── Log ─────────────────────────────────────────────────── */
+    #log {
+      font-size: 11px; font-family: monospace; color: #475569;
+      max-height: 120px; overflow-y: auto; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;
+    }
+    #log div { padding: 1px 0; border-bottom: 1px solid #f1f5f9; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Sprint 27 — PDF Text Block Selection</h1>
+  <span class="badge">S27</span>
+  <span style="font-size:12px; color:#94a3b8; margin-left:auto;">PDF.js 3.11.174 · Fabric 6.x · Y-band + X-gap grouping</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-title">Stats</div>
+      <div class="stat-row"><span>Raw text items</span><span id="stat-items">—</span></div>
+      <div class="stat-row"><span>Detected blocks</span><span id="stat-blocks">—</span></div>
+      <div class="stat-row"><span>Viewport scale</span><span id="stat-scale">—</span></div>
+      <div class="stat-row"><span>Canvas size</span><span id="stat-size">—</span></div>
+    </div>
+
+    <div>
+      <div class="section-title">Gate Checklist</div>
+      <div class="gate-item" id="gate-render">
+        <div class="gate-dot" id="gate-render-dot"></div>
+        <div>PDF renders as canvas background</div>
+      </div>
+      <div class="gate-item" id="gate-blocks">
+        <div class="gate-dot" id="gate-blocks-dot"></div>
+        <div>Text blocks detected &amp; overlaid</div>
+      </div>
+      <div class="gate-item" id="gate-hover">
+        <div class="gate-dot" id="gate-hover-dot"></div>
+        <div>Hover shows indigo tint</div>
+      </div>
+      <div class="gate-item" id="gate-edit">
+        <div class="gate-dot" id="gate-edit-dot"></div>
+        <div>Click → Textbox with PDF text</div>
+      </div>
+      <div class="gate-item" id="gate-cells">
+        <div class="gate-dot" id="gate-cells-dot"></div>
+        <div>Table cells select independently</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Detected Blocks <span id="block-count" style="font-weight:400;color:#6366f1"></span></div>
+      <div id="block-list" style="max-height:200px; overflow-y:auto;"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Event Log</div>
+      <div id="log"></div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="main">
+
+    <div class="drop-zone" id="drop-zone">
+      <strong>Drop a PDF here</strong>
+      <p>or click to browse — financial tables &amp; legal contracts recommended</p>
+      <input type="file" id="file-input" accept=".pdf">
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <select id="fc-family">
+        <option>Helvetica</option>
+        <option>Times New Roman</option>
+        <option>Courier New</option>
+        <option>Arial</option>
+        <option>Georgia</option>
+      </select>
+      <input type="number" id="fc-size" value="12" min="6" max="96">
+      <input type="color" id="fc-color" value="#000000">
+      <div class="tb-sep"></div>
+      <button class="tb-btn" id="btn-b"><b>B</b></button>
+      <button class="tb-btn" id="btn-i"><i>I</i></button>
+      <button class="tb-btn" id="btn-u" style="text-decoration:underline">U</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" id="btn-undo" title="Ctrl+Z">↩ Undo</button>
+      <button class="tb-btn" id="btn-redo" title="Ctrl+Shift+Z">↪ Redo</button>
+      <div class="tb-sep"></div>
+      <div class="tb-mode" id="mode-indicator">🔲 hover to select</div>
+    </div>
+
+    <div class="page-wrapper" id="page-wrapper">
+      <canvas id="pdf-canvas"></canvas>
+      <!-- Fabric canvas injected here by initFabric() -->
+    </div>
+
+  </main>
+</div>
+
+<!-- PDF.js 3.11.174 CDN (matches Next.js codebase version) -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- Fabric.js v6 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fabric@6.4.3/dist/index.min.js"></script>
+
+<script>
+'use strict';
+
+// ── PDF.js worker ────────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+// ── State ────────────────────────────────────────────────────────
+let fabricCanvas = null;
+let currentViewport = null;
+let detectedBlocks = [];
+
+// History for undo/redo
+const history = [];
+const redoStack = [];
+
+// ── Logging ──────────────────────────────────────────────────────
+function log(msg) {
+  const el = document.getElementById('log');
+  const div = document.createElement('div');
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.prepend(div);
+  if (el.children.length > 40) el.lastChild.remove();
+}
+
+// ── Gate helpers ─────────────────────────────────────────────────
+function gatePass(id) {
+  document.getElementById(`gate-${id}-dot`).className = 'gate-dot pass';
+}
+function gateFail(id) {
+  document.getElementById(`gate-${id}-dot`).className = 'gate-dot fail';
+}
+
+// ── Font detection from PDF.js fontName ──────────────────────────
+function detectFontStyle(fontName) {
+  if (!fontName) return { family: 'Helvetica', bold: false, italic: false };
+  const n = fontName.toLowerCase();
+  const bold = n.includes('bold') || n.includes('heavy') || n.includes('black');
+  const italic = n.includes('italic') || n.includes('oblique') || n.includes('slant');
+  let family = 'Helvetica';
+  if (n.includes('times') || n.includes('serif')) family = 'Times New Roman';
+  else if (n.includes('courier') || n.includes('mono')) family = 'Courier New';
+  else if (n.includes('georgia')) family = 'Georgia';
+  return { family, bold, italic };
+}
+
+// ── Block detection: Y-band + X-gap splitting ────────────────────
+// Matches PdfTextLayer.tsx groupLines() with added X-gap split for table cells.
+function detectBlocks(items) {
+  if (!items.length) return [];
+
+  // Step 1: Sort by Y then X
+  const sorted = [...items].sort((a, b) =>
+    a.canvasY !== b.canvasY ? a.canvasY - b.canvasY : a.canvasX - b.canvasX
+  );
+
+  // Step 2: Y-band grouping (same algorithm as PdfTextLayer.tsx)
+  const yBands = [];
+  for (const item of sorted) {
+    const last = yBands[yBands.length - 1];
+    const tolerance = item.canvasFontSize * 0.6;
+    if (last && Math.abs(item.canvasY - last[0].canvasY) <= tolerance) {
+      last.push(item);
+    } else {
+      yBands.push([item]);
+    }
+  }
+
+  // Step 3: Within each Y-band, split on large X gaps → independent blocks
+  // Threshold: gap > fontSize * 0.8 = separate cell (handles tables & columns)
+  const blocks = [];
+  for (const band of yBands) {
+    const bandSorted = [...band].sort((a, b) => a.canvasX - b.canvasX);
+    let current = [bandSorted[0]];
+
+    for (let i = 1; i < bandSorted.length; i++) {
+      const prev = current[current.length - 1];
+      const next = bandSorted[i];
+      const prevRight = prev.canvasX + prev.canvasWidth;
+      const gap = next.canvasX - prevRight;
+      // Gap threshold: larger than font-size → new block (separate table cell)
+      const gapThreshold = prev.canvasFontSize * 0.8;
+
+      if (gap > gapThreshold) {
+        blocks.push(buildBlock(current));
+        current = [next];
+      } else {
+        current.push(next);
+      }
+    }
+    blocks.push(buildBlock(current));
+  }
+
+  return blocks.filter(b => b.text.trim().length > 0);
+}
+
+function buildBlock(items) {
+  const xs = items.map(i => i.canvasX);
+  const xe = items.map(i => i.canvasX + i.canvasWidth);
+  const ys = items.map(i => i.canvasY);
+  const ye = items.map(i => i.canvasY + i.canvasFontSize * 1.2);
+
+  const left   = Math.min(...xs);
+  const top    = Math.min(...ys);
+  const width  = Math.max(...xe) - left;
+  const height = Math.max(...ye) - top;
+  const text   = items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+  const anchor = items[0];
+
+  return {
+    left, top,
+    width: Math.max(width, 24),
+    height: Math.max(height, anchor.canvasFontSize * 1.2),
+    text,
+    fontName: anchor.fontName,
+    canvasFontSize: anchor.canvasFontSize,
+    items,
+  };
+}
+
+// ── History helpers ───────────────────────────────────────────────
+function saveHistory() {
+  const snap = JSON.stringify(fabricCanvas.toJSON(['data', 'blockRef']));
+  history.push(snap);
+  redoStack.length = 0;
+}
+
+function doUndo() {
+  if (history.length <= 1) { log('Nothing to undo'); return; }
+  redoStack.push(history.pop());
+  const snap = history[history.length - 1];
+  fabricCanvas.loadFromJSON(JSON.parse(snap), () => {
+    fabricCanvas.renderAll();
+    log('Undo');
+  });
+}
+
+function doRedo() {
+  if (!redoStack.length) { log('Nothing to redo'); return; }
+  const snap = redoStack.pop();
+  history.push(snap);
+  fabricCanvas.loadFromJSON(JSON.parse(snap), () => {
+    fabricCanvas.renderAll();
+    log('Redo');
+  });
+}
+
+// ── Toolbar sync ──────────────────────────────────────────────────
+function syncToolbarToObject(obj) {
+  if (!obj || obj.type === 'rect') return;
+  document.getElementById('fc-family').value = obj.fontFamily || 'Helvetica';
+  document.getElementById('fc-size').value = Math.round(obj.fontSize || 12);
+  document.getElementById('fc-color').value = obj.fill || '#000000';
+  setFmtBtn('b', obj.fontWeight === 'bold');
+  setFmtBtn('i', obj.fontStyle === 'italic');
+  setFmtBtn('u', !!obj.underline);
+}
+
+function setFmtBtn(id, active) {
+  document.getElementById(`btn-${id}`).classList.toggle('active', active);
+}
+
+function applyToActive(prop, value) {
+  const obj = fabricCanvas?.getActiveObject();
+  if (!obj || obj.type === 'rect') return;
+  if (obj.isEditing) {
+    obj.setSelectionStyles({ [prop]: value }, obj.selectionStart, obj.selectionEnd);
+  } else {
+    obj.set(prop, value);
+  }
+  fabricCanvas.renderAll();
+  saveHistory();
+}
+
+// ── Convert hit-target rect → editable Textbox ───────────────────
+function convertRectToTextbox(rect) {
+  const block = rect.data?.block;
+  if (!block) return;
+
+  fabricCanvas.remove(rect);
+
+  const fontStyle = detectFontStyle(block.fontName);
+  const fontSize = Math.max(block.canvasFontSize, 8);
+
+  const tb = new fabric.Textbox(block.text, {
+    left:         block.left,
+    top:          block.top,
+    width:        Math.max(block.width, 60),
+    fontFamily:   fontStyle.family,
+    fontSize:     fontSize,
+    fontWeight:   fontStyle.bold   ? 'bold'   : 'normal',
+    fontStyle:    fontStyle.italic ? 'italic' : 'normal',
+    fill:         '#1e1b4b',
+    padding:      2,
+    backgroundColor: 'rgba(238,242,255,0.95)',
+    editingBorderColor: 'rgba(99,102,241,0.9)',
+    data:         { converted: true, blockText: block.text },
+  });
+
+  fabricCanvas.add(tb);
+  fabricCanvas.setActiveObject(tb);
+  tb.enterEditing();
+  tb.selectAll();
+
+  syncToolbarToObject(tb);
+  document.getElementById('mode-indicator').textContent = '✏️ editing';
+
+  // Gate: first conversion passes the edit gate
+  gatePass('edit');
+  log(`Converted block → Textbox: "${block.text.substring(0, 40)}…"`);
+
+  saveHistory();
+  fabricCanvas.renderAll();
+}
+
+// ── Place hit-target rects for all detected blocks ────────────────
+function placeHitTargets(blocks) {
+  // Remove existing hit-target rects (keep Textboxes)
+  const toRemove = fabricCanvas.getObjects('rect');
+  toRemove.forEach(r => fabricCanvas.remove(r));
+
+  blocks.forEach((block, idx) => {
+    const rect = new fabric.Rect({
+      left:         block.left,
+      top:          block.top,
+      width:        block.width,
+      height:       block.height,
+      fill:         'rgba(0,0,0,0)',
+      stroke:       'rgba(99,102,241,0.25)',
+      strokeWidth:  1,
+      selectable:   true,
+      hasControls:  false,
+      hasBorders:   false,
+      hoverCursor:  'text',
+      data:         { block, idx },
+    });
+
+    rect.on('mouseover', () => {
+      rect.set('fill', 'rgba(99,102,241,0.12)');
+      rect.set('stroke', 'rgba(99,102,241,0.6)');
+      fabricCanvas.renderAll();
+      // Pass hover gate on first hover
+      gatePass('hover');
+    });
+
+    rect.on('mouseout', () => {
+      rect.set('fill', 'rgba(0,0,0,0)');
+      rect.set('stroke', 'rgba(99,102,241,0.25)');
+      fabricCanvas.renderAll();
+    });
+
+    rect.on('mousedown', (opt) => {
+      // Prevent Fabric drag from firing instead of click
+      opt.e.stopPropagation();
+      convertRectToTextbox(rect);
+    });
+
+    fabricCanvas.add(rect);
+  });
+
+  fabricCanvas.renderAll();
+  gatePass('blocks');
+  document.getElementById('mode-indicator').textContent = '🔲 hover to select';
+  log(`Placed ${blocks.length} hit-target rects`);
+}
+
+// ── Update sidebar block list ─────────────────────────────────────
+function renderBlockList(blocks) {
+  const container = document.getElementById('block-list');
+  container.innerHTML = '';
+  document.getElementById('block-count').textContent = `(${blocks.length})`;
+
+  blocks.slice(0, 50).forEach((block, i) => {
+    const div = document.createElement('div');
+    div.className = 'block-item';
+    div.innerHTML = `
+      <div class="block-text">${block.text || '(empty)'}</div>
+      <div class="block-meta">x:${Math.round(block.left)} y:${Math.round(block.top)} · ${Math.round(block.width)}×${Math.round(block.height)}px · ${block.canvasFontSize.toFixed(1)}pt</div>
+    `;
+    div.addEventListener('click', () => {
+      // Highlight the corresponding rect
+      const rects = fabricCanvas.getObjects('rect');
+      const match = rects.find(r => r.data?.idx === i);
+      if (match) {
+        fabricCanvas.setActiveObject(match);
+        match.set('fill', 'rgba(99,102,241,0.25)');
+        fabricCanvas.renderAll();
+        setTimeout(() => {
+          match.set('fill', 'rgba(0,0,0,0)');
+          fabricCanvas.renderAll();
+        }, 800);
+      }
+    });
+    container.appendChild(div);
+  });
+
+  if (blocks.length > 50) {
+    const more = document.createElement('div');
+    more.style.cssText = 'font-size:11px;color:#94a3b8;padding:4px 6px';
+    more.textContent = `… and ${blocks.length - 50} more`;
+    container.appendChild(more);
+  }
+}
+
+// ── Init Fabric canvas ────────────────────────────────────────────
+function initFabric(cssWidth, cssHeight) {
+  // Destroy previous instance if any
+  if (fabricCanvas) {
+    fabricCanvas.dispose();
+    fabricCanvas = null;
+  }
+
+  // Create canvas element and add to wrapper
+  const wrapper = document.getElementById('page-wrapper');
+  const existing = wrapper.querySelector('canvas:not(#pdf-canvas)');
+  if (existing) existing.remove();
+
+  const canvasEl = document.createElement('canvas');
+  canvasEl.id = 'fabric-canvas';
+  wrapper.appendChild(canvasEl);
+
+  fabricCanvas = new fabric.Canvas('fabric-canvas', {
+    width:              cssWidth,
+    height:             cssHeight,
+    enableRetinaScaling: true,
+    selection:          false,  // no drag-select box
+  });
+
+  // Position Fabric overlay exactly on top of PDF canvas
+  const fabricContainer = canvasEl.parentElement;
+  fabricContainer.style.position = 'absolute';
+  fabricContainer.style.top      = '0';
+  fabricContainer.style.left     = '0';
+  fabricContainer.style.pointerEvents = 'none'; // let events pass through when needed
+  canvasEl.parentElement.style.pointerEvents = 'auto';
+
+  // ── Toolbar wiring ──────────────────────────────────────────────
+  fabricCanvas.on('selection:created',  e => syncToolbarToObject(e.selected?.[0]));
+  fabricCanvas.on('selection:updated',  e => syncToolbarToObject(e.selected?.[0]));
+  fabricCanvas.on('selection:cleared',  () => {
+    document.getElementById('mode-indicator').textContent = '🔲 hover to select';
+  });
+
+  fabricCanvas.on('text:changed', () => saveHistory());
+
+  document.getElementById('fc-family').addEventListener('change', e =>
+    applyToActive('fontFamily', e.target.value));
+  document.getElementById('fc-size').addEventListener('change', e =>
+    applyToActive('fontSize', parseInt(e.target.value)));
+  document.getElementById('fc-color').addEventListener('input', e =>
+    applyToActive('fill', e.target.value));
+
+  document.getElementById('btn-b').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (!obj) return;
+    const isBold = obj.fontWeight === 'bold';
+    applyToActive('fontWeight', isBold ? 'normal' : 'bold');
+    setFmtBtn('b', !isBold);
+  });
+  document.getElementById('btn-i').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (!obj) return;
+    const isItalic = obj.fontStyle === 'italic';
+    applyToActive('fontStyle', isItalic ? 'normal' : 'italic');
+    setFmtBtn('i', !isItalic);
+  });
+  document.getElementById('btn-u').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (!obj) return;
+    const isUnder = !!obj.underline;
+    applyToActive('underline', !isUnder);
+    setFmtBtn('u', !isUnder);
+  });
+
+  document.getElementById('btn-undo').addEventListener('click', doUndo);
+  document.getElementById('btn-redo').addEventListener('click', doRedo);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') { doRedo(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { doUndo(); return; }
+    // Delete selected Textbox if empty + Backspace
+    if (e.key === 'Backspace') {
+      const obj = fabricCanvas.getActiveObject();
+      if (obj && obj.type === 'textbox' && !obj.isEditing && obj.text === '') {
+        fabricCanvas.remove(obj);
+        fabricCanvas.discardActiveObject();
+        fabricCanvas.renderAll();
+        saveHistory();
+        log('Deleted empty Textbox');
+      }
+    }
+  });
+
+  // Initial history snapshot
+  saveHistory();
+  log('Fabric canvas initialized');
+}
+
+// ── Core: load & render PDF + extract text ────────────────────────
+async function loadPdf(arrayBuffer) {
+  log('Loading PDF…');
+
+  const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  log(`PDF loaded — ${pdfDoc.numPages} page(s)`);
+
+  const page = await pdfDoc.getPage(1);
+
+  // Scale: fit to max 760px wide, max 2× for crisp rendering
+  const maxWidth = 760;
+  const unscaled = page.getViewport({ scale: 1 });
+  const scale = Math.min(maxWidth / unscaled.width, 2.0);
+  const viewport = page.getViewport({ scale });
+  currentViewport = viewport;
+
+  const cssWidth  = Math.round(viewport.width);
+  const cssHeight = Math.round(viewport.height);
+
+  // ── Render PDF to canvas ──────────────────────────────────────
+  const pdfCanvas = document.getElementById('pdf-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  pdfCanvas.width  = cssWidth  * dpr;
+  pdfCanvas.height = cssHeight * dpr;
+  pdfCanvas.style.width  = `${cssWidth}px`;
+  pdfCanvas.style.height = `${cssHeight}px`;
+
+  const ctx = pdfCanvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  log('PDF rendered to canvas background');
+  gatePass('render');
+
+  // Update stats
+  document.getElementById('stat-scale').textContent = scale.toFixed(3);
+  document.getElementById('stat-size').textContent  = `${cssWidth}×${cssHeight}`;
+
+  // Show UI
+  document.getElementById('page-wrapper').classList.add('visible');
+  document.getElementById('toolbar').classList.add('visible');
+  document.getElementById('drop-zone').style.display = 'none';
+
+  // Init Fabric overlay
+  initFabric(cssWidth, cssHeight);
+
+  // ── Extract text items ────────────────────────────────────────
+  const textContent = await page.getTextContent();
+  const rawItems = textContent.items.filter(item => item.str?.trim());
+  document.getElementById('stat-items').textContent = rawItems.length;
+  log(`Extracted ${rawItems.length} raw text items`);
+
+  // ── Convert to canvas coordinates ────────────────────────────
+  const canvasItems = rawItems.map((item, idx) => {
+    // PDF transform: [scaleX, skewX, skewY, scaleY, tx, ty]
+    // tx, ty = bottom-left origin of text in PDF user space
+    const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+
+    // Font size: scaleY component of the text matrix, scaled to viewport
+    const fontHeightPDF = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
+    const canvasFontSize = fontHeightPDF * viewport.scale;
+
+    // Width: item.width is in PDF user units (pre-viewport-scale)
+    const canvasWidth = item.width * viewport.scale;
+
+    // Y: PDF baseline is bottom of text; canvas y is top
+    const canvasY = vy - canvasFontSize;
+    const canvasX = vx;
+
+    return {
+      id:            `item-${idx}`,
+      str:           item.str,
+      fontName:      item.fontName || '',
+      canvasX:       Math.max(canvasX, 0),
+      canvasY:       Math.max(canvasY, 0),
+      canvasWidth:   Math.max(canvasWidth, 8),
+      canvasFontSize: Math.max(canvasFontSize, 6),
+    };
+  });
+
+  // ── Detect blocks ─────────────────────────────────────────────
+  detectedBlocks = detectBlocks(canvasItems);
+  document.getElementById('stat-blocks').textContent = detectedBlocks.length;
+  log(`Detected ${detectedBlocks.length} text blocks`);
+
+  // Gate: table cells check — if more blocks than raw Y-bands it means X-splitting worked
+  const yBandCount = new Set(canvasItems.map(i => Math.round(i.canvasY / 5))).size;
+  if (detectedBlocks.length >= yBandCount) {
+    gatePass('cells');
+    log('Table cell splitting verified (blocks ≥ y-bands)');
+  }
+
+  // ── Render hit-targets ────────────────────────────────────────
+  placeHitTargets(detectedBlocks);
+  renderBlockList(detectedBlocks);
+
+  saveHistory();
+}
+
+// ── Drop zone wiring ──────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if (file) handleFile(file);
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files?.[0];
+  if (file?.type === 'application/pdf') handleFile(file);
+  else log('⚠ Drop a PDF file');
+});
+
+async function handleFile(file) {
+  log(`Reading: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+  const buf = await file.arrayBuffer();
+  try {
+    await loadPdf(buf);
+  } catch (err) {
+    log(`ERROR: ${err.message}`);
+    console.error(err);
+  }
+}
+
+// ── Init log ──────────────────────────────────────────────────────
+log('S27 ready — drop a PDF to begin');
+log('Scope: financial tables + legal contracts');
+</script>
+</body>
+</html>

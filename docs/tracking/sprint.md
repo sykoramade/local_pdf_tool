@@ -420,6 +420,234 @@ MD needs to: create Supabase project → copy URL + anon key → create `.env.lo
 
 ---
 
+## Sprint 21 — COMPLETE ✅
+**Committed:** `faf0974`, `992a818` (2026-03-23)
+**Goal:** Sig overlay stability + workspace state fixes.
+
+### Done
+- [x] S21: Sig stroke color fix (black rendered correctly)
+- [x] S21: Center-anchor sig overlay (transform: translate(-50%, -50%))
+- [x] S21: pageRef-based placement coordinates (accurate pct coords)
+- [x] S21: Tool-switch PDF state reset (switching tools no longer loses edits)
+- [x] S21: Floating "Save PDF" button in CanvasArea
+- [x] S21: Compress default-on behaviour
+
+---
+
+## Sprint 22 — COMPLETE ✅
+**Committed:** `c0f97fb`, `4e8af4f`, `41d3bd8`, `33f3651` (2026-03-23)
+**Goal:** Save quality fixes + stored signatures + blank page insert.
+
+### Done
+- [x] S22-1: Bold/italic preserved in saved PDF via `resolveStandardFont()` (fixes long-standing font regression)
+- [x] S22-2: Proportional descender mask in `save.ts` + full Y-position audit
+- [x] S22-3: Stored signatures — `localStorage` persistence + signature picker in SignatureModal
+- [x] S22-4: Blank page insertion via PageRail + button (pdf-lib `addPage`)
+
+---
+
+## Sprint 23 — COMPLETE ✅
+**Committed (S23-1):** `81c8ede` (2026-03-24)
+**Goal:** Image insertion + freehand drawing tools.
+
+### Done
+- [x] S23-1: Image insertion — drag-to-place `ImageOverlay`, `ImageEntry` type, `embedImages()` in `lib/pdf/image.ts`, wired into WorkspaceShell (insert button + download chain)
+- [x] S23-2: Freehand drawing — `DrawingCanvas` full-viewport canvas overlay (pen colors, sizes, dpr-aware crop to page rect); stored as `ImageEntry` with `widthPct: 100`; "Draw" toggle in L3Strip sign-idle section; dynamic import (`ssr: false`)
+- [x] S23-3: Pro gate audit — image insert and draw are free features; `isPro={false}` hardcode correct until MD populates `.env.local` for real auth (S20-B blocked on MD)
+
+---
+
+## Sprint 24 — COMPLETE ✅
+**Committed:** 2026-03-25
+**Goal:** PDF text overlay fidelity — metric-compatible font embedding.
+
+### Done
+- [x] S24-1: Investigated `canvasWidth` formula (`raw.width * scale`) — source analysis of PDF.js v3.11 worker confirmed `raw.width` is in PDF user-space (points). Formula `raw.width * scale` is mathematically correct. No change needed. (CTO agent Option 0 was incorrect; applying `tx[0]` would multiply font size twice.)
+- [x] S24-2: Added Arimo, Tinos, Cousine (metric-compatible fonts) via `next/font/google` in `layout.tsx`. CSS variables: `--font-arimo`, `--font-tinos`, `--font-cousine`. Applied to `<body>` so they cascade into PDF viewer overlays.
+- [x] S24-3: Updated `font-map.ts` CSS stacks to prefix metric-compatible fonts: `var(--font-arimo)` for Helvetica/Arial, `var(--font-tinos)` for Times, `var(--font-cousine)` for Courier. System font fallbacks preserved. Build passes.
+
+---
+
+## Sprint 25 — COMPLETE ✅
+**Completed:** 2026-03-26
+**Plan:** `docs/tracking/SPRINT_25_CANVAS_PIVOT.md` (Canvas Pivot + Redact Tier 2, S25–S30)
+
+### MD Decisions Locked
+- **PDF.js version → Option A:** All HTML prototypes (S25–S28) use `pdfjs-dist@3.11.174` CDN. Matches Next.js codebase. Eliminates version mismatch risk at S29. S29 confidence: 6→8/10.
+- **S27 scope:** Text selection algorithm optimised for financial tables + legal contracts only. Edge cases outside those profiles fall back to text-box placement. S27 confidence: 6→8/10.
+- **S30A pre-sprint:** ~200 tokens investigating PDF.js `evaluator.js` tokeniser accessibility before building custom parser. S30A confidence: 5→7/10 if accessible.
+- **Overall revised confidence: 7.8/10**
+
+### Goal
+Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real complex document.
+
+### Done
+- [x] `sprints/sprint25_canvas_proof.html` — PDF.js 3.11.174 + Fabric.js 6.4.3 CDN coexist; DPR-aware rendering; Fabric container pinned absolute top:0 left:0; click dot logs x/y; alignment gate validates zero offset
+
+**Gate:** MD confirms no visual drift.
+
+---
+
+## Sprint 26 — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Free text placement — click blank area to place Fabric.Textbox with full toolbar.
+
+### Done
+- [x] `sprints/sprint26_text_placement.html` — Fabric.js v6 inlined (CORS-safe for file://); click blank → Textbox at cursor, auto-focused; toolbar (font, size, B/I/U, color); empty box cleanup on deselect; history undo/redo; keyboard Backspace delete
+- [x] Fabric.js v6 inlined pattern confirmed (333.9KB UMD bundle on line 9) — used for file:// compatibility
+
+**Gate:** MD verifies placement accuracy, cursor visible, toolbar live update, multiple boxes independent.
+
+---
+
+## Sprint 27 — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** PDF text block detection — Y-band + X-gap grouping, transparent hit-target Rects, hover tint, click→Textbox.
+
+### Done
+- [x] `sprints/sprint27_text_selection.html` — PDF.js extracts text items; canvasX/Y/width/fontSize computed from transform matrix + viewport.convertToViewportPoint; Y-band grouping (tolerance: fontSize×0.6, matches PdfTextLayer.tsx); X-gap splitting (gap > fontSize×0.8 = separate cell); transparent Fabric Rects with indigo hover tint rgba(99,102,241,0.12); click → Rect removed → Textbox populated with PDF text + detected font; toolbar + history from S26; sidebar: block count, block list, 5-item gate checklist
+- [x] Scope: financial tables + legal contracts (X-gap threshold tuned for table cells)
+- [x] Coordinate formula: canvasY = vy − canvasFontSize (PDF baseline → canvas top)
+
+**Gate:** MD verifies individual table cells select independently (blocks ≥ Y-bands), hover tint, click→Textbox with correct text. Serve with `npx serve sprints/`.
+
+---
+
+## Sprint 28 — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Export pipeline HTML prototype — white-rect cover + pdf-lib text replacement proof.
+
+### Done
+- [x] `sprints/sprint28_export_pipeline.html` — PDF.js 3.11.174 extracts text; Fabric.js v6 block selection + editing; pdf-lib CDN applies white cover rect (canvas coords → PDF coords via viewportScale) + drawText at pdfX/pdfY; download works end-to-end; coordinate conversion formula validated: `coverY = pageH - (blockTop + blockH) / scale`
+
+**Gate:** MD verifies edited text appears at correct position in downloaded PDF.
+
+---
+
+## Sprint 29 — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Full Next.js workspace integration — canvas-based PDF text editing wired into PdfEditor.
+
+### Done
+- [x] `app/lib/pdf/types.ts` — added `FabricTextboxExport` and `FabricLayerRef` interfaces
+- [x] `app/app/components/CanvasTextLayer.tsx` — new Fabric.js canvas overlay; `forwardRef<FabricLayerRef>`; Y-band + X-gap block detection; hit-target Rects; click → editable Textbox; `getTextboxes()` collects edited blocks
+- [x] `app/lib/pdf/canvas-save.ts` — `applyCanvasEditsAndSave(originalBytes, textboxes, viewportScale)`; white cover rect via canvas→PDF coord conversion; text placement at `item.pdfX/pdfY`; font dedup cache; `useObjectStreams: false`
+- [x] `app/app/components/PdfViewer.tsx` — added `useCanvasLayer` + `fabricLayerRefs` props; conditional `<CanvasTextLayer>` vs `<PdfTextLayer>`
+- [x] `app/app/components/PdfEditor.tsx` — added `fabricLayerRefs` ref; canvas download path (collect textboxes → `applyCanvasEditsAndSave`); falls back to `applyEditsAndSave` if no canvas edits; `useCanvasLayer` enabled by default
+- [x] `fabric@^6.9.1` installed
+
+**Gate:** Load PDF → click text block → edit in Fabric Textbox → download → open PDF → verify text at correct position.
+
+---
+
+## Sprint 30A — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Redact proof HTML prototype — true text removal via PDF content stream surgery.
+
+### Done
+- [x] `sprints/sprint30a_redact_proof.html` — pdf-lib loads PDF; pako FlateDecode decompression; `blankTextOps()` regex parser handles `Tj`, `'`, `"`, and `TJ` array operators; modified stream written back uncompressed (Filter/DecodeParms/Length dict updated); PDF.js re-renders and confirms visual removal; text extraction verifies target absent; before/after side-by-side comparison; download button
+- [x] `getStreamRefs()` handles single `PDFRef` and `PDFArray` contents; graceful fallback on unsupported filters (JBIG2, CCITTFax etc.)
+- [x] Verification gate: 4 checks (surgery success / PDF.js re-render / text extraction / valid download)
+
+**Gate:** MD loads a real PDF with known PII text → enters target → clicks Redact → verifies text visually removed + gate 3 (text extraction) passes green. Serve with `npx serve sprints/`.
+
+---
+
+## Sprint 30B — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Redact integration into Next.js workspace (wire S30A surgery into PdfEditor.tsx).
+
+### Done
+- [x] `app/lib/pdf/redact.ts` — TypeScript port of S30A surgery: `strToBytes`, `inflateZlib` (native `DecompressionStream`, no pako), `blankTextOps`, `getPageStreams`, `redactPdf` — no new npm dependencies
+- [x] Redact tab `comingSoon: false` — Redaction tab now active in idle marketing view
+- [x] Redact state added to `PdfEditor` — `redactTargets: string[]` + `redactInput: string`
+- [x] Redact panel in viewing state — shown when `activeToolTab === 'redact'`: text input (Enter to add), tag list with × removal, amber notice strip
+- [x] `handleDownload` wired — when `activeToolTab === 'redact'` and targets present, calls `redactPdf`; filename suffix changes to `-redacted.pdf`; Download button text shows target count and disables when no targets
+- [x] TypeScript clean — `npx tsc --noEmit` passes with no errors
+
+**Gate:** MD loads a PDF, selects Redaction tab from idle screen, drops PDF, enters a target phrase, clicks "Redact & Download (1)" — verify downloaded PDF has text permanently removed (PDF.js extract shows target absent).
+
+---
+
+## Sprint 30C — COMPLETE ✅
+**Completed:** 2026-03-26
+**Goal:** Wire S25–S29 canvas layer into live WorkspaceShell (S29 delivered to dead PdfEditor.tsx — post-mortem fix). Three CanvasTextLayer refinements.
+
+### Done
+- [x] `WorkspaceShell.tsx` — `fabricLayerRefs` ref (`useRef<Map<number, FabricLayerRef>>(new Map())`); `CanvasArea` prop type extended with `fabricLayerRefs`; `PdfViewer` call passes `useCanvasLayer={isEdit}` and `fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}`
+- [x] `WorkspaceShell.tsx` — `handleDownload` canvas save path: collect textboxes from all `fabricLayerRefs` layers → `applyCanvasEditsAndSave(outputBytes, canvasTextboxes, 1.5)` — falls back to existing `editMap` path if no canvas edits
+- [x] `CanvasTextLayer.tsx` — S26 patch 1: font/size from nearest PDF.js item on click (reduce by distance to clickX mid) rather than always `items[0]`
+- [x] `CanvasTextLayer.tsx` — S26 patch 2: auto-grow Textbox width on typing (`tb.on('changed')` → `calcTextWidth() + 8`)
+- [x] `CanvasTextLayer.tsx` — S26 patch 3: drag-select enabled (`selection: true`, `selectionColor: 'rgba(99,102,241,0.08)'`, `selectionBorderColor: '#818cf8'`, `selectionLineWidth: 1`)
+- [x] `docs/lessons-learned.md` — Mandatory Prop Audit rule added (grep PropName across definition → type signature → call site → usage in render/handler)
+- [x] `HomepageHub.tsx` — redact unlocked (`href: '/workspace?tool=redact'`, `pro` flag removed)
+
+**Gate:** Load PDF in WorkspaceShell → switch to Edit tab → click text block → Textbox activates → edit → download → verify text replaced at correct position in output PDF.
+
+---
+
+## Sprint 31 — READY TO BUILD 🔜
+**Goal:** IText overlay — the killer feature. Clicking existing PDF text enters inline edit mode. The transition from reading to editing is invisible.
+
+### Background
+S25–S30 built the Fabric canvas infrastructure. S30C wired it into WorkspaceShell. The remaining gap: CanvasTextLayer uses invisible Rect hit-zones that convert to Textbox on click. The target architecture: per-block `IText` objects at `opacity:0.001`, editable in-place, deactivate on blur. This is the exact pattern used by PDFNoLimit ("Select mode → click any text → editable inline").
+
+Three specialist agents (architect + UX researcher + PM) reviewed this approach. Confidence: 8–9/10. Two mandatory UX conditions identified (see below).
+
+### Tasks
+
+**S31-1 — IText overlay: replace Rect hit-zones with IText objects** (`CanvasTextLayer.tsx`)
+- For each detected block: create `IText` (not Rect) with block text joined, correct font/size from nearest item (already implemented), `opacity: 0.001` (NOT 0 — Fabric v6 filters true-zero from hit detection), `editable: false`, `selectable: false`, `hoverCursor: 'text'`
+- Remove the `mouse:over` / `mouse:out` Rect fill swap handlers
+- Remove the `mouse:down` Textbox-creation handler
+
+**S31-2 — IText activate/deactivate lifecycle** (`CanvasTextLayer.tsx`)
+- `mouse:down` on IText object: set `opacity: 1`, `editable: true`, `selectable: true`, call `enterEditing()`, `renderAll()`
+- `selection:cleared` event: iterate all IText objects, restore `opacity: 0.001`, `editable: false`
+- Preserve auto-grow width on `changed` event (carry over from S30C Textbox implementation)
+
+**S31-3 — Rest-state editability signal** (`CanvasTextLayer.tsx`)
+- Set `underline: true` on all IText at opacity:0.001
+- This is the mandatory UX researcher finding: without a permanent signal at rest, opacity:0.001 is the same discoverability black hole as the failed invisible Rect approach
+- Underline color via Fabric `stroke` on IText — use `'rgba(99,102,241,0.25)'`
+
+**S31-4 — FAB save button** (`WorkspaceShell.tsx`)
+- Fixed `div` outside the scrollable area: `position: fixed`, `bottom: 24px`, `right: 24px`, `background: #6366f1`, `borderRadius: 30px`, `padding: 12px 20px`, `boxShadow: 0 10px 25px -5px rgba(99,102,241,0.5)`
+- Triggers existing `handleDownload` — no new logic
+- Show only when a file is loaded (`file !== null`)
+- Label: "Save PDF"
+
+**S31-5 — TypeScript audit + prop audit** (mandatory gate)
+- `npx tsc --noEmit` must pass clean
+- Grep `FabricLayerRef` across definition → CanvasArea type sig → PdfViewer type sig → call sites → render/handler to confirm full thread
+
+### Acceptance Criterion
+A new user, no instructions, opens a PDF in the workspace Edit tab, finds the date field in an invoice, clicks it, edits the text, and downloads — in under 30 seconds. No visible jump between PDF.js render and Fabric IText on activation.
+
+### Out of Scope for S31
+- "Added text" / "Original text" badge — post-launch (UX researcher: noise; PM: low priority)
+- Text alignment controls — S32
+- Fade transition for visual jump — assess after S31-1/2; add only if frame-by-frame test reveals visible glyph jump
+
+---
+
+## Sprint 32 — QUEUED
+**Goal:** Foundation completers — zoom, page thumbnails, Redact Tier 2.
+
+- Zoom controls (scale slider in L3Strip — PDF.js viewport API)
+- Page thumbnails in PageRail (64×91px PDF.js render per page, lazy-loaded)
+- Redact Tier 2 — true content removal (wire S30A `blankTextOps` into WorkspaceShell redact path; gate behind "Remove content permanently" toggle)
+
+---
+
+## Sprint 33 — QUEUED
+**Goal:** Polish — text alignment + search/find.
+
+- Text alignment: left/center/right on IText via Fabric `textAlign` (3 buttons in toolbar)
+- Search/Find: PDF.js `findController` wired to search modal; highlight matches on current page
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF

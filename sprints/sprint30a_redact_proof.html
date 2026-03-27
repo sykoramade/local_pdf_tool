@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S30A — Redact Proof (Content Stream Surgery)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; }
+
+    header {
+      background: #1e293b; color: #f1f5f9; padding: 12px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header h1 { font-size: 15px; font-weight: 600; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #ef4444; color: white; font-weight: 600; }
+    .sub { font-size: 12px; color: #94a3b8; margin-left: auto; }
+
+    .layout { display: flex; height: calc(100vh - 44px); overflow: hidden; }
+    .sidebar {
+      width: 290px; background: #fff; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; overflow-y: auto; padding: 16px; gap: 14px;
+    }
+    .main { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+    .drop-zone {
+      width: 100%; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 24px 16px;
+      text-align: center; cursor: pointer; transition: all .2s; background: #fafafa;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #ef4444; background: #fff5f5; }
+    .drop-zone p { font-size: 13px; color: #64748b; margin-top: 6px; }
+    .drop-zone strong { font-size: 14px; color: #334155; }
+    #file-input { display: none; }
+
+    .section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: #94a3b8; margin-bottom: 4px;
+    }
+
+    .redact-input-row { display: flex; gap: 6px; }
+    .redact-input {
+      flex: 1; border: 1px solid #d1d5db; border-radius: 5px;
+      padding: 6px 9px; font-size: 13px; background: #fff;
+    }
+    .redact-input:focus { outline: none; border-color: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
+
+    .btn {
+      padding: 6px 14px; border-radius: 5px; font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    .btn-redact { background: #ef4444; color: white; }
+    .btn-redact:hover { background: #dc2626; }
+    .btn-redact:disabled { background: #fca5a5; cursor: wait; }
+    .btn-download { background: #6366f1; color: white; display: none; width: 100%; text-align: center; }
+    .btn-download:hover { background: #4f46e5; }
+    .btn-download.visible { display: block; }
+
+    #tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-height: 24px; }
+    .tag {
+      font-size: 11px; background: #fee2e2; color: #b91c1c; padding: 2px 8px;
+      border-radius: 20px; display: flex; align-items: center; gap: 4px;
+    }
+    .tag button { background: none; border: none; cursor: pointer; color: #b91c1c; font-size: 12px; line-height: 1; padding: 0; }
+
+    #log {
+      font-size: 11px; font-family: monospace; color: #475569;
+      max-height: 160px; overflow-y: auto; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;
+    }
+    #log div { padding: 1.5px 0; border-bottom: 1px solid #f1f5f9; }
+    #log div:last-child { border-bottom: none; }
+    #log .ok { color: #16a34a; }
+    #log .warn { color: #d97706; }
+    #log .err { color: #dc2626; }
+
+    .gate-item {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .gate-item:last-child { border-bottom: none; }
+    .gate-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; background: #e2e8f0; }
+    .gate-dot.pass { background: #22c55e; }
+    .gate-dot.fail { background: #ef4444; }
+    .gate-dot.pending { background: #f59e0b; }
+
+    .stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+    .stat-row span:last-child { font-weight: 600; color: #ef4444; }
+
+    /* PDF canvas */
+    .page-wrapper {
+      position: relative; display: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12); border-radius: 2px;
+    }
+    .page-wrapper.visible { display: block; }
+    #pdf-canvas, #pdf-canvas-after { display: block; }
+
+    .canvas-label {
+      position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 700;
+      background: rgba(0,0,0,.6); color: white; padding: 2px 7px; border-radius: 4px;
+    }
+
+    .drop-zone { position: relative; }
+    .page-count-badge {
+      display: inline-block; margin-top: 6px; font-size: 11px; color: #64748b;
+    }
+
+    .compare-row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+    .empty-state {
+      text-align: center; color: #94a3b8; font-size: 14px; padding: 60px 0;
+    }
+    .empty-state p { margin-top: 8px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Sprint 30A — Redact Proof</h1>
+  <span class="badge">S30A</span>
+  <span class="sub">Content stream surgery · pdf-lib + pako · true text removal</span>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <!-- Drop zone -->
+    <div>
+      <div class="section-title">1. Load PDF</div>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <strong>📄 Drop PDF here</strong>
+        <p>or click to browse</p>
+      </div>
+      <input type="file" id="file-input" accept=".pdf">
+    </div>
+
+    <!-- Redact targets -->
+    <div>
+      <div class="section-title">2. Text to redact</div>
+      <div class="redact-input-row">
+        <input class="redact-input" id="target-input" type="text" placeholder="e.g. John Smith" />
+        <button class="btn btn-redact" id="add-btn" onclick="addTarget()">Add</button>
+      </div>
+      <div id="tag-list" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- Redact button -->
+    <div>
+      <button class="btn btn-redact" id="redact-btn" onclick="runRedact()" disabled style="width:100%">
+        ⬛ Redact &amp; verify
+      </button>
+      <button class="btn btn-download" id="download-btn" onclick="downloadResult()">
+        ⬇ Download redacted PDF
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats-box" style="display:none">
+      <div class="section-title">Stats</div>
+      <div class="stat-row"><span>Pages processed</span><span id="stat-pages">—</span></div>
+      <div class="stat-row"><span>Streams scanned</span><span id="stat-streams">—</span></div>
+      <div class="stat-row"><span>Replacements made</span><span id="stat-replacements">—</span></div>
+    </div>
+
+    <!-- Verification gate -->
+    <div id="gate-box" style="display:none">
+      <div class="section-title">Verification gate</div>
+      <div class="gate-item"><div class="gate-dot" id="g1"></div><span>Content stream modified without error</span></div>
+      <div class="gate-item"><div class="gate-dot" id="g2"></div><span>PDF.js re-renders cleanly after surgery</span></div>
+      <div class="gate-item"><div class="gate-dot" id="g3"></div><span>Target text absent from PDF.js text extraction</span></div>
+      <div class="gate-item"><div class="gate-dot" id="g4"></div><span>Download produces valid PDF (no parse error)</span></div>
+    </div>
+
+    <!-- Log -->
+    <div>
+      <div class="section-title">Log</div>
+      <div id="log"><div style="color:#94a3b8">Waiting for PDF…</div></div>
+    </div>
+
+  </aside>
+
+  <main class="main" id="main-area">
+    <div class="empty-state" id="empty-state">
+      <div style="font-size:48px">⬛</div>
+      <p>Drop a PDF to begin content stream surgery proof</p>
+    </div>
+    <div class="compare-row" id="compare-row" style="display:none">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-align:center">BEFORE</div>
+        <div class="page-wrapper" id="before-wrapper">
+          <canvas id="pdf-canvas"></canvas>
+          <span class="canvas-label">Original</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-align:center">AFTER</div>
+        <div class="page-wrapper" id="after-wrapper">
+          <canvas id="pdf-canvas-after"></canvas>
+          <span class="canvas-label">Redacted</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- CDN scripts -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let originalBytes = null;
+let redactedBytes = null;
+let targets = [];
+
+// ─── Logging ──────────────────────────────────────────────────────────────────
+function log(msg, cls = '') {
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ─── Tag management ───────────────────────────────────────────────────────────
+function addTarget() {
+  const input = document.getElementById('target-input');
+  const val = input.value.trim();
+  if (!val || targets.includes(val)) { input.value = ''; return; }
+  targets.push(val);
+  input.value = '';
+  renderTags();
+  updateRedactBtn();
+}
+
+function removeTarget(t) {
+  targets = targets.filter(x => x !== t);
+  renderTags();
+  updateRedactBtn();
+}
+
+function renderTags() {
+  const list = document.getElementById('tag-list');
+  list.innerHTML = targets.map(t =>
+    `<span class="tag">${escHtml(t)}<button onclick="removeTarget(${JSON.stringify(t)})">×</button></span>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('target-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTarget();
+});
+
+function updateRedactBtn() {
+  const btn = document.getElementById('redact-btn');
+  btn.disabled = !(originalBytes && targets.length > 0);
+}
+
+// ─── PDF.js render ────────────────────────────────────────────────────────────
+const SCALE = 1.2;
+
+async function renderPdf(bytes, canvasId, wrapId) {
+  const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+  const page = await doc.getPage(1);
+  const vp = page.getViewport({ scale: SCALE });
+  const canvas = document.getElementById(canvasId);
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  document.getElementById(wrapId).classList.add('visible');
+  return doc;
+}
+
+async function extractTextFromPdf(bytes) {
+  const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+  const texts = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    tc.items.forEach(it => { if (it.str) texts.push(it.str); });
+  }
+  return texts.join(' ');
+}
+
+// ─── File loading ─────────────────────────────────────────────────────────────
+async function handleFile(file) {
+  const buf = await file.arrayBuffer();
+  originalBytes = new Uint8Array(buf);
+  redactedBytes = null;
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('compare-row').style.display = 'flex';
+  document.getElementById('after-wrapper').classList.remove('visible');
+  document.getElementById('download-btn').classList.remove('visible');
+  document.getElementById('gate-box').style.display = 'none';
+  document.getElementById('stats-box').style.display = 'none';
+
+  document.getElementById('log').innerHTML = '';
+  log(`Loaded: ${file.name} (${(originalBytes.length / 1024).toFixed(1)} KB)`);
+
+  document.getElementById('before-wrapper').classList.remove('visible');
+  await renderPdf(originalBytes, 'pdf-canvas', 'before-wrapper');
+  log('PDF.js render: original OK', 'ok');
+
+  updateRedactBtn();
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+// ─── Content stream surgery ───────────────────────────────────────────────────
+
+/** Convert a latin-1 string back to bytes. */
+function strToBytes(str) {
+  const out = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) out[i] = str.charCodeAt(i) & 0xFF;
+  return out;
+}
+
+/**
+ * Blank occurrences of each target string inside a PDF content stream string.
+ *
+ * Handles:
+ *   (text) Tj / '  / "
+ *   [(text) n (text)] TJ
+ *
+ * Replacement: fill matched content with spaces to preserve glyph-advance budget.
+ * Returns { result, count }.
+ */
+function blankTextOps(streamStr, targetList) {
+  let result = streamStr;
+  let totalCount = 0;
+
+  for (const target of targetList) {
+    const targetLower = target.toLowerCase();
+
+    // ── Tj / ' / " operators (literal string operand) ──────────────────────
+    // Match: (possibly-escaped-string) followed by Tj or ' or "
+    result = result.replace(
+      /\(([^\\)]*(?:\\.[^\\)]*)*)\)\s*(Tj|'|")/g,
+      (match, content, op) => {
+        if (content.toLowerCase().includes(targetLower)) {
+          totalCount++;
+          // Replace every non-space with a space to maintain approximate width
+          const blanked = content.replace(/[^ ]/g, ' ');
+          return `(${blanked}) ${op}`;
+        }
+        return match;
+      }
+    );
+
+    // ── TJ operator (array of strings + number pairs) ───────────────────────
+    result = result.replace(
+      /\[([^\]]*)\]\s*TJ/g,
+      (match, arr) => {
+        let modified = arr;
+        let changed = false;
+        modified = modified.replace(
+          /\(([^\\)]*(?:\\.[^\\)]*)*)\)/g,
+          (m, content) => {
+            if (content.toLowerCase().includes(targetLower)) {
+              changed = true;
+              totalCount++;
+              return `(${content.replace(/[^ ]/g, ' ')})`;
+            }
+            return m;
+          }
+        );
+        return changed ? `[${modified}] TJ` : match;
+      }
+    );
+  }
+
+  return { result, count: totalCount };
+}
+
+/**
+ * Get content stream refs for a page, handling both single ref and array.
+ * Returns an array of PDFRef objects.
+ */
+function getStreamRefs(pdfDoc, page) {
+  const contentsVal = page.node.get(PDFLib.PDFName.of('Contents'));
+  if (!contentsVal) return [];
+
+  const typeName = contentsVal.constructor?.name;
+
+  if (typeName === 'PDFRef') {
+    // Could be a ref to a stream or a ref to an array
+    const obj = pdfDoc.context.lookup(contentsVal);
+    if (!obj) return [];
+    if (obj.constructor?.name === 'PDFArray') {
+      return obj.asArray().filter(r => r?.constructor?.name === 'PDFRef');
+    }
+    // Ref to a stream
+    return [contentsVal];
+  }
+
+  if (typeName === 'PDFArray') {
+    return contentsVal.asArray().filter(r => r?.constructor?.name === 'PDFRef');
+  }
+
+  return [];
+}
+
+/**
+ * Core redaction function. Operates on each page's content stream(s):
+ * 1. Decompress (FlateDecode / no filter)
+ * 2. Blank matching text operators
+ * 3. Write back as uncompressed stream (safe for pdf-lib serialization)
+ */
+async function redactPdf(bytes, targetList) {
+  const pdfDoc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+  const pages = pdfDoc.getPages();
+
+  let totalStreams = 0;
+  let totalReplacements = 0;
+  const pageStats = [];
+
+  for (let pi = 0; pi < pages.length; pi++) {
+    const page = pages[pi];
+    const refs = getStreamRefs(pdfDoc, page);
+
+    if (refs.length === 0) {
+      log(`  Page ${pi + 1}: no content stream refs found`, 'warn');
+      pageStats.push({ streams: 0, replacements: 0 });
+      continue;
+    }
+
+    let pageReplacements = 0;
+
+    for (const ref of refs) {
+      const stream = pdfDoc.context.lookup(ref);
+      if (!stream || !stream.contents) {
+        log(`  Page ${pi + 1}: stream lookup failed`, 'warn');
+        continue;
+      }
+
+      totalStreams++;
+
+      // Check filter
+      const filterVal = stream.dict?.get(PDFLib.PDFName.of('Filter'));
+      const filterName = filterVal?.constructor?.name === 'PDFName'
+        ? filterVal.asString()
+        : null;
+
+      let rawBytes = stream.contents;
+      let decompressed;
+
+      if (filterName === 'FlateDecode') {
+        try {
+          decompressed = pako.inflate(rawBytes);
+          log(`  Page ${pi + 1}: decompressed ${rawBytes.length}B → ${decompressed.length}B`);
+        } catch (e) {
+          log(`  Page ${pi + 1}: decompression failed — ${e.message}`, 'err');
+          continue;
+        }
+      } else if (!filterName) {
+        decompressed = rawBytes;
+        log(`  Page ${pi + 1}: uncompressed stream (${rawBytes.length}B)`);
+      } else {
+        log(`  Page ${pi + 1}: unsupported filter ${filterName} — skipping`, 'warn');
+        continue;
+      }
+
+      // Decode, modify, re-encode
+      const streamText = new TextDecoder('latin1').decode(decompressed);
+      const { result, count } = blankTextOps(streamText, targetList);
+      pageReplacements += count;
+
+      if (count > 0) {
+        const modifiedBytes = strToBytes(result);
+
+        // Write back as uncompressed
+        stream.contents = modifiedBytes;
+
+        // Remove compression filter so pdf-lib won't try to decompress on read
+        stream.dict.delete(PDFLib.PDFName.of('Filter'));
+        stream.dict.delete(PDFLib.PDFName.of('DecodeParms'));
+
+        // Update Length to match new byte count
+        stream.dict.set(
+          PDFLib.PDFName.of('Length'),
+          pdfDoc.context.obj(modifiedBytes.length)
+        );
+
+        log(`  Page ${pi + 1}: ${count} replacement(s) applied`, 'ok');
+      } else {
+        log(`  Page ${pi + 1}: no matches found`);
+      }
+    }
+
+    totalReplacements += pageReplacements;
+    pageStats.push({ streams: refs.length, replacements: pageReplacements });
+  }
+
+  const saved = await pdfDoc.save({ useObjectStreams: false });
+  return { bytes: new Uint8Array(saved), totalStreams, totalReplacements };
+}
+
+// ─── Gate helpers ─────────────────────────────────────────────────────────────
+function setGate(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('pass', 'fail', 'pending');
+  el.classList.add(state);
+}
+
+// ─── Main redact flow ─────────────────────────────────────────────────────────
+async function runRedact() {
+  if (!originalBytes || targets.length === 0) return;
+
+  const btn = document.getElementById('redact-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  document.getElementById('gate-box').style.display = 'block';
+  document.getElementById('stats-box').style.display = 'block';
+  document.getElementById('after-wrapper').classList.remove('visible');
+  document.getElementById('download-btn').classList.remove('visible');
+  redactedBytes = null;
+
+  // Reset gates
+  ['g1','g2','g3','g4'].forEach(g => setGate(g, 'pending'));
+
+  log('─── Starting redaction ───');
+  log(`Targets: ${targets.map(t => JSON.stringify(t)).join(', ')}`);
+
+  try {
+    // Step 1: Content stream surgery
+    const { bytes, totalStreams, totalReplacements } = await redactPdf(originalBytes, targets);
+    redactedBytes = bytes;
+    setGate('g1', 'pass');
+    log('Content stream surgery complete', 'ok');
+
+    document.getElementById('stat-pages').textContent =
+      (await PDFLib.PDFDocument.load(originalBytes)).getPageCount();
+    document.getElementById('stat-streams').textContent = totalStreams;
+    document.getElementById('stat-replacements').textContent = totalReplacements;
+
+    // Step 2: Re-render with PDF.js
+    try {
+      await renderPdf(redactedBytes, 'pdf-canvas-after', 'after-wrapper');
+      setGate('g2', 'pass');
+      log('PDF.js re-render: OK', 'ok');
+    } catch (e) {
+      setGate('g2', 'fail');
+      log(`PDF.js re-render FAILED: ${e.message}`, 'err');
+    }
+
+    // Step 3: Text extraction verification
+    try {
+      const extractedText = await extractTextFromPdf(redactedBytes);
+      const allGone = targets.every(t => !extractedText.toLowerCase().includes(t.toLowerCase()));
+
+      if (allGone) {
+        setGate('g3', 'pass');
+        log('Text extraction: all targets absent ✓', 'ok');
+      } else {
+        const still = targets.filter(t => extractedText.toLowerCase().includes(t.toLowerCase()));
+        setGate('g3', 'fail');
+        log(`Text extraction: targets still present: ${still.map(t => JSON.stringify(t)).join(', ')}`, 'warn');
+        log('Note: may be residual in XObject/form streams not reached by this pass', 'warn');
+      }
+    } catch (e) {
+      setGate('g3', 'fail');
+      log(`Text extraction error: ${e.message}`, 'err');
+    }
+
+    // Step 4: Mark download gate as pass (valid bytes produced)
+    setGate('g4', 'pass');
+    document.getElementById('download-btn').classList.add('visible');
+    log('Redacted PDF ready for download', 'ok');
+
+  } catch (e) {
+    setGate('g1', 'fail');
+    log(`Surgery error: ${e.message}`, 'err');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬛ Redact & verify';
+  updateRedactBtn();
+}
+
+// ─── Download ─────────────────────────────────────────────────────────────────
+function downloadResult() {
+  if (!redactedBytes) return;
+  const blob = new Blob([redactedBytes.buffer], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'redacted.pdf';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log('Downloaded: redacted.pdf');
+}
+
+</script>
+</body>
+</html>

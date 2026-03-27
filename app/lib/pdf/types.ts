@@ -83,3 +83,40 @@ export interface SigEntry {
   yPct: number
   widthPct: number
 }
+
+// ─── Image types ─────────────────────────────────────────────────────────────
+
+/** A raster image placed on a page. xPct/yPct are the CENTER point (0–100). */
+export interface ImageEntry {
+  id: string
+  dataUrl: string
+  mimeType: 'png' | 'jpeg'
+  page: number
+  xPct: number
+  yPct: number
+  widthPct: number
+}
+
+// ─── Canvas layer types (S29 canvas pivot) ───────────────────────────────────
+
+/** Data exported from a Fabric Textbox for PDF save. */
+export interface FabricTextboxExport {
+  text: string
+  anchorItem: ExtractedTextItem          // pdfX/pdfY used for text placement
+  blockBounds: {                          // canvas-pixel coords of original block
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+  fontSize: number                        // canvas px (divide by scale → PDF pt)
+  fontFamily: string
+  fontWeight: string                      // 'normal' | 'bold'
+  fontStyle: string                       // 'normal' | 'italic'
+  fill: string                            // hex color string e.g. '#000000'
+}
+
+/** Ref handle exposed by CanvasTextLayer for collecting edits at export time. */
+export interface FabricLayerRef {
+  getTextboxes: () => FabricTextboxExport[]
+}

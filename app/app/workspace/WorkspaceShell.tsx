@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { consumePendingFile } from '@/lib/pending-file'
-import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData, SigEntry, Annotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
 import { TOOL_HEX, TOOL_BG, type ToolKey } from '@/lib/ui/tool-colors'
 import EditToolbar from '@/app/components/EditToolbar'
 import SignatureModal from '@/app/components/SignatureModal'
@@ -13,6 +13,7 @@ import { formatBytes } from '@/lib/pdf/compress'
 import { addBlankPage } from '@/lib/pdf/pages'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
+const DrawingCanvas = dynamic(() => import('@/app/components/DrawingCanvas'), { ssr: false })
 
 /* ─── Types ─── */
 // ToolKey imported from lib/ui/tool-colors
@@ -28,7 +29,7 @@ const TOOLS: ToolDef[] = [
   { key: 'edit',     label: 'Edit'     },
   { key: 'sign',     label: 'Sign'     },
   { key: 'annotate', label: 'Annotate' },
-  { key: 'redact',   label: 'Redact',  pro: true },
+  { key: 'redact',   label: 'Redact' },
   { key: 'compress', label: 'Compress' },
 ]
 
@@ -215,6 +216,10 @@ function L3Strip({
   onCancelSig,
   annotateMode,
   onAnnotateModeChange,
+  imageCount,
+  onInsertImageClick,
+  drawMode,
+  onDrawClick,
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -234,6 +239,10 @@ function L3Strip({
   onCancelSig: () => void
   annotateMode: AMode
   onAnnotateModeChange: (m: AMode) => void
+  imageCount: number
+  onInsertImageClick: () => void
+  drawMode: boolean
+  onDrawClick: () => void
 }) {
 
   const base: React.CSSProperties = {
@@ -276,9 +285,26 @@ function L3Strip({
             >
               + Add Signature
             </button>
+            <button
+              onClick={onInsertImageClick}
+              style={{ background: 'none', color: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Insert Image
+            </button>
+            <button
+              onClick={onDrawClick}
+              style={{ background: drawMode ? 'rgba(99,102,241,.18)' : 'none', color: drawMode ? '#818cf8' : 'rgba(255,255,255,.5)', border: drawMode ? '1px solid rgba(129,140,248,.4)' : '1px solid rgba(255,255,255,.15)', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Draw
+            </button>
             {sigCount > 0 && (
               <span style={{ fontSize: 11, fontWeight: 600, color: '#22d3a0', background: 'rgba(34,211,160,.12)', border: '1px solid rgba(34,211,160,.25)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
                 {sigCount} sig{sigCount > 1 ? 's' : ''} ✓
+              </span>
+            )}
+            {imageCount > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>
+                {imageCount} img{imageCount > 1 ? 's' : ''} ✓
               </span>
             )}
           </div>
@@ -627,6 +653,14 @@ function CanvasArea({
   annotations,
   onAnnotationMove,
   onAnnotationDelete,
+  images,
+  onImageMove,
+  onImageDelete,
+  redactTargets = [],
+  redactInput = '',
+  onRedactTargetsChange,
+  onRedactInputChange,
+  fabricLayerRefs,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -655,6 +689,14 @@ function CanvasArea({
   annotations?: Annotation[]
   onAnnotationMove?: (id: string, xPct: number, yPct: number) => void
   onAnnotationDelete?: (id: string) => void
+  images?: ImageEntry[]
+  onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageDelete?: (id: string) => void
+  redactTargets?: string[]
+  redactInput?: string
+  onRedactTargetsChange?: (targets: string[]) => void
+  onRedactInputChange?: (val: string) => void
+  fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -782,10 +824,50 @@ function CanvasArea({
     )
   } else if (activeTool.key === 'redact') {
     toolContent = (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 560, padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--font-sans)' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 12 }}>PRO</div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 8 }}>Redact sensitive content</div>
-        <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>Permanently remove text and images — not just visually hidden. Available on the Pro plan.</div>
+      <div style={{ fontFamily: 'var(--font-sans)' }}>
+        <div style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3', padding: '12px 16px' }}>
+          <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: '#b91c1c', textTransform: 'uppercase', margin: 0 }}>
+              Redaction — text is permanently removed from the PDF data layer
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={redactInput}
+                onChange={e => onRedactInputChange?.(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = redactInput.trim()
+                    if (val && !redactTargets.includes(val)) onRedactTargetsChange?.([...redactTargets, val])
+                    onRedactInputChange?.('')
+                  }
+                }}
+                placeholder="Type a word or phrase to redact, then press Enter"
+                style={{ flex: 1, fontSize: 13, padding: '6px 10px', border: '1px solid #fca5a5', borderRadius: 6, outline: 'none', background: '#fff' }}
+              />
+              <button
+                onClick={() => {
+                  const val = redactInput.trim()
+                  if (val && !redactTargets.includes(val)) onRedactTargetsChange?.([...redactTargets, val])
+                  onRedactInputChange?.('')
+                }}
+                style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+              >
+                Add
+              </button>
+            </div>
+            {redactTargets.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {redactTargets.map(t => (
+                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 9999 }}>
+                    {t}
+                    <button onClick={() => onRedactTargetsChange?.(redactTargets.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     )
   } else {
@@ -810,6 +892,11 @@ function CanvasArea({
         annotations={annotations}
         onAnnotationMove={onAnnotationMove}
         onAnnotationDelete={onAnnotationDelete}
+        images={images}
+        onImageMove={onImageMove}
+        onImageDelete={onImageDelete}
+        useCanvasLayer={isEdit}
+        fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
       />
     )
   }
@@ -921,10 +1008,21 @@ export default function WorkspaceShell() {
   const [annotateMode, setAnnotateMode] = useState<AMode>('yellow')
   const [annotations, setAnnotations] = useState<Annotation[]>([])
 
+  /* Image state */
+  const [images, setImages] = useState<ImageEntry[]>([])
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
   /* Compress state */
   const [compressEnabled, setCompressEnabled] = useState(true)
   const [compressStats, setCompressStats] = useState<{ original: number; compressed: number; pct: number } | null>(null)
   const [compressLoading, setCompressLoading] = useState(false)
+
+  /* Redact state */
+  const [redactTargets, setRedactTargets] = useState<string[]>([])
+  const [redactInput, setRedactInput] = useState('')
+
+  /* Canvas layer refs — one per rendered page, keyed by pageNum */
+  const fabricLayerRefs = useRef<Map<number, FabricLayerRef>>(new Map())
 
   /* History stack */
   const histRef = useRef<EditMap[]>([new Map()])
@@ -1101,6 +1199,52 @@ export default function WorkspaceShell() {
     setAnnotations(prev => prev.filter(a => a.id !== id))
   }, [])
 
+  /* Image handlers */
+  const handleInsertImageClick = useCallback(() => {
+    imageInputRef.current?.click()
+  }, [])
+
+  const handleImageFileSelect = useCallback((file: File) => {
+    const mimeType: ImageEntry['mimeType'] = file.type === 'image/png' ? 'png' : 'jpeg'
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        dataUrl: reader.result as string,
+        mimeType,
+        page: activePage,
+        xPct: 50,
+        yPct: 50,
+        widthPct: 30,
+      }])
+    }
+    reader.readAsDataURL(file)
+  }, [activePage])
+
+  const handleImageMove = useCallback((id: string, xPct: number, yPct: number) => {
+    setImages(prev => prev.map(img => img.id === id ? { ...img, xPct, yPct } : img))
+  }, [])
+
+  const handleImageDelete = useCallback((id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id))
+  }, [])
+
+  /* Draw state */
+  const [drawMode, setDrawMode] = useState(false)
+  const handleDrawClick = useCallback(() => setDrawMode(prev => !prev), [])
+  const handleDrawDone = useCallback((dataUrl: string) => {
+    setImages(prev => [...prev, {
+      id: crypto.randomUUID(),
+      dataUrl,
+      mimeType: 'png' as const,
+      page: activePage,
+      xPct: 50,
+      yPct: 50,
+      widthPct: 100,
+    }])
+    setDrawMode(false)
+  }, [activePage])
+
   /* Compute compress stats when compress tool is active and pdfBytes available */
   useEffect(() => {
     if (activeTool.key !== 'compress' || !pdfBytes) return
@@ -1156,6 +1300,14 @@ export default function WorkspaceShell() {
         outputBytes = await applyEditsAndSave(pdfBytes, textItems, editMap)
         outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
       }
+      // Canvas layer edits (CanvasTextLayer active in edit mode — replaces editMap path)
+      const canvasTextboxes = Array.from(fabricLayerRefs.current.values())
+        .flatMap(layer => layer.getTextboxes())
+      if (canvasTextboxes.length > 0) {
+        const { applyCanvasEditsAndSave } = await import('@/lib/pdf/canvas-save')
+        outputBytes = await applyCanvasEditsAndSave(outputBytes, canvasTextboxes, 1.5)
+        outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+      }
       if (sigs.length > 0) {
         const typedSigs = sigs.filter(s => s.text)
         const drawnSigs = sigs.filter(s => s.drawingDataUrl)
@@ -1189,12 +1341,25 @@ export default function WorkspaceShell() {
           outputName = file.name.replace(/\.pdf$/i, '_signed.pdf')
         }
       }
+      if (images.length > 0) {
+        const { embedImages } = await import('@/lib/pdf/image')
+        outputBytes = await embedImages(outputBytes, images)
+        if (outputName === file.name) {
+          outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
+        }
+      }
       if (annotations.length > 0) {
         const { applyAnnotations } = await import('@/lib/pdf/annotate')
         outputBytes = await applyAnnotations(outputBytes, annotations)
         if (outputName === file.name) {
           outputName = file.name.replace(/\.pdf$/i, '_annotated.pdf')
         }
+      }
+      if (activeTool.key === 'redact' && redactTargets.length > 0) {
+        const { redactPdf } = await import('@/lib/pdf/redact')
+        const result = await redactPdf(outputBytes, redactTargets)
+        outputBytes = result.bytes
+        outputName = file.name.replace(/\.pdf$/i, '_redacted.pdf')
       }
       if (compressEnabled) {
         const { compressPdf } = await import('@/lib/pdf/compress')
@@ -1213,7 +1378,7 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, sigs, annotations, compressEnabled])
+  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets])
 
   return (
     <>
@@ -1224,6 +1389,31 @@ export default function WorkspaceShell() {
         onClose={() => setSigModalOpen(false)}
         onConfirm={handleSigModalConfirm}
       />
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg"
+        style={{ display: 'none' }}
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) handleImageFileSelect(f)
+          e.target.value = ''
+        }}
+      />
+
+      {drawMode && (() => {
+        const pageEl = pageRefsMap.current.get(activePage)
+        const rect = pageEl?.getBoundingClientRect()
+        if (!rect) return null
+        return (
+          <DrawingCanvas
+            pageRect={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
+            onDone={handleDrawDone}
+            onCancel={() => setDrawMode(false)}
+          />
+        )
+      })()}
 
       <div
         style={{
@@ -1320,6 +1510,10 @@ export default function WorkspaceShell() {
               onCancelSig={handleCancelSig}
               annotateMode={annotateMode}
               onAnnotateModeChange={handleAnnotateModeChange}
+              imageCount={images.length}
+              onInsertImageClick={handleInsertImageClick}
+              drawMode={drawMode}
+              onDrawClick={handleDrawClick}
             />
           </div>
         </div>
@@ -1361,6 +1555,14 @@ export default function WorkspaceShell() {
             annotations={annotations}
             onAnnotationMove={handleAnnotationMove}
             onAnnotationDelete={handleAnnotationDelete}
+            images={images}
+            onImageMove={handleImageMove}
+            onImageDelete={handleImageDelete}
+            redactTargets={redactTargets}
+            redactInput={redactInput}
+            onRedactTargetsChange={setRedactTargets}
+            onRedactInputChange={setRedactInput}
+            fabricLayerRefs={fabricLayerRefs}
           />
         </div>
       </div>
@@ -1370,12 +1572,13 @@ export default function WorkspaceShell() {
         <button
           aria-label="Save PDF"
           onClick={handleDownload}
+          disabled={activeTool.key === 'redact' && redactTargets.length === 0}
           style={{
             position: 'fixed',
             bottom: 28,
             right: 28,
             zIndex: 40,
-            background: '#6366f1',
+            background: activeTool.key === 'redact' ? '#dc2626' : '#6366f1',
             color: '#fff',
             border: 'none',
             borderRadius: 14,
@@ -1383,25 +1586,31 @@ export default function WorkspaceShell() {
             fontSize: 15,
             fontWeight: 700,
             letterSpacing: '.02em',
+            opacity: activeTool.key === 'redact' && redactTargets.length === 0 ? 0.5 : 1,
             whiteSpace: 'nowrap',
             cursor: 'pointer',
             boxShadow: '0 4px 24px rgba(99,102,241,.45)',
             transition: 'background .2s, box-shadow .2s, transform .1s',
           }}
           onMouseEnter={e => {
+            if (activeTool.key === 'redact' && redactTargets.length === 0) return
             const b = e.currentTarget
-            b.style.background = '#4f46e5'
+            b.style.background = activeTool.key === 'redact' ? '#b91c1c' : '#4f46e5'
             b.style.boxShadow = '0 6px 32px rgba(99,102,241,.6)'
             b.style.transform = 'translateY(-1px)'
           }}
           onMouseLeave={e => {
             const b = e.currentTarget
-            b.style.background = '#6366f1'
+            b.style.background = activeTool.key === 'redact' ? '#dc2626' : '#6366f1'
             b.style.boxShadow = '0 4px 24px rgba(99,102,241,.45)'
             b.style.transform = 'none'
           }}
         >
-          Save PDF
+          {activeTool.key === 'redact'
+            ? redactTargets.length > 0
+              ? `Redact & Download (${redactTargets.length})`
+              : 'Add words to redact'
+            : 'Save PDF'}
         </button>
       )}
     </>

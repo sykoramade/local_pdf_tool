@@ -211,11 +211,11 @@ export default function PdfTextLayer({
                   ? 'rgba(255,255,255,0.95)'
                   : 'transparent',
                 borderBottom: isEdited
-                  ? '1px solid rgba(79,70,229,0.4)'
-                  : 'none',
+                  ? '2px solid rgba(79,70,229,0.7)'
+                  : '1px solid rgba(99,102,241,0.25)',
                 userSelect: 'none',
               }}
-              className="hover:bg-indigo-50/40 hover:border-b hover:border-indigo-300/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
+              className="hover:bg-indigo-100/60 hover:border-b-2 hover:border-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
               title={isEdited ? `Edited: "${currentText}"` : 'Click to edit'}
               onClick={() => {
                 if (

@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import PdfDropzone from './PdfDropzone'
 import AuthModal from './AuthModal'
-import type { ExtractedTextItem, EditMap, FieldData } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, FabricLayerRef } from '@/lib/pdf/types'
 import { useUser } from '@/hooks/useUser'
 import { canUse, incrementUses } from '@/lib/usage'
 import { consumePendingFile } from '@/lib/pending-file'
@@ -70,9 +70,12 @@ export default function PdfEditor() {
   const [saving, setSaving] = useState(false)
   const [editCount, setEditCount] = useState(0)
   const textItemsRef = useRef<ExtractedTextItem[]>([])
+  const fabricLayerRefs = useRef<Map<number, FabricLayerRef>>(new Map())
   // S9-3: editMap history stack for Ctrl+Z undo
   const historyRef = useRef<EditMap[]>([])
   const [activeToolTab, setActiveToolTab] = useState<'edit' | 'sign' | 'compress' | 'merge' | 'annotate' | 'redact'>('edit')
+  const [redactTargets, setRedactTargets] = useState<string[]>([])
+  const [redactInput, setRedactInput] = useState('')
 
   const handleLoad = useCallback((bytes: Uint8Array, name: string) => {
     setPdfBytes(bytes)
@@ -167,17 +170,32 @@ export default function PdfEditor() {
 
     try {
       let outputBytes = pdfBytes
+      let outputSuffix = '-edited'
 
-      if (editMap.size > 0) {
-        const { applyEditsAndSave } = await import('@/lib/pdf/save')
-        outputBytes = await applyEditsAndSave(pdfBytes, textItemsRef.current, editMap)
+      if (activeToolTab === 'redact' && redactTargets.length > 0) {
+        const { redactPdf } = await import('@/lib/pdf/redact')
+        const result = await redactPdf(pdfBytes, redactTargets)
+        outputBytes = result.bytes
+        outputSuffix = '-redacted'
+      } else {
+        // Canvas mode: collect Fabric textboxes from all pages
+        const allTextboxes = Array.from(fabricLayerRefs.current.values())
+          .flatMap(layer => layer.getTextboxes())
+
+        if (allTextboxes.length > 0) {
+          const { applyCanvasEditsAndSave } = await import('@/lib/pdf/canvas-save')
+          outputBytes = await applyCanvasEditsAndSave(pdfBytes, allTextboxes, viewerScale)
+        } else if (editMap.size > 0) {
+          const { applyEditsAndSave } = await import('@/lib/pdf/save')
+          outputBytes = await applyEditsAndSave(pdfBytes, textItemsRef.current, editMap)
+        }
       }
 
       const blob = new Blob([outputBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename.replace(/\.pdf$/i, '-edited.pdf')
+      a.download = filename.replace(/\.pdf$/i, `${outputSuffix}.pdf`)
       a.click()
       URL.revokeObjectURL(url)
       if (!user) incrementUses()
@@ -186,7 +204,7 @@ export default function PdfEditor() {
     } finally {
       setSaving(false)
     }
-  }, [pdfBytes, editMap, filename, user])
+  }, [pdfBytes, editMap, filename, user, activeToolTab, redactTargets, viewerScale])
 
   const toolTabs: {
     id: 'edit' | 'sign' | 'compress' | 'merge' | 'annotate' | 'redact'
@@ -336,8 +354,8 @@ export default function PdfEditor() {
       icon: <IconRedact />,
       iconBg: 'bg-amber-100 text-amber-700',
       desc: 'Permanently remove sensitive content — not just visually hidden. GDPR Art. 17 and FOI compliant.',
-      cta: <span className="text-gray-400 text-sm">Coming soon — <a href="/pricing" className="text-indigo-400 underline hover:text-indigo-300 transition-colors">Get notified</a></span>,
-      comingSoon: true,
+      cta: <a href="/" className="text-emerald-400 hover:text-emerald-300 font-semibold text-sm transition-colors">Open the editor →</a>,
+      comingSoon: false,
       mock: (
         <div className="space-y-3">
           <div className="h-2 bg-gray-600 rounded w-full" />
@@ -577,7 +595,7 @@ export default function PdfEditor() {
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> Everything in Free, unlimited</li>
                   <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> <span>Annotate &amp; highlight <span className="text-[10px] uppercase font-medium text-indigo-500 bg-indigo-100 rounded-full px-1.5 py-0.5 ml-1">soon</span></span></li>
-                  <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> <span>Permanent redaction <span className="text-[10px] uppercase font-medium text-indigo-500 bg-indigo-100 rounded-full px-1.5 py-0.5 ml-1">soon</span></span></li>
+                  <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> Permanent redaction</li>
                   <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> Batch processing</li>
                   <li className="flex items-start gap-2 text-sm text-gray-600"><span className="text-emerald-500 font-bold mt-0.5 flex-shrink-0">✓</span> Priority support</li>
                 </ul>
@@ -615,20 +633,90 @@ export default function PdfEditor() {
             </span>
           )}
           <span className="text-xs text-gray-400 hidden sm:block">
-            Click any text to edit
+            {activeToolTab === 'redact' ? 'Redact mode — text removed from PDF data layer' : 'Click any text to edit'}
           </span>
           <button
             onClick={handleDownload}
-            disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            disabled={saving || (activeToolTab === 'redact' && redactTargets.length === 0)}
+            className={`text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+              activeToolTab === 'redact'
+                ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-300'
+                : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300'
+            }`}
           >
-            {saving ? 'Saving...' : '⬇ Download'}
+            {saving
+              ? 'Processing...'
+              : activeToolTab === 'redact'
+                ? redactTargets.length > 0
+                  ? `Redact & Download (${redactTargets.length})`
+                  : 'Add targets below'
+                : '⬇ Download'}
           </button>
         </div>
       </header>
 
       {showAuthGate && (
         <AuthModal reason="gate" onClose={() => setShowAuthGate(false)} />
+      )}
+
+      {/* Redact panel — shown when redact tab is active */}
+      {activeToolTab === 'redact' && (
+        <div className="bg-red-50 border-b border-red-100 px-4 py-3">
+          <div className="max-w-2xl mx-auto flex flex-col gap-2">
+            <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
+              Redaction — text is permanently removed from the PDF data layer
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={redactInput}
+                onChange={e => setRedactInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = redactInput.trim()
+                    if (val && !redactTargets.includes(val)) {
+                      setRedactTargets(prev => [...prev, val])
+                    }
+                    setRedactInput('')
+                  }
+                }}
+                placeholder="e.g. John Smith, ACME Corp…"
+                className="flex-1 text-sm border border-red-200 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-300 bg-white"
+              />
+              <button
+                onClick={() => {
+                  const val = redactInput.trim()
+                  if (val && !redactTargets.includes(val)) {
+                    setRedactTargets(prev => [...prev, val])
+                  }
+                  setRedactInput('')
+                }}
+                className="text-sm font-medium bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md transition-colors"
+              >
+                Add
+              </button>
+            </div>
+            {redactTargets.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {redactTargets.map(t => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-800 rounded-full px-2.5 py-1"
+                  >
+                    {t}
+                    <button
+                      onClick={() => setRedactTargets(prev => prev.filter(x => x !== t))}
+                      className="text-red-500 hover:text-red-700 leading-none"
+                      aria-label={`Remove ${t}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* PDF Viewer with editable text layer */}
@@ -640,6 +728,7 @@ export default function PdfEditor() {
             editMap={editMap}
             onEdit={handleEdit}
             onTextItems={handleTextItems}
+            fabricLayerRefs={fabricLayerRefs}
           />
         )}
       </div>

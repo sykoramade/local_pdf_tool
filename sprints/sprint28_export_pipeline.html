@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S28 — PDF Export Pipeline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; }
+
+    header {
+      background: #1e293b; color: #f1f5f9; padding: 12px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header h1 { font-size: 15px; font-weight: 600; }
+    .badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: #6366f1; color: white; font-weight: 600;
+    }
+
+    .layout { display: flex; height: calc(100vh - 44px); overflow: hidden; }
+    .sidebar {
+      width: 280px; background: #fff; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; overflow-y: auto; padding: 16px; gap: 14px;
+    }
+    .main { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+    .drop-zone {
+      width: 100%; max-width: 720px; border: 2px dashed #cbd5e1;
+      border-radius: 12px; padding: 32px; text-align: center;
+      cursor: pointer; transition: all .2s; background: #fff;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; background: #eef2ff; }
+    .drop-zone p { font-size: 14px; color: #64748b; margin-top: 8px; }
+    .drop-zone strong { font-size: 16px; color: #334155; }
+    #file-input { display: none; }
+
+    .toolbar {
+      display: none; width: 100%; max-width: 720px;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 8px 12px; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .toolbar.visible { display: flex; }
+    .toolbar select, .toolbar input[type=number] {
+      border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 6px;
+      font-size: 13px; background: #fff; cursor: pointer;
+    }
+    .toolbar input[type=number] { width: 52px; }
+    .toolbar input[type=color] { width: 28px; height: 28px; border: none; cursor: pointer; padding: 0; background: none; }
+    .tb-btn {
+      border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 8px;
+      font-size: 13px; background: #fff; cursor: pointer; line-height: 1.4;
+    }
+    .tb-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+    .tb-sep { width: 1px; height: 20px; background: #e2e8f0; }
+
+    /* Export button — prominent */
+    .btn-export {
+      display: none; padding: 7px 18px; border-radius: 6px;
+      background: #6366f1; color: white; font-weight: 600; font-size: 13px;
+      border: none; cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    .btn-export:hover { background: #4f46e5; }
+    .btn-export.visible { display: block; }
+    .btn-export:disabled { background: #94a3b8; cursor: wait; }
+
+    .page-wrapper {
+      position: relative; display: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12); border-radius: 2px; overflow: hidden;
+    }
+    .page-wrapper.visible { display: block; }
+    #pdf-canvas { display: block; }
+
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: #94a3b8; margin-bottom: 6px;
+    }
+    .stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .stat-row span:last-child { font-weight: 600; color: #6366f1; }
+
+    .gate-item {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .gate-item:last-child { border-bottom: none; }
+    .gate-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; background: #e2e8f0; }
+    .gate-dot.pass { background: #22c55e; }
+    .gate-dot.fail { background: #ef4444; }
+
+    #log {
+      font-size: 11px; font-family: monospace; color: #475569;
+      max-height: 150px; overflow-y: auto; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;
+    }
+    #log div { padding: 1px 0; border-bottom: 1px solid #f1f5f9; }
+
+    .export-summary {
+      font-size: 12px; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;
+    }
+    .export-summary .item {
+      padding: 3px 0; border-bottom: 1px solid #f1f5f9;
+      font-family: monospace; color: #334155;
+    }
+    .export-summary .item:last-child { border-bottom: none; }
+    .coord-highlight { color: #6366f1; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Sprint 28 — PDF Export Pipeline</h1>
+  <span class="badge">S28</span>
+  <span style="font-size:12px; color:#94a3b8; margin-left:auto;">Fabric → pdf-lib · pdfY = pageH − fabricY − objH</span>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-title">Coordinate Map</div>
+      <div class="stat-row"><span>Viewport scale</span><span id="stat-scale">—</span></div>
+      <div class="stat-row"><span>PDF page (pts)</span><span id="stat-pdf-size">—</span></div>
+      <div class="stat-row"><span>Canvas (px)</span><span id="stat-canvas-size">—</span></div>
+      <div class="stat-row"><span>Textboxes</span><span id="stat-textboxes">0</span></div>
+    </div>
+
+    <div>
+      <div class="section-title">Gate Checklist</div>
+      <div class="gate-item">
+        <div class="gate-dot" id="gate-render-dot"></div>
+        <div>PDF renders as canvas background</div>
+      </div>
+      <div class="gate-item">
+        <div class="gate-dot" id="gate-edit-dot"></div>
+        <div>Text block clicked → Textbox editable</div>
+      </div>
+      <div class="gate-item">
+        <div class="gate-dot" id="gate-export-dot"></div>
+        <div>Export runs without error</div>
+      </div>
+      <div class="gate-item">
+        <div class="gate-dot" id="gate-coords-dot"></div>
+        <div>Downloaded PDF text at correct position</div>
+      </div>
+      <div class="gate-item">
+        <div class="gate-dot" id="gate-cover-dot"></div>
+        <div>Original text covered by white rect</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Export Preview</div>
+      <div class="export-summary" id="export-summary">
+        <div style="color:#94a3b8; font-size:11px; padding:4px 0">Edit a text block then export to see coordinate mapping here.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Event Log</div>
+      <div id="log"></div>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="drop-zone" id="drop-zone">
+      <strong>Drop a PDF here</strong>
+      <p>Click text blocks to edit, then export. Recommended: invoice or contract with tables.</p>
+      <input type="file" id="file-input" accept=".pdf">
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <select id="fc-family">
+        <option>Helvetica</option>
+        <option>Times New Roman</option>
+        <option>Courier New</option>
+        <option>Arial</option>
+      </select>
+      <input type="number" id="fc-size" value="12" min="6" max="96">
+      <input type="color" id="fc-color" value="#000000">
+      <div class="tb-sep"></div>
+      <button class="tb-btn" id="btn-b"><b>B</b></button>
+      <button class="tb-btn" id="btn-i"><i>I</i></button>
+      <button class="tb-btn" id="btn-u" style="text-decoration:underline">U</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" id="btn-undo">↩</button>
+      <button class="tb-btn" id="btn-redo">↪</button>
+      <div class="tb-sep"></div>
+      <button class="btn-export visible" id="btn-export" disabled>⬇ Download PDF</button>
+    </div>
+
+    <div class="page-wrapper" id="page-wrapper">
+      <canvas id="pdf-canvas"></canvas>
+    </div>
+
+  </main>
+</div>
+
+<!-- PDF.js 3.11.174 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- Fabric.js v6 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fabric@6.4.3/dist/index.min.js"></script>
+<!-- pdf-lib CDN -->
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
+<script>
+'use strict';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+// ── State ────────────────────────────────────────────────────────
+let fabricCanvas  = null;
+let viewportScale = 1;
+let cssHeight     = 0;
+let originalPdfBytes = null;
+let pdfPageSize   = { width: 612, height: 792 }; // default letter
+
+const history    = [];
+const redoStack  = [];
+
+// ── Logging ──────────────────────────────────────────────────────
+function log(msg) {
+  const el  = document.getElementById('log');
+  const div = document.createElement('div');
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.prepend(div);
+  if (el.children.length > 60) el.lastChild.remove();
+}
+
+function gatePass(id) {
+  const dot = document.getElementById(`gate-${id}-dot`);
+  if (dot) dot.className = 'gate-dot pass';
+}
+
+// ── Standard font mapping for pdf-lib ────────────────────────────
+function pickStandardFont(family, weight, style) {
+  const f = (family || '').toLowerCase();
+  const bold   = weight === 'bold';
+  const italic = style  === 'italic';
+
+  if (f.includes('times') || f.includes('serif')) {
+    if (bold && italic) return 'TimesRomanBoldItalic';
+    if (bold)           return 'TimesRomanBold';
+    if (italic)         return 'TimesRomanItalic';
+    return 'TimesRoman';
+  }
+  if (f.includes('courier') || f.includes('mono')) {
+    if (bold && italic) return 'CourierBoldOblique';
+    if (bold)           return 'CourierBold';
+    if (italic)         return 'CourierOblique';
+    return 'Courier';
+  }
+  // Default: Helvetica family
+  if (bold && italic) return 'HelveticaBoldOblique';
+  if (bold)           return 'HelveticaBold';
+  if (italic)         return 'HelveticaOblique';
+  return 'Helvetica';
+}
+
+// ── Hex colour → pdf-lib rgb() ───────────────────────────────────
+function hexToRgb(hex) {
+  const { rgb } = PDFLib;
+  const h = (hex || '#000000').replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return rgb(r, g, b);
+}
+
+// ── Export ───────────────────────────────────────────────────────
+async function exportPdf() {
+  if (!originalPdfBytes) { log('No PDF loaded'); return; }
+
+  const btn = document.getElementById('btn-export');
+  btn.disabled = true;
+  btn.textContent = '⏳ Exporting…';
+
+  try {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const pdfDoc = await PDFDocument.load(originalPdfBytes);
+    const page   = pdfDoc.getPages()[0];
+    const { width: pageW, height: pageH } = page.getSize();
+
+    const textboxes = fabricCanvas.getObjects('textbox');
+    document.getElementById('stat-textboxes').textContent = textboxes.length;
+
+    const summaryEl = document.getElementById('export-summary');
+    summaryEl.innerHTML = '';
+
+    // Pre-embed fonts (cache to avoid repeated embedding)
+    const fontCache = {};
+    async function getFont(name) {
+      if (!fontCache[name]) fontCache[name] = await pdfDoc.embedFont(StandardFonts[name]);
+      return fontCache[name];
+    }
+
+    let exportCount = 0;
+
+    for (const tb of textboxes) {
+      if (!tb.text || !tb.text.trim()) continue;
+
+      // ── Coordinate transform ──────────────────────────────────
+      // Fabric canvas uses CSS pixels, top-left origin.
+      // PDF uses points (1pt = 1/72in), bottom-left origin.
+      //
+      // Formula: pdfY = pageH − (fabricTop + tbHeight) / viewportScale
+      //
+      // For text BASELINE: subtract fontSize so text sits inside the box.
+      // tbHeight in CSS pixels = tb.height * tb.scaleY (Fabric may scale)
+
+      const tbHeight   = tb.height * (tb.scaleY || 1);
+      const tbWidth    = tb.width  * (tb.scaleX || 1);
+      const fontSize_pt = tb.fontSize / viewportScale;
+
+      const pdfX = tb.left / viewportScale;
+      // pdfY is the baseline: top of box → bottom-left origin
+      const pdfY = pageH - (tb.top / viewportScale) - fontSize_pt;
+
+      const fontName = pickStandardFont(tb.fontFamily, tb.fontWeight, tb.fontStyle);
+      const font = await getFont(fontName);
+
+      // ── Cover original text if this was converted from a PDF block ──
+      if (tb.data?.originalBlock) {
+        const b = tb.data.originalBlock;
+        const coverX = b.left  / viewportScale;
+        const coverY = pageH - (b.top + b.height) / viewportScale;
+        const coverW = b.width  / viewportScale;
+        const coverH = b.height / viewportScale;
+
+        page.drawRectangle({
+          x: coverX, y: coverY,
+          width: coverW, height: coverH,
+          color: rgb(1, 1, 1),  // white cover
+          borderWidth: 0,
+        });
+
+        log(`White cover: x=${coverX.toFixed(1)} y=${coverY.toFixed(1)} ${coverW.toFixed(1)}×${coverH.toFixed(1)}pt`);
+        gatePass('cover');
+      }
+
+      // ── Draw new text ─────────────────────────────────────────
+      page.drawText(tb.text, {
+        x:    pdfX,
+        y:    pdfY,
+        size: Math.max(fontSize_pt, 4),
+        font,
+        color: hexToRgb(typeof tb.fill === 'string' ? tb.fill : '#000000'),
+        maxWidth: tbWidth / viewportScale,
+      });
+
+      // ── Export preview entry ──────────────────────────────────
+      const entry = document.createElement('div');
+      entry.className = 'item';
+      entry.innerHTML = `
+        "${tb.text.substring(0, 25)}…"<br>
+        <span class="coord-highlight">pdfX=${pdfX.toFixed(1)} pdfY=${pdfY.toFixed(1)}</span>
+        · ${fontSize_pt.toFixed(1)}pt · ${fontName}
+      `;
+      summaryEl.appendChild(entry);
+      exportCount++;
+    }
+
+    gatePass('export');
+
+    if (exportCount === 0) {
+      log('⚠ No edits to export — click a text block first');
+      btn.disabled = false;
+      btn.textContent = '⬇ Download PDF';
+      return;
+    }
+
+    // ── Download ──────────────────────────────────────────────
+    const bytes = await pdfDoc.save();
+    const blob  = new Blob([bytes], { type: 'application/pdf' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href = url;
+    a.download = 'edited_s28.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    gatePass('coords');
+    log(`Export complete — ${exportCount} text object(s), ${(bytes.length / 1024).toFixed(1)} KB`);
+
+  } catch (err) {
+    log(`EXPORT ERROR: ${err.message}`);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ Download PDF';
+  }
+}
+
+// ── History ───────────────────────────────────────────────────────
+function saveHistory() {
+  if (!fabricCanvas) return;
+  const snap = JSON.stringify(fabricCanvas.toJSON(['data']));
+  history.push(snap);
+  redoStack.length = 0;
+}
+function doUndo() {
+  if (history.length <= 1) return;
+  redoStack.push(history.pop());
+  fabricCanvas.loadFromJSON(JSON.parse(history[history.length - 1]), () => fabricCanvas.renderAll());
+}
+function doRedo() {
+  if (!redoStack.length) return;
+  const snap = redoStack.pop();
+  history.push(snap);
+  fabricCanvas.loadFromJSON(JSON.parse(snap), () => fabricCanvas.renderAll());
+}
+
+// ── Toolbar sync ──────────────────────────────────────────────────
+function syncToolbar(obj) {
+  if (!obj || obj.type === 'rect') return;
+  document.getElementById('fc-family').value = obj.fontFamily || 'Helvetica';
+  document.getElementById('fc-size').value   = Math.round(obj.fontSize || 12);
+  document.getElementById('fc-color').value  = obj.fill || '#000000';
+  setFmtBtn('b', obj.fontWeight === 'bold');
+  setFmtBtn('i', obj.fontStyle  === 'italic');
+  setFmtBtn('u', !!obj.underline);
+  document.getElementById('stat-textboxes').textContent = fabricCanvas.getObjects('textbox').length;
+}
+function setFmtBtn(id, active) {
+  document.getElementById(`btn-${id}`).classList.toggle('active', active);
+}
+function applyToActive(prop, val) {
+  const obj = fabricCanvas?.getActiveObject();
+  if (!obj || obj.type === 'rect') return;
+  obj.set(prop, val);
+  fabricCanvas.renderAll();
+  saveHistory();
+}
+
+// ── Font detection ────────────────────────────────────────────────
+function detectFontStyle(fontName) {
+  if (!fontName) return { family: 'Helvetica', bold: false, italic: false };
+  const n = fontName.toLowerCase();
+  return {
+    family: n.includes('times') ? 'Times New Roman' :
+            n.includes('courier') ? 'Courier New' : 'Helvetica',
+    bold:   n.includes('bold') || n.includes('heavy'),
+    italic: n.includes('italic') || n.includes('oblique'),
+  };
+}
+
+// ── Block detection (same as S27) ─────────────────────────────────
+function detectBlocks(items) {
+  if (!items.length) return [];
+  const sorted = [...items].sort((a, b) =>
+    a.canvasY !== b.canvasY ? a.canvasY - b.canvasY : a.canvasX - b.canvasX
+  );
+  const yBands = [];
+  for (const item of sorted) {
+    const last = yBands[yBands.length - 1];
+    const tol  = item.canvasFontSize * 0.6;
+    if (last && Math.abs(item.canvasY - last[0].canvasY) <= tol) {
+      last.push(item);
+    } else {
+      yBands.push([item]);
+    }
+  }
+  const blocks = [];
+  for (const band of yBands) {
+    const bsorted = [...band].sort((a, b) => a.canvasX - b.canvasX);
+    let cur = [bsorted[0]];
+    for (let i = 1; i < bsorted.length; i++) {
+      const prev = cur[cur.length - 1];
+      const gap  = bsorted[i].canvasX - (prev.canvasX + prev.canvasWidth);
+      if (gap > prev.canvasFontSize * 0.8) {
+        blocks.push(buildBlock(cur));
+        cur = [bsorted[i]];
+      } else {
+        cur.push(bsorted[i]);
+      }
+    }
+    blocks.push(buildBlock(cur));
+  }
+  return blocks.filter(b => b.text.trim());
+}
+
+function buildBlock(items) {
+  const xs = items.map(i => i.canvasX);
+  const xe = items.map(i => i.canvasX + i.canvasWidth);
+  const ys = items.map(i => i.canvasY);
+  const ye = items.map(i => i.canvasY + i.canvasFontSize * 1.2);
+  const anchor = items[0];
+  return {
+    left:           Math.min(...xs),
+    top:            Math.min(...ys),
+    width:          Math.max(Math.max(...xe) - Math.min(...xs), 24),
+    height:         Math.max(Math.max(...ye) - Math.min(...ys), anchor.canvasFontSize * 1.2),
+    text:           items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim(),
+    fontName:       anchor.fontName,
+    canvasFontSize: anchor.canvasFontSize,
+    items,
+  };
+}
+
+// ── Convert hit-target Rect → Textbox ────────────────────────────
+function convertRectToTextbox(rect) {
+  const block = rect.data?.block;
+  if (!block) return;
+
+  fabricCanvas.remove(rect);
+
+  const fontStyle  = detectFontStyle(block.fontName);
+  const fontSize   = Math.max(block.canvasFontSize, 8);
+
+  const tb = new fabric.Textbox(block.text, {
+    left:               block.left,
+    top:                block.top,
+    width:              Math.max(block.width, 60),
+    fontFamily:         fontStyle.family,
+    fontSize:           fontSize,
+    fontWeight:         fontStyle.bold   ? 'bold'   : 'normal',
+    fontStyle:          fontStyle.italic ? 'italic' : 'normal',
+    fill:               '#1e1b4b',
+    padding:            2,
+    backgroundColor:    'rgba(238,242,255,0.95)',
+    editingBorderColor: 'rgba(99,102,241,0.9)',
+    // Store original block position for the cover-rect export step
+    data: {
+      converted:     true,
+      originalBlock: { left: block.left, top: block.top, width: block.width, height: block.height },
+      blockText:     block.text,
+    },
+  });
+
+  fabricCanvas.add(tb);
+  fabricCanvas.setActiveObject(tb);
+  tb.enterEditing();
+  tb.selectAll();
+  syncToolbar(tb);
+
+  gatePass('edit');
+  log(`Click → Textbox: "${block.text.substring(0, 40)}"`);
+  saveHistory();
+  document.getElementById('stat-textboxes').textContent = fabricCanvas.getObjects('textbox').length;
+  fabricCanvas.renderAll();
+}
+
+// ── Place Fabric hit-target rects ─────────────────────────────────
+function placeHitTargets(blocks) {
+  fabricCanvas.getObjects('rect').forEach(r => fabricCanvas.remove(r));
+
+  blocks.forEach((block, idx) => {
+    const rect = new fabric.Rect({
+      left:        block.left,
+      top:         block.top,
+      width:       block.width,
+      height:      block.height,
+      fill:        'rgba(0,0,0,0)',
+      stroke:      'rgba(99,102,241,0.25)',
+      strokeWidth: 1,
+      selectable:  true,
+      hasControls: false,
+      hasBorders:  false,
+      hoverCursor: 'text',
+      data:        { block, idx },
+    });
+    rect.on('mouseover', () => {
+      rect.set({ fill: 'rgba(99,102,241,0.12)', stroke: 'rgba(99,102,241,0.6)' });
+      fabricCanvas.renderAll();
+    });
+    rect.on('mouseout', () => {
+      rect.set({ fill: 'rgba(0,0,0,0)', stroke: 'rgba(99,102,241,0.25)' });
+      fabricCanvas.renderAll();
+    });
+    rect.on('mousedown', opt => {
+      opt.e.stopPropagation();
+      convertRectToTextbox(rect);
+    });
+    fabricCanvas.add(rect);
+  });
+
+  fabricCanvas.renderAll();
+  log(`${blocks.length} hit-target rects placed`);
+}
+
+// ── Init Fabric ───────────────────────────────────────────────────
+function initFabric(w, h) {
+  if (fabricCanvas) { fabricCanvas.dispose(); fabricCanvas = null; }
+
+  const wrapper  = document.getElementById('page-wrapper');
+  const existing = wrapper.querySelector('canvas:not(#pdf-canvas)');
+  if (existing) existing.remove();
+
+  const el = document.createElement('canvas');
+  el.id = 'fabric-canvas';
+  wrapper.appendChild(el);
+
+  fabricCanvas = new fabric.Canvas('fabric-canvas', {
+    width:               w,
+    height:              h,
+    enableRetinaScaling: true,
+    selection:           false,
+  });
+
+  const fc = el.parentElement;
+  fc.style.position = 'absolute';
+  fc.style.top = '0';
+  fc.style.left = '0';
+
+  fabricCanvas.on('selection:created', e => syncToolbar(e.selected?.[0]));
+  fabricCanvas.on('selection:updated', e => syncToolbar(e.selected?.[0]));
+  fabricCanvas.on('text:changed', saveHistory);
+
+  // Toolbar wiring
+  document.getElementById('fc-family').addEventListener('change', e => applyToActive('fontFamily', e.target.value));
+  document.getElementById('fc-size').addEventListener('change',   e => applyToActive('fontSize', parseInt(e.target.value)));
+  document.getElementById('fc-color').addEventListener('input',   e => applyToActive('fill', e.target.value));
+  document.getElementById('btn-b').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject(); if (!obj) return;
+    applyToActive('fontWeight', obj.fontWeight === 'bold' ? 'normal' : 'bold');
+    setFmtBtn('b', fabricCanvas.getActiveObject()?.fontWeight === 'bold');
+  });
+  document.getElementById('btn-i').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject(); if (!obj) return;
+    applyToActive('fontStyle', obj.fontStyle === 'italic' ? 'normal' : 'italic');
+    setFmtBtn('i', fabricCanvas.getActiveObject()?.fontStyle === 'italic');
+  });
+  document.getElementById('btn-u').addEventListener('click', () => {
+    const obj = fabricCanvas.getActiveObject(); if (!obj) return;
+    applyToActive('underline', !obj.underline);
+    setFmtBtn('u', !!fabricCanvas.getActiveObject()?.underline);
+  });
+  document.getElementById('btn-undo').addEventListener('click', doUndo);
+  document.getElementById('btn-redo').addEventListener('click', doRedo);
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') doRedo();
+    else if ((e.ctrlKey || e.metaKey) && e.key === 'z') doUndo();
+  });
+
+  saveHistory();
+  log('Fabric canvas ready');
+}
+
+// ── Core: load PDF ────────────────────────────────────────────────
+async function loadPdf(arrayBuffer) {
+  originalPdfBytes = arrayBuffer;
+
+  const pdfDoc  = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+  const page    = await pdfDoc.getPage(1);
+
+  const maxWidth = 760;
+  const unscaled = page.getViewport({ scale: 1 });
+  const scale    = Math.min(maxWidth / unscaled.width, 2.0);
+  const viewport = page.getViewport({ scale });
+
+  viewportScale = scale;
+  const w = Math.round(viewport.width);
+  const h = Math.round(viewport.height);
+  cssHeight = h;
+
+  // Retrieve PDF page dimensions in points (for sidebar)
+  pdfPageSize = { width: unscaled.width, height: unscaled.height };
+  document.getElementById('stat-scale').textContent      = scale.toFixed(3);
+  document.getElementById('stat-pdf-size').textContent   = `${Math.round(unscaled.width)}×${Math.round(unscaled.height)}pt`;
+  document.getElementById('stat-canvas-size').textContent = `${w}×${h}px`;
+
+  // Render
+  const pdfCanvas = document.getElementById('pdf-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  pdfCanvas.width  = w * dpr;
+  pdfCanvas.height = h * dpr;
+  pdfCanvas.style.width  = `${w}px`;
+  pdfCanvas.style.height = `${h}px`;
+  const ctx = pdfCanvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  gatePass('render');
+  document.getElementById('page-wrapper').classList.add('visible');
+  document.getElementById('toolbar').classList.add('visible');
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('btn-export').disabled = false;
+
+  initFabric(w, h);
+
+  // Extract text items
+  const content = await page.getTextContent();
+  const items = content.items.filter(i => i.str?.trim()).map((item, idx) => {
+    const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+    const fontHeightPDF = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
+    const canvasFontSize = fontHeightPDF * viewport.scale;
+    return {
+      id:            `i${idx}`,
+      str:           item.str,
+      fontName:      item.fontName || '',
+      canvasX:       Math.max(vx, 0),
+      canvasY:       Math.max(vy - canvasFontSize, 0),
+      canvasWidth:   Math.max(item.width * viewport.scale, 8),
+      canvasFontSize: Math.max(canvasFontSize, 6),
+    };
+  });
+
+  const blocks = detectBlocks(items);
+  placeHitTargets(blocks);
+  log(`Loaded: ${items.length} items → ${blocks.length} blocks`);
+}
+
+// ── Drop zone ─────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { const f = e.target.files?.[0]; if (f) handleFile(f); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files?.[0];
+  if (f?.type === 'application/pdf') handleFile(f);
+});
+async function handleFile(file) {
+  log(`Loading: ${file.name}`);
+  const buf = await file.arrayBuffer();
+  try { await loadPdf(buf); }
+  catch (err) { log(`ERROR: ${err.message}`); console.error(err); }
+}
+
+// Export button
+document.getElementById('btn-export').addEventListener('click', exportPdf);
+
+log('S28 ready — drop a PDF to begin');
+log('Formula: pdfY = pageH − (fabricTop/scale) − (fontSize/scale)');
+</script>
+</body>
+</html>

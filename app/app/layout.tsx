@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Instrument_Serif, DM_Sans, JetBrains_Mono } from 'next/font/google'
+import { Instrument_Serif, DM_Sans, JetBrains_Mono, Arimo, Tinos, Cousine } from 'next/font/google'
 import './globals.css'
 
 const instrumentSerif = Instrument_Serif({
@@ -24,6 +24,32 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
+// Metric-compatible fonts for PDF overlay fidelity:
+// Arimo ≈ Arial/Helvetica, Tinos ≈ Times New Roman, Cousine ≈ Courier New
+const arimo = Arimo({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-arimo',
+  display: 'swap',
+})
+
+const tinos = Tinos({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-tinos',
+  display: 'swap',
+})
+
+const cousine = Cousine({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-cousine',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://localpdf.tools'),
   title: {
@@ -45,7 +71,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${instrumentSerif.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
+      <body className={`${instrumentSerif.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${arimo.variable} ${tinos.variable} ${cousine.variable} antialiased`}>
         {children}
       </body>
     </html>
