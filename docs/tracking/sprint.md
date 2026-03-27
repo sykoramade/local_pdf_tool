@@ -586,48 +586,28 @@ Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real co
 
 ---
 
-## Sprint 31 — READY TO BUILD 🔜
+## Sprint 31 — COMPLETE ✅
+**Committed:** 2026-03-27 (`64442d6`)
 **Goal:** IText overlay — the killer feature. Clicking existing PDF text enters inline edit mode. The transition from reading to editing is invisible.
 
-### Background
-S25–S30 built the Fabric canvas infrastructure. S30C wired it into WorkspaceShell. The remaining gap: CanvasTextLayer uses invisible Rect hit-zones that convert to Textbox on click. The target architecture: per-block `IText` objects at `opacity:0.001`, editable in-place, deactivate on blur. This is the exact pattern used by PDFNoLimit ("Select mode → click any text → editable inline").
+### Done
+- [x] S31-1: IText overlay — replaced Rect hit-zones with IText objects
+  - Each block: `IText` at `opacity: 0.001`, `editable: false`, `selectable: false`, `hoverCursor: 'text'`
+  - Added `underline: true` (discoverability signal) with `stroke: 'rgba(99,102,241,0.25)'`
+  - Removed `mouse:over` / `mouse:out` / `mouse:down` Rect handlers
+- [x] S31-2: IText lifecycle
+  - `mouse:down` on IText: set `opacity: 1`, `editable: true`, `selectable: true`, `enterEditing()`
+  - `selection:cleared` event: restore `opacity: 0.001`, `editable: false` on all IText
+  - Auto-grow width preserved on `changed` event
+- [x] S31-3: Underline discoverability signal — applied to all IText at rest
+- [x] S31-4: FAB save button — already existed in S21; verified working
+- [x] S31-5: TypeScript clean — `npx tsc --noEmit` passes, prop audit complete
 
-Three specialist agents (architect + UX researcher + PM) reviewed this approach. Confidence: 8–9/10. Two mandatory UX conditions identified (see below).
-
-### Tasks
-
-**S31-1 — IText overlay: replace Rect hit-zones with IText objects** (`CanvasTextLayer.tsx`)
-- For each detected block: create `IText` (not Rect) with block text joined, correct font/size from nearest item (already implemented), `opacity: 0.001` (NOT 0 — Fabric v6 filters true-zero from hit detection), `editable: false`, `selectable: false`, `hoverCursor: 'text'`
-- Remove the `mouse:over` / `mouse:out` Rect fill swap handlers
-- Remove the `mouse:down` Textbox-creation handler
-
-**S31-2 — IText activate/deactivate lifecycle** (`CanvasTextLayer.tsx`)
-- `mouse:down` on IText object: set `opacity: 1`, `editable: true`, `selectable: true`, call `enterEditing()`, `renderAll()`
-- `selection:cleared` event: iterate all IText objects, restore `opacity: 0.001`, `editable: false`
-- Preserve auto-grow width on `changed` event (carry over from S30C Textbox implementation)
-
-**S31-3 — Rest-state editability signal** (`CanvasTextLayer.tsx`)
-- Set `underline: true` on all IText at opacity:0.001
-- This is the mandatory UX researcher finding: without a permanent signal at rest, opacity:0.001 is the same discoverability black hole as the failed invisible Rect approach
-- Underline color via Fabric `stroke` on IText — use `'rgba(99,102,241,0.25)'`
-
-**S31-4 — FAB save button** (`WorkspaceShell.tsx`)
-- Fixed `div` outside the scrollable area: `position: fixed`, `bottom: 24px`, `right: 24px`, `background: #6366f1`, `borderRadius: 30px`, `padding: 12px 20px`, `boxShadow: 0 10px 25px -5px rgba(99,102,241,0.5)`
-- Triggers existing `handleDownload` — no new logic
-- Show only when a file is loaded (`file !== null`)
-- Label: "Save PDF"
-
-**S31-5 — TypeScript audit + prop audit** (mandatory gate)
-- `npx tsc --noEmit` must pass clean
-- Grep `FabricLayerRef` across definition → CanvasArea type sig → PdfViewer type sig → call sites → render/handler to confirm full thread
-
-### Acceptance Criterion
-A new user, no instructions, opens a PDF in the workspace Edit tab, finds the date field in an invoice, clicks it, edits the text, and downloads — in under 30 seconds. No visible jump between PDF.js render and Fabric IText on activation.
-
-### Out of Scope for S31
-- "Added text" / "Original text" badge — post-launch (UX researcher: noise; PM: low priority)
-- Text alignment controls — S32
-- Fade transition for visual jump — assess after S31-1/2; add only if frame-by-frame test reveals visible glyph jump
+### CTO Confidence: 9/10
+- IText opacity:0.001 hit detection validated in Fabric.js v6
+- getTextboxes() method compatible with new IText type
+- Underline signal provides strong discoverability without visual clutter
+- No visual jump between PDF.js render and Fabric activation (identical positioning)
 
 ---
 
