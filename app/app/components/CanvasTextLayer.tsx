@@ -87,10 +87,11 @@ interface CanvasTextLayerProps {
   pageWidth: number
   pageHeight: number
   scale: number
+  searchQuery?: string
 }
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, scale }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, scale, searchQuery }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -115,11 +116,73 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       },
     }), [])
 
+    // Search highlight effect — runs when searchQuery changes
+    useEffect(() => {
+      const fc = fabricRef.current
+      if (!fc) return
+      const canvas = fc // captured non-null reference for async use
+
+      async function updateHighlights() {
+        const { Rect } = await import('fabric')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const old = (canvas.getObjects() as any[]).filter(o => o.data?.type === 'search-highlight')
+        old.forEach(o => canvas.remove(o as Parameters<typeof canvas.remove>[0]))
+        if (!searchQuery || searchQuery.length < 2) { canvas.renderAll(); return }
+        const q = searchQuery.toLowerCase()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(canvas.getObjects() as any[])
+          .filter(o => o.data?.type === 'edited-text' && (o.text ?? '').toLowerCase().includes(q))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .forEach((o: any) => {
+            const rect = new Rect({
+              left: o.left as number,
+              top: o.top as number,
+              width: (o.width as number) || 40,
+              height: (o.height as number) || (o.fontSize as number) * 1.4,
+              fill: 'rgba(251,191,36,0.3)',
+              stroke: 'rgba(251,191,36,0.7)',
+              strokeWidth: 1,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(rect as any).data = { type: 'search-highlight' }
+            canvas.add(rect)
+            canvas.sendObjectToBack(rect)
+          })
+        canvas.renderAll()
+      }
+
+      updateHighlights()
+    }, [searchQuery])
+
     useEffect(() => {
       const el = canvasElRef.current
       if (!el) return
 
       let fc: FabricCanvas | null = null
+
+      // Ctrl+L/E/R text alignment when an IText is actively being edited
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (!(e.ctrlKey || e.metaKey)) return
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const active = fabricRef.current?.getActiveObject() as any
+        if (!active || active.type !== 'i-text' || !active.isEditing) return
+        if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault()
+          active.set('textAlign', 'left')
+          fabricRef.current?.renderAll()
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault()
+          active.set('textAlign', 'center')
+          fabricRef.current?.renderAll()
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault()
+          active.set('textAlign', 'right')
+          fabricRef.current?.renderAll()
+        }
+      }
+      window.addEventListener('keydown', handleKeydown)
 
       async function init() {
         const { Canvas, IText } = await import('fabric')
@@ -224,6 +287,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       init()
 
       return () => {
+        window.removeEventListener('keydown', handleKeydown)
         try {
           fc?.dispose()
         } catch {

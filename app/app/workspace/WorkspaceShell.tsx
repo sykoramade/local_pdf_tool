@@ -220,6 +220,7 @@ function L3Strip({
   onInsertImageClick,
   drawMode,
   onDrawClick,
+  redactTargets = [],
 }: {
   activeTool: ToolDef
   selectedField: FieldData | null
@@ -243,6 +244,7 @@ function L3Strip({
   onInsertImageClick: () => void
   drawMode: boolean
   onDrawClick: () => void
+  redactTargets?: string[]
 }) {
 
   const base: React.CSSProperties = {
@@ -348,16 +350,13 @@ function L3Strip({
         <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px', background: 'rgba(249,112,102,.06)', border: '1px solid rgba(249,112,102,.2)', borderRadius: 9, width: '100%', boxSizing: 'border-box', animation: 'strip-appear .2s ease both' }}>
           <SvgIcon id="ws-redact" size={16} style={{ color: '#f97066', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#f97066' }}>Redact — Pro feature</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#f97066' }}>Redact text</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)' }}>
-              Permanent removal · GDPR &amp; HIPAA compliant
+              {redactTargets.length > 0
+                ? `${redactTargets.length} phrase${redactTargets.length > 1 ? 's' : ''} queued — click "Redact & Download" to apply`
+                : 'Type a word or phrase below, press Enter to add'}
             </div>
           </div>
-          <button
-            style={{ background: '#f97066', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-          >
-            Upgrade →
-          </button>
         </div>
       </div>
     )
@@ -522,13 +521,47 @@ function PageRail({
   activePage,
   onPageClick,
   onAddPage,
+  pdfBytes,
 }: {
   pageCount: number
   activePage: number
   onPageClick: (n: number) => void
   onAddPage?: (afterPage: number) => void
+  pdfBytes?: Uint8Array | null
 }) {
   const count = pageCount > 0 ? pageCount : 1  // always show at least 1 placeholder
+  const thumbRefs = useRef<Map<number, HTMLCanvasElement>>(new Map())
+
+  useEffect(() => {
+    if (!pdfBytes || pageCount === 0) return
+    let cancelled = false
+
+    async function renderThumbs() {
+      const pdfjs = (await import('pdfjs-dist')) as typeof import('pdfjs-dist')
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+      const doc = await pdfjs.getDocument({ data: pdfBytes!.slice(0) }).promise
+      if (cancelled) { doc.destroy(); return }
+
+      for (let p = 1; p <= doc.numPages; p++) {
+        if (cancelled) break
+        const canvas = thumbRefs.current.get(p)
+        if (!canvas) continue
+        const page = await doc.getPage(p)
+        const vp = page.getViewport({ scale: 0.15 })
+        canvas.width = vp.width
+        canvas.height = vp.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) continue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await page.render({ canvasContext: ctx as any, viewport: vp }).promise
+      }
+
+      if (!cancelled) doc.destroy()
+    }
+
+    renderThumbs().catch(() => {})
+    return () => { cancelled = true }
+  }, [pdfBytes, pageCount])
 
   return (
     <div
@@ -559,23 +592,34 @@ function PageRail({
               display: 'flex',
               flexDirection: 'column',
               padding: 5,
+              overflow: 'hidden',
               transition: 'border-color .15s',
             }}
           >
-            {/* Line stubs mimicking page content — decorative */}
-            <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-              {[1, 0.55, 0.82, 0.68, 0.75].map((w, i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: i === 0 ? 2 : 1.5,
-                    background: i === 0 ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.14)',
-                    borderRadius: 1,
-                    width: `${w * 100}%`,
-                  }}
-                />
-              ))}
-            </div>
+            {pdfBytes ? (
+              <canvas
+                ref={el => {
+                  if (el) thumbRefs.current.set(n, el)
+                  else thumbRefs.current.delete(n)
+                }}
+                style={{ width: '100%', height: 'auto', display: 'block', flex: 1 }}
+              />
+            ) : (
+              /* Line stubs — shown before PDF loads */
+              <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+                {[1, 0.55, 0.82, 0.68, 0.75].map((w, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      height: idx === 0 ? 2 : 1.5,
+                      background: idx === 0 ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.14)',
+                      borderRadius: 1,
+                      width: `${w * 100}%`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
             <div
               style={{
                 fontSize: 8,
@@ -661,6 +705,8 @@ function CanvasArea({
   onRedactTargetsChange,
   onRedactInputChange,
   fabricLayerRefs,
+  scale = 1.5,
+  searchQuery = '',
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -697,6 +743,8 @@ function CanvasArea({
   onRedactTargetsChange?: (targets: string[]) => void
   onRedactInputChange?: (val: string) => void
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
+  scale?: number
+  searchQuery?: string
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -876,7 +924,7 @@ function CanvasArea({
     toolContent = (
       <PdfViewer
         pdfBytes={pdfBytes}
-        scale={1.5}
+        scale={scale}
         editMap={isEdit ? editMap : readOnlyMap}
         onEdit={isEdit ? onEdit : noOpEdit}
         onLoad={onPageCount}
@@ -897,6 +945,7 @@ function CanvasArea({
         onImageDelete={onImageDelete}
         useCanvasLayer={isEdit}
         fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
+        searchQuery={isEdit ? searchQuery : undefined}
       />
     )
   }
@@ -1020,6 +1069,16 @@ export default function WorkspaceShell() {
   /* Redact state */
   const [redactTargets, setRedactTargets] = useState<string[]>([])
   const [redactInput, setRedactInput] = useState('')
+
+  /* Zoom state */
+  const [scale, setScale] = useState(1.5)
+  const handleZoomIn = useCallback(() => setScale(s => Math.min(3, Math.round((s + 0.25) * 100) / 100)), [])
+  const handleZoomOut = useCallback(() => setScale(s => Math.max(0.75, Math.round((s - 0.25) * 100) / 100)), [])
+  const handleZoomReset = useCallback(() => setScale(1.5), [])
+
+  /* Search state (edit mode only) */
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   /* Canvas layer refs — one per rendered page, keyed by pageNum */
   const fabricLayerRefs = useRef<Map<number, FabricLayerRef>>(new Map())
@@ -1286,6 +1345,22 @@ export default function WorkspaceShell() {
     return () => window.removeEventListener('keydown', handler)
   }, [histUndo, histRedo])
 
+  /* Keyboard handler for Ctrl+F search (edit mode only) */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f' && activeTool.key === 'edit' && file) {
+        e.preventDefault()
+        setSearchOpen(prev => !prev)
+        if (searchOpen) setSearchQuery('')
+      } else if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false)
+        setSearchQuery('')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [activeTool.key, file, searchOpen])
+
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
   const handleDownload = useCallback(async () => {
@@ -1305,7 +1380,7 @@ export default function WorkspaceShell() {
         .flatMap(layer => layer.getTextboxes())
       if (canvasTextboxes.length > 0) {
         const { applyCanvasEditsAndSave } = await import('@/lib/pdf/canvas-save')
-        outputBytes = await applyCanvasEditsAndSave(outputBytes, canvasTextboxes, 1.5)
+        outputBytes = await applyCanvasEditsAndSave(outputBytes, canvasTextboxes, scale)
         outputName = file.name.replace(/\.pdf$/i, '_edited.pdf')
       }
       if (sigs.length > 0) {
@@ -1378,7 +1453,7 @@ export default function WorkspaceShell() {
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets])
+  }, [pdfBytes, file, editMap, textItems, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets, scale])
 
   return (
     <>
@@ -1471,6 +1546,67 @@ export default function WorkspaceShell() {
             {file ? `${file.name} · ${formatBytes(file.size)}` : 'No file open'}
           </span>
 
+          {file && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <button
+                onClick={handleZoomOut}
+                disabled={scale <= 0.75}
+                aria-label="Zoom out"
+                style={{ background: 'none', border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, color: scale <= 0.75 ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.6)', cursor: scale <= 0.75 ? 'default' : 'pointer', fontSize: 14, fontWeight: 700, lineHeight: 1, padding: '3px 8px' }}
+              >−</button>
+              <button
+                onClick={handleZoomReset}
+                aria-label="Reset zoom"
+                style={{ background: 'none', border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: '3px 7px', minWidth: 44, textAlign: 'center' }}
+              >{Math.round(scale * 100)}%</button>
+              <button
+                onClick={handleZoomIn}
+                disabled={scale >= 3}
+                aria-label="Zoom in"
+                style={{ background: 'none', border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, color: scale >= 3 ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.6)', cursor: scale >= 3 ? 'default' : 'pointer', fontSize: 14, fontWeight: 700, lineHeight: 1, padding: '3px 8px' }}
+              >+</button>
+            </div>
+          )}
+
+          {file && activeTool.key === 'edit' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              {searchOpen ? (
+                <>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Find text…"
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    style={{
+                      fontSize: 12,
+                      padding: '3px 8px',
+                      background: 'rgba(255,255,255,.07)',
+                      border: '1px solid rgba(255,255,255,.18)',
+                      borderRadius: 6,
+                      color: 'rgba(255,255,255,.85)',
+                      outline: 'none',
+                      width: 160,
+                    }}
+                  />
+                  <button
+                    onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+                    aria-label="Close search"
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}
+                  >×</button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Find text (Ctrl+F)"
+                  title="Find text (Ctrl+F)"
+                  style={{ background: 'none', border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 12, padding: '3px 8px' }}
+                >Find</button>
+              )}
+            </div>
+          )}
+
           {downloadError && (
             <span style={{ fontSize: 11, color: '#f87171', maxWidth: 220 }} title={downloadError}>
               ⚠ Download failed
@@ -1514,6 +1650,7 @@ export default function WorkspaceShell() {
               onInsertImageClick={handleInsertImageClick}
               drawMode={drawMode}
               onDrawClick={handleDrawClick}
+              redactTargets={redactTargets}
             />
           </div>
         </div>
@@ -1525,6 +1662,7 @@ export default function WorkspaceShell() {
             activePage={activePage}
             onPageClick={handlePageClick}
             onAddPage={handleAddPage}
+            pdfBytes={pdfBytes}
           />
 
           <CanvasArea
@@ -1563,6 +1701,8 @@ export default function WorkspaceShell() {
             onRedactTargetsChange={setRedactTargets}
             onRedactInputChange={setRedactInput}
             fabricLayerRefs={fabricLayerRefs}
+            scale={scale}
+            searchQuery={searchQuery}
           />
         </div>
       </div>

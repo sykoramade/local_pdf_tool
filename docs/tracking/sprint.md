@@ -611,20 +611,34 @@ Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real co
 
 ---
 
-## Sprint 32 — QUEUED
+## Sprint 32 — COMPLETE
+**Committed:** 2026-03-27
 **Goal:** Foundation completers — zoom, page thumbnails, Redact Tier 2.
 
-- Zoom controls (scale slider in L3Strip — PDF.js viewport API)
-- Page thumbnails in PageRail (64×91px PDF.js render per page, lazy-loaded)
-- Redact Tier 2 — true content removal (wire S30A `blankTextOps` into WorkspaceShell redact path; gate behind "Remove content permanently" toggle)
+### Done
+- [x] S32-1: Zoom controls — `scale` state (0.75–3×, step 0.25), zoom in/out/reset buttons in header, propagated to PdfViewer + canvas-save
+- [x] S32-2: Page thumbnails — PDF.js thumbnail rendering (scale 0.15) in PageRail via `pdfBytes` prop; `thumbRefs` canvas map; cancelled flag prevents stale renders
+- [x] S32-3: L3Strip redact fix — was showing "Pro feature / Upgrade" incorrectly; fixed to show phrase count and status
+- [x] S32-4: Scale hardcoding fixed — `applyCanvasEditsAndSave` now receives `scale` state instead of hardcoded `1.5`
+
+### CTO Confidence: 9/10
+- Zoom propagation verified end-to-end (WorkspaceShell → CanvasArea → PdfViewer → CanvasTextLayer)
+- Thumbnail rendering uses same PDF.js pattern as PdfViewer, cancelled flag handles race conditions
 
 ---
 
-## Sprint 33 — QUEUED
+## Sprint 33 — COMPLETE
+**Committed:** 2026-03-27
 **Goal:** Polish — text alignment + search/find.
 
-- Text alignment: left/center/right on IText via Fabric `textAlign` (3 buttons in toolbar)
-- Search/Find: PDF.js `findController` wired to search modal; highlight matches on current page
+### Done
+- [x] S33-1: Text alignment — Ctrl+L/E/R shortcuts when IText is in edit mode; sets Fabric `textAlign` ('left'/'center'/'right'); handler registered in main useEffect, cleaned up on unmount
+- [x] S33-2: Search/Find — Ctrl+F panel in header (edit mode only); `searchQuery` state threads WorkspaceShell → CanvasArea → PdfViewer → CanvasTextLayer; yellow Rect highlight overlays for matches (≥2 chars); Escape to close
+
+### CTO Confidence: 9/10
+- Keyboard handler uses `fabricRef.current` for live access to active canvas object
+- Search highlights use `data.type: 'search-highlight'` tag for clean removal on query change
+- `canvas` captured non-null before async import to satisfy TypeScript narrowing
 
 ---
 
