@@ -107,6 +107,9 @@ export function useWorkspaceActions({
   const handleImageMove = useCallback((id: string, xPct: number, yPct: number) => {
     setImages(prev => prev.map(img => img.id === id ? { ...img, xPct, yPct } : img))
   }, [])
+  const handleImageResize = useCallback((id: string, widthPct: number) => {
+    setImages(prev => prev.map(img => img.id === id ? { ...img, widthPct } : img))
+  }, [])
   const handleImageDelete = useCallback((id: string) => {
     setImages(prev => prev.filter(img => img.id !== id))
   }, [])
@@ -304,6 +307,7 @@ export function useWorkspaceActions({
     handleInsertImageClick,
     handleImageFileSelect,
     handleImageMove,
+    handleImageResize,
     handleImageDelete,
     /* Draw */
     drawMode,
