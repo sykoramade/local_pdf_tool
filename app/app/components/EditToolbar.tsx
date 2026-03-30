@@ -10,7 +10,6 @@ interface EditToolbarProps {
   onFieldChange: (patch: Partial<FieldData>) => void
   onUndo: () => void
   onRedo: () => void
-  hoveredFont?: string | null
 }
 
 const FONT_FAMILIES = ['Helvetica', 'Arial', 'Times New Roman', 'Courier', 'Georgia']
@@ -23,7 +22,6 @@ export default function EditToolbar({
   onFieldChange,
   onUndo,
   onRedo,
-  hoveredFont,
 }: EditToolbarProps) {
   const isDisabled = selectedField === null
 
@@ -38,29 +36,7 @@ export default function EditToolbar({
         overflow: 'hidden',
       }}
     >
-      {/* Font family — or hover hint when no field active */}
-      {isDisabled && hoveredFont ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            height: 28,
-            padding: '0 7px',
-            background: 'rgba(255,255,255,.04)',
-            border: '1px solid rgba(255,255,255,.1)',
-            borderRadius: 6,
-            fontSize: 11,
-            color: 'rgba(255,255,255,.35)',
-            maxWidth: 96,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <span style={{ color: 'rgba(255,255,255,.2)', fontSize: 10 }}>~</span>
-          {hoveredFont}
-        </div>
-      ) : (
+      {/* Font family */}
       <select
         disabled={isDisabled}
         value={selectedField?.family ?? 'Helvetica'}
@@ -85,7 +61,6 @@ export default function EditToolbar({
           </option>
         ))}
       </select>
-      )}
 
       {/* Divider */}
       <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,.14)', flexShrink: 0 }} />

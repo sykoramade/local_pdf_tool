@@ -33,7 +33,7 @@ interface PdfViewerProps {
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
   searchQuery?: string
   onRedact?: (item: ExtractedTextItem) => void
-  onFontDetected?: (family: string | null) => void
+  editMode?: 'select' | 'text'
   redactTargets?: string[]
 }
 
@@ -89,7 +89,7 @@ export default function PdfViewer({
   fabricLayerRefs,
   searchQuery,
   onRedact,
-  onFontDetected,
+  editMode,
   redactTargets,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
@@ -292,7 +292,7 @@ export default function PdfViewer({
                       pageHeight={height}
                       scale={scale}
                       searchQuery={searchQuery}
-                      onFontDetected={onFontDetected}
+                      editMode={editMode}
                     />
                   ) : (
                     <PdfTextLayer

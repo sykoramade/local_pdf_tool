@@ -59,7 +59,7 @@ export default function CanvasArea({
   fabricLayerRefs,
   scale = 1.5,
   searchQuery = '',
-  onFontDetected,
+  editMode,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -96,7 +96,7 @@ export default function CanvasArea({
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
   scale?: number
   searchQuery?: string
-  onFontDetected?: (family: string | null) => void
+  editMode?: 'select' | 'text'
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -271,7 +271,7 @@ export default function CanvasArea({
         useCanvasLayer={isEdit}
         fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
         searchQuery={isEdit ? searchQuery : undefined}
-        onFontDetected={isEdit ? onFontDetected : undefined}
+        editMode={isEdit ? editMode : undefined}
       />
     )
   }

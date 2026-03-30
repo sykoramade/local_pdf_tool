@@ -24,7 +24,7 @@ export default function WorkspaceShell() {
   const initialTool = TOOLS.find(t => t.key === initialKey) ?? TOOLS[0]
 
   const [activeTool, setActiveTool] = useState<ToolDef>(initialTool)
-  const [hoveredFont, setHoveredFont] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState<'select' | 'text'>('text')
 
   // ── Hooks ──
   const fileHook = useWorkspaceFile()
@@ -321,7 +321,8 @@ export default function WorkspaceShell() {
             <SelRail activeTool={activeTool} onSelect={handleSelectTool} />
             <L3Strip
               activeTool={activeTool}
-              hoveredFont={hoveredFont}
+              editMode={editMode}
+              onEditModeChange={setEditMode}
               selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
               editCount={editMap.size}
               canUndo={hIdx > 0}
@@ -348,7 +349,6 @@ export default function WorkspaceShell() {
               redactInput={redactInput}
               onRedactInputChange={setRedactInput}
               onRedactTargetsChange={setRedactTargets}
-              onBurnRedactions={handleDownload}
             />
           </div>
         </div>
@@ -402,7 +402,7 @@ export default function WorkspaceShell() {
             fabricLayerRefs={fabricLayerRefs}
             scale={scale}
             searchQuery={searchQuery}
-            onFontDetected={setHoveredFont}
+            editMode={editMode}
           />
         </div>
       </div>

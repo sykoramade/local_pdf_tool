@@ -3,17 +3,15 @@
 /**
  * CanvasTextLayer — Fabric.js canvas overlay for block-based PDF text editing.
  *
- * Interaction model (S35-B):
- *   hover      → light indigo tint over block, fires onFontDetected callback
- *   1st click  → white occluder + enterEditing() + selectAll() immediately
- *   editing    → Fabric native cursor placement (second click, arrow keys, etc.)
- *   Escape     → Fabric exits editing, text:editing:exited → dormant
- *   Click away → dormant
+ * Interaction model (S36):
+ *   select mode → canvas is passive, no text interaction
+ *   text mode   → 1st click: white occluder + enterEditing() + selectAll() via rAF
+ *                  2nd click: cursor placed at pointer position
+ *                  Escape → dormant; Click away → dormant
  *
  * Z-order within Fabric canvas (bottom → top):
  *   [0] white occluder  — covers PDF-rendered text at block bounds
  *   [1..N] IText objects — text rendered on top of occluder
- *   [top] hoverRect     — transient hover highlight (above everything)
  */
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
@@ -94,20 +92,28 @@ interface CanvasTextLayerProps {
   pageHeight: number
   scale: number
   searchQuery?: string
-  onFontDetected?: (family: string | null) => void
+  editMode?: 'select' | 'text'
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, onFontDetected }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
+
+    // editMode ref — synced without triggering canvas re-init
+    const editModeRef = useRef<'select' | 'text'>(editMode ?? 'text')
 
     // Selection state refs — read/written in Fabric event handlers (no re-render needed)
     const selectedBlockKeyRef = useRef<string | null>(null)
     const occluderRectRef = useRef<object | null>(null)    // white rect covers PDF text while editing
-    const hoverRectRef = useRef<object | null>(null)       // transient hover highlight
+    const hoverRectRef = useRef<object | null>(null)       // kept for clearSelectionState compat
+
+    // Sync editMode prop to ref without triggering canvas re-init
+    useEffect(() => {
+      editModeRef.current = editMode ?? 'text'
+    }, [editMode])
 
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
@@ -323,6 +329,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         // ── Single-click → immediate editing ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fc.on('mouse:down', (e: any) => {
+          // Select mode — canvas is passive, no text interaction
+          if (editModeRef.current === 'select') return
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const obj = e.target as any
 
@@ -334,8 +343,12 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             return
           }
 
-          // Already editing this block — let Fabric handle cursor placement naturally
-          if (obj.isEditing) return
+          // Already editing this block — place cursor at click position (not selectAll)
+          if (obj.isEditing) {
+            obj.setCursorByClick(e.e)
+            fc!.renderAll()
+            return
+          }
 
           const blockKey = obj.data.blockKey as string
           // Is this a committed block being re-clicked?
@@ -434,51 +447,6 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           } else {
             // No change (or block not found) — full dormant
             clearSelectionState(fc!)
-          }
-        })
-
-        // ── Hover: light tint + fire onFontDetected ──────────────────────────
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:over', (e: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const obj = e.target as any
-          if (!obj || obj.type !== 'i-text' || obj.data?.type !== 'edited-text') return
-          if (selectedBlockKeyRef.current === obj.data.blockKey) return // already editing
-
-          onFontDetected?.(obj.data.detectedFamily as string)
-
-          if (hoverRectRef.current) {
-            fc!.remove(hoverRectRef.current as any)
-          }
-          const bounds = obj.data.blockBounds as Block
-          const hoverRect = new Rect({
-            left: bounds.left,
-            top: bounds.top,
-            width: bounds.width,
-            height: bounds.height,
-            fill: 'rgba(99,102,241,0.09)',
-            strokeWidth: 0,
-            selectable: false,
-            evented: false,
-          })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(hoverRect as any).data = { type: 'hover-highlight' }
-          fc!.add(hoverRect)
-          // Keep hover rect on top (no sendToBack) so it renders above IText
-          hoverRectRef.current = hoverRect
-          fc!.renderAll()
-        })
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:out', (e: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const obj = e.target as any
-          if (!obj || obj.type !== 'i-text') return
-          onFontDetected?.(null)
-          if (hoverRectRef.current) {
-            fc!.remove(hoverRectRef.current as any)
-            hoverRectRef.current = null
-            fc!.renderAll()
           }
         })
 

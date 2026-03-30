@@ -113,7 +113,8 @@ function AnnotateSubRail({ mode, onModeChange }: { mode: AMode; onModeChange: (m
 
 export default function L3Strip({
   activeTool,
-  hoveredFont,
+  editMode = 'text',
+  onEditModeChange,
   selectedField,
   editCount,
   canUndo,
@@ -140,10 +141,10 @@ export default function L3Strip({
   redactInput = '',
   onRedactInputChange,
   onRedactTargetsChange,
-  onBurnRedactions,
 }: {
   activeTool: ToolDef
-  hoveredFont?: string | null
+  editMode?: 'select' | 'text'
+  onEditModeChange?: (mode: 'select' | 'text') => void
   selectedField: FieldData | null
   editCount: number
   canUndo: boolean
@@ -170,7 +171,6 @@ export default function L3Strip({
   redactInput?: string
   onRedactInputChange?: (val: string) => void
   onRedactTargetsChange?: (targets: string[]) => void
-  onBurnRedactions?: () => void
 }) {
   const base: React.CSSProperties = {
     height: 52,
@@ -186,17 +186,54 @@ export default function L3Strip({
   if (activeTool.key === 'edit') {
     return (
       <div style={base}>
-        <div key={animKey} style={{ width: '100%', animation: 'strip-appear .2s ease both' }}>
-          <EditToolbar
-            selectedField={selectedField}
-            editCount={editCount}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onFieldChange={onFieldChange}
-            onUndo={onUndo}
-            onRedo={onRedo}
-            hoveredFont={hoveredFont}
-          />
+        <div key={animKey} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', animation: 'strip-appear .2s ease both' }}>
+          {/* Mode toggle: Select | T Text */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 7, padding: 2, flexShrink: 0 }}>
+            <button
+              onClick={() => onEditModeChange?.('select')}
+              title="Select mode"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '4px 9px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                background: editMode === 'select' ? 'rgba(255,255,255,.12)' : 'none',
+                color: editMode === 'select' ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.35)',
+                transition: 'background .15s, color .15s',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M2 2l5 12 2.5-4.5L14 12l-2-2-4.5-2.5z"/>
+              </svg>
+              Select
+            </button>
+            <button
+              onClick={() => onEditModeChange?.('text')}
+              title="Text editing mode"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '4px 9px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                background: editMode === 'text' ? 'rgba(255,255,255,.12)' : 'none',
+                color: editMode === 'text' ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.35)',
+                transition: 'background .15s, color .15s',
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'Georgia,serif', lineHeight: 1 }}>T</span>
+              Text
+            </button>
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <EditToolbar
+              selectedField={selectedField}
+              editCount={editCount}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onFieldChange={onFieldChange}
+              onUndo={onUndo}
+              onRedo={onRedo}
+            />
+          </div>
         </div>
       </div>
     )
@@ -271,7 +308,6 @@ export default function L3Strip({
   }
 
   if (activeTool.key === 'redact') {
-    const totalMatches = Object.values(redactMatchCounts).reduce((a, b) => a + b, 0)
     const visibleChips = redactTargets.slice(0, 3)
     const hiddenCount = redactTargets.length - visibleChips.length
     const hasTargets = redactTargets.length > 0
@@ -294,10 +330,10 @@ export default function L3Strip({
               }
             }}
             placeholder="Enter phrase, press ↵ to queue"
-            style={{ fontSize: 12, padding: '4px 8px', background: 'rgba(249,112,102,.08)', border: '1px solid rgba(249,112,102,.3)', borderRadius: 6, color: 'rgba(255,255,255,.8)', outline: 'none', width: 180, flexShrink: 0 }}
+            style={{ fontSize: 12, padding: '4px 8px', background: 'rgba(249,112,102,.08)', border: '1px solid rgba(249,112,102,.3)', borderRadius: 6, color: 'rgba(255,255,255,.8)', outline: 'none', width: 160, flexShrink: 0 }}
           />
 
-          {/* ── Middle: chip queue ── */}
+          {/* ── Chip queue ── */}
           {!hasTargets ? (
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,.28)', flexShrink: 0 }}>
               Queue is empty — type above or click text on the PDF
@@ -307,12 +343,12 @@ export default function L3Strip({
               {visibleChips.map(t => {
                 const count = redactMatchCounts[t] ?? 0
                 return (
-                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, background: 'rgba(220,38,38,.15)', color: '#fca5a5', border: '1px solid rgba(220,38,38,.3)', padding: '2px 7px', borderRadius: 9999, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    {t}
-                    {count > 0 && <span style={{ opacity: 0.65 }}>({count})</span>}
+                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, background: 'rgba(220,38,38,.15)', color: '#fca5a5', border: '1px solid rgba(220,38,38,.3)', padding: '2px 7px', borderRadius: 9999, flexShrink: 0 }}>
+                    <span style={{ maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t}</span>
+                    <span style={{ opacity: 0.7, whiteSpace: 'nowrap', flexShrink: 0 }}>({count})</span>
                     <button
                       onClick={() => onRedactTargetsChange?.(redactTargets.filter(x => x !== t))}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 1 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 1, flexShrink: 0 }}
                     >×</button>
                   </span>
                 )
@@ -323,24 +359,6 @@ export default function L3Strip({
                 </span>
               )}
             </div>
-          )}
-
-          {/* ── Right: total count + Burn button (separated) ── */}
-          {hasTargets && (
-            <>
-              <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
-              {totalMatches > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#fca5a5', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {totalMatches} match{totalMatches !== 1 ? 'es' : ''}
-                </span>
-              )}
-              <button
-                onClick={onBurnRedactions}
-                style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
-              >
-                Burn Redactions
-              </button>
-            </>
           )}
         </div>
       </div>
