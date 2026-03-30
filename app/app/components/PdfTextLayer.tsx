@@ -12,6 +12,8 @@ interface PdfTextLayerProps {
   scale: number
   annotateMode?: 'yellow' | 'green' | 'pink' | null
   onHighlight?: (item: ExtractedTextItem) => void
+  onRedact?: (item: ExtractedTextItem) => void
+  redactTargets?: string[]
 }
 
 interface LineGroup {
@@ -55,6 +57,8 @@ export default function PdfTextLayer({
   scale,
   annotateMode,
   onHighlight,
+  onRedact,
+  redactTargets = [],
 }: PdfTextLayerProps) {
   // activeId = anchorId of the active line group (first item in that group)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -130,8 +134,40 @@ export default function PdfTextLayer({
     return { left, top, width: right - left, tapHeight, anchor }
   }
 
+  // Compute which items match any redact target for visual preview overlay
+  const redactMatchSet = new Set<string>()
+  if (redactTargets.length > 0) {
+    for (const item of items) {
+      const itemLower = item.str.toLowerCase()
+      if (redactTargets.some(t => t.trim() && itemLower.includes(t.toLowerCase()))) {
+        redactMatchSet.add(item.id)
+      }
+    }
+  }
+
   return (
     <>
+      {/* Redact preview: black boxes over matching text items */}
+      {redactTargets.length > 0 && Array.from(redactMatchSet).map(id => {
+        const item = items.find(i => i.id === id)
+        if (!item) return null
+        return (
+          <div
+            key={`redact-preview-${item.id}`}
+            style={{
+              position: 'absolute',
+              left: item.canvasX,
+              top: item.canvasY,
+              width: Math.max(item.canvasWidth, 24),
+              height: Math.max(item.canvasFontSize * 1.2, 14),
+              background: '#1a1a1a',
+              borderRadius: 1,
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+        )
+      })}
       {lineGroups.map(group => {
         const { left, top, width, tapHeight, anchor } = groupBounds(group)
         const fontMatch = mapFont(anchor.fontName)
@@ -194,7 +230,7 @@ export default function PdfTextLayer({
             fontStyle: itemFontMatch.italic ? 'italic' : 'normal',
             lineHeight: 1,
             whiteSpace: 'nowrap',
-            cursor: annotateMode ? 'crosshair' : 'text',
+            cursor: onRedact || annotateMode ? 'crosshair' : 'text',
             boxSizing: 'border-box',
           }
 
@@ -210,14 +246,16 @@ export default function PdfTextLayer({
                 backgroundColor: isEdited
                   ? 'rgba(255,255,255,0.95)'
                   : 'transparent',
-                borderBottom: isEdited
-                  ? '2px solid rgba(79,70,229,0.7)'
-                  : '1px solid rgba(99,102,241,0.25)',
+                borderBottom: isEdited ? '2px solid rgba(79,70,229,0.7)' : 'none',
                 userSelect: 'none',
               }}
               className="hover:bg-indigo-100/60 hover:border-b-2 hover:border-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:rounded"
               title={isEdited ? `Edited: "${currentText}"` : 'Click to edit'}
               onClick={() => {
+                if (onRedact) {
+                  onRedact(item)
+                  return
+                }
                 if (
                   annotateMode === 'yellow' ||
                   annotateMode === 'green' ||
@@ -234,6 +272,10 @@ export default function PdfTextLayer({
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
+                  if (onRedact) {
+                    onRedact(item)
+                    return
+                  }
                   if (
                     annotateMode === 'yellow' ||
                     annotateMode === 'green' ||

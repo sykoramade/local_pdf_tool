@@ -32,6 +32,9 @@ interface PdfViewerProps {
   useCanvasLayer?: boolean
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
   searchQuery?: string
+  onRedact?: (item: ExtractedTextItem) => void
+  onFontDetected?: (family: string | null) => void
+  redactTargets?: string[]
 }
 
 interface PageData {
@@ -85,6 +88,9 @@ export default function PdfViewer({
   useCanvasLayer = false,
   fabricLayerRefs,
   searchQuery,
+  onRedact,
+  onFontDetected,
+  redactTargets,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -286,6 +292,7 @@ export default function PdfViewer({
                       pageHeight={height}
                       scale={scale}
                       searchQuery={searchQuery}
+                      onFontDetected={onFontDetected}
                     />
                   ) : (
                     <PdfTextLayer
@@ -299,6 +306,8 @@ export default function PdfViewer({
                           ? annotateMode
                           : null
                       }
+                      onRedact={onRedact}
+                      redactTargets={redactTargets}
                       onHighlight={item => {
                         if (!onAnnotate) return
                         const hl: TextHighlight = {
