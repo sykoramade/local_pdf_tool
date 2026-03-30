@@ -28,6 +28,7 @@ interface PdfViewerProps {
   onAnnotationDelete?: (id: string) => void
   images?: ImageEntry[]
   onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageResize?: (id: string, widthPct: number) => void
   onImageDelete?: (id: string) => void
   useCanvasLayer?: boolean
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
@@ -86,6 +87,7 @@ export default function PdfViewer({
   onAnnotationDelete,
   images,
   onImageMove,
+  onImageResize,
   onImageDelete,
   useCanvasLayer = false,
   fabricLayerRefs,
@@ -354,6 +356,7 @@ export default function PdfViewer({
                     key={img.id}
                     image={img}
                     onMove={onImageMove}
+                    onResize={onImageResize ?? (() => {})}
                     onDelete={onImageDelete}
                   />
                 ))}

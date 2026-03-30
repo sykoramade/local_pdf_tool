@@ -118,6 +118,7 @@ export default function WorkspaceShell() {
     handleInsertImageClick,
     handleImageFileSelect,
     handleImageMove,
+    handleImageResize,
     handleImageDelete,
     drawMode,
     setDrawMode,
@@ -396,6 +397,7 @@ export default function WorkspaceShell() {
             onAnnotationDelete={handleAnnotationDelete}
             images={images}
             onImageMove={handleImageMove}
+            onImageResize={handleImageResize}
             onImageDelete={handleImageDelete}
             onRedact={(item) => {
               const txt = item.str.trim()

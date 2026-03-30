@@ -6,10 +6,11 @@ import type { ImageEntry } from '@/lib/pdf/types'
 interface ImageOverlayProps {
   image: ImageEntry
   onMove: (id: string, xPct: number, yPct: number) => void
+  onResize: (id: string, widthPct: number) => void
   onDelete: (id: string) => void
 }
 
-export default function ImageOverlay({ image, onMove, onDelete }: ImageOverlayProps) {
+export default function ImageOverlay({ image, onMove, onResize, onDelete }: ImageOverlayProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -21,6 +22,7 @@ export default function ImageOverlay({ image, onMove, onDelete }: ImageOverlayPr
     yPct: number
   } | null>(null)
   const lastPositionRef = useRef({ xPct: image.xPct, yPct: image.yPct })
+  const isResizingRef = useRef(false)
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -66,6 +68,40 @@ export default function ImageOverlay({ image, onMove, onDelete }: ImageOverlayPr
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDelete(image.id)
+  }
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizingRef.current = true
+    const startX = e.clientX
+    const startWidthPct = image.widthPct
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingRef.current || !containerRef.current) return
+      const parent = containerRef.current.parentElement
+      if (!parent) return
+      const rect = parent.getBoundingClientRect()
+      const dx = moveEvent.clientX - startX
+      const newWidthPct = Math.max(5, Math.min(100, startWidthPct + (dx / rect.width) * 100))
+      containerRef.current.style.width = newWidthPct + '%'
+    }
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      isResizingRef.current = false
+      if (!containerRef.current) return
+      const parent = containerRef.current.parentElement
+      if (!parent) return
+      const rect = parent.getBoundingClientRect()
+      const dx = upEvent.clientX - startX
+      const newWidthPct = Math.max(5, Math.min(100, startWidthPct + (dx / rect.width) * 100))
+      onResize(image.id, newWidthPct)
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
   }
 
   return (
@@ -125,6 +161,25 @@ export default function ImageOverlay({ image, onMove, onDelete }: ImageOverlayPr
       >
         ×
       </button>
+
+      {/* Resize handle — bottom-right corner */}
+      {isHovered && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          style={{
+            position: 'absolute',
+            bottom: -5,
+            right: -5,
+            width: 10,
+            height: 10,
+            background: '#6366f1',
+            border: '1.5px solid #fff',
+            borderRadius: 2,
+            cursor: 'se-resize',
+            zIndex: 10,
+          }}
+        />
+      )}
     </div>
   )
 }

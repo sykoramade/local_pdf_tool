@@ -54,6 +54,7 @@ export default function CanvasArea({
   onAnnotationDelete,
   images,
   onImageMove,
+  onImageResize,
   onImageDelete,
   onRedact,
   redactTargets = [],
@@ -93,6 +94,7 @@ export default function CanvasArea({
   onAnnotationDelete?: (id: string) => void
   images?: ImageEntry[]
   onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageResize?: (id: string, widthPct: number) => void
   onImageDelete?: (id: string) => void
   onRedact?: (item: ExtractedTextItem) => void
   redactTargets?: string[]
@@ -243,6 +245,7 @@ export default function CanvasArea({
         isPro={isPro}
         images={images}
         onImageMove={onImageMove}
+        onImageResize={onImageResize}
         onImageDelete={onImageDelete}
         onRedact={onRedact}
         redactTargets={redactTargets}
@@ -272,6 +275,7 @@ export default function CanvasArea({
         onAnnotationDelete={onAnnotationDelete}
         images={images}
         onImageMove={onImageMove}
+        onImageResize={onImageResize}
         onImageDelete={onImageDelete}
         useCanvasLayer={isEdit}
         fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
