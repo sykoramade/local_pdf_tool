@@ -134,40 +134,53 @@ export default function PdfTextLayer({
     return { left, top, width: right - left, tapHeight, anchor }
   }
 
-  // Compute which items match any redact target for visual preview overlay
-  const redactMatchSet = new Set<string>()
+  // Compute per-substring redact preview boxes (character-level X offset)
+  interface RedactBox { key: string; left: number; top: number; width: number; height: number }
+  const redactBoxes: RedactBox[] = []
   if (redactTargets.length > 0) {
     for (const item of items) {
-      const itemLower = item.str.toLowerCase()
-      if (redactTargets.some(t => t.trim() && itemLower.includes(t.toLowerCase()))) {
-        redactMatchSet.add(item.id)
+      const itemStr = item.str
+      const itemLower = itemStr.toLowerCase()
+      const charWidth = item.str.length > 0 ? item.canvasWidth / item.str.length : 0
+      const boxHeight = Math.max(item.canvasFontSize * 1.2, 14)
+
+      for (const target of redactTargets) {
+        const tLower = target.toLowerCase().trim()
+        if (!tLower) continue
+        let pos = 0
+        while ((pos = itemLower.indexOf(tLower, pos)) !== -1) {
+          redactBoxes.push({
+            key: `${item.id}-${pos}`,
+            left: item.canvasX + charWidth * pos,
+            top: item.canvasY,
+            width: Math.max(charWidth * tLower.length, 8),
+            height: boxHeight,
+          })
+          pos += tLower.length
+        }
       }
     }
   }
 
   return (
     <>
-      {/* Redact preview: black boxes over matching text items */}
-      {redactTargets.length > 0 && Array.from(redactMatchSet).map(id => {
-        const item = items.find(i => i.id === id)
-        if (!item) return null
-        return (
-          <div
-            key={`redact-preview-${item.id}`}
-            style={{
-              position: 'absolute',
-              left: item.canvasX,
-              top: item.canvasY,
-              width: Math.max(item.canvasWidth, 24),
-              height: Math.max(item.canvasFontSize * 1.2, 14),
-              background: '#1a1a1a',
-              borderRadius: 1,
-              pointerEvents: 'none',
-              zIndex: 5,
-            }}
-          />
-        )
-      })}
+      {/* Redact preview: black boxes at substring-level positions */}
+      {redactBoxes.map(box => (
+        <div
+          key={`redact-preview-${box.key}`}
+          style={{
+            position: 'absolute',
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+            background: '#1a1a1a',
+            borderRadius: 1,
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        />
+      ))}
       {lineGroups.map(group => {
         const { left, top, width, tapHeight, anchor } = groupBounds(group)
         const fontMatch = mapFont(anchor.fontName)
