@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { EditMap, ExtractedTextItem, FieldData, FabricLayerRef } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, FieldData, FabricLayerRef, CommittedEdit } from '@/lib/pdf/types'
 import type { ToolDef } from '@/app/workspace/workspace-types'
 
 export function useWorkspaceEdit(file: File | null, activeTool: ToolDef) {
@@ -14,6 +14,8 @@ export function useWorkspaceEdit(file: File | null, activeTool: ToolDef) {
   const histRef = useRef<EditMap[]>([new Map()])
   const [hIdx, setHIdx] = useState(0)
   const fabricLayerRefs = useRef<Map<number, FabricLayerRef>>(new Map())
+  // committedEdits: outer key = pageNum, inner key = blockKey ('block_0', etc.)
+  const [committedEdits, setCommittedEdits] = useState<Map<number, Map<string, CommittedEdit>>>(new Map())
 
   /* Reset edit state when file is cleared */
   useEffect(() => {
@@ -23,6 +25,7 @@ export function useWorkspaceEdit(file: File | null, activeTool: ToolDef) {
       histRef.current = [new Map()]
       setHIdx(0)
       setSelectedFieldId(null)
+      setCommittedEdits(new Map())
     }
   }, [file])
 
@@ -72,6 +75,16 @@ export function useWorkspaceEdit(file: File | null, activeTool: ToolDef) {
 
   const handleTextItems = useCallback((items: ExtractedTextItem[]) => setTextItems(items), [])
 
+  const handleCommit = useCallback((pageNum: number, blockKey: string, edit: CommittedEdit) => {
+    setCommittedEdits(prev => {
+      const next = new Map(prev)
+      const pageMap = new Map(next.get(pageNum) ?? [])
+      pageMap.set(blockKey, edit)
+      next.set(pageNum, pageMap)
+      return next
+    })
+  }, [])
+
   /* Keyboard handler for undo/redo */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -116,6 +129,8 @@ export function useWorkspaceEdit(file: File | null, activeTool: ToolDef) {
     handleFieldChange,
     handleTextItems,
     fabricLayerRefs,
+    committedEdits,
+    handleCommit,
     searchOpen,
     setSearchOpen,
     searchQuery,

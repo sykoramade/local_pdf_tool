@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry, FabricLayerRef, CommittedEdit } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
 import CanvasTextLayer from './CanvasTextLayer'
 import SigOverlay from './SigOverlay'
@@ -35,6 +35,8 @@ interface PdfViewerProps {
   onRedact?: (item: ExtractedTextItem) => void
   editMode?: 'select' | 'text'
   redactTargets?: string[]
+  committedEdits?: Map<number, Map<string, CommittedEdit>>
+  onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
 }
 
 interface PageData {
@@ -91,6 +93,8 @@ export default function PdfViewer({
   onRedact,
   editMode,
   redactTargets,
+  committedEdits,
+  onCommit,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -293,6 +297,8 @@ export default function PdfViewer({
                       scale={scale}
                       searchQuery={searchQuery}
                       editMode={editMode}
+                      committedEdits={committedEdits?.get(pageNum)}
+                      onCommit={onCommit ? (bk, ed) => onCommit(pageNum, bk, ed) : undefined}
                     />
                   ) : (
                     <PdfTextLayer

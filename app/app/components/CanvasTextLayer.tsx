@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { Canvas as FabricCanvas } from 'fabric'
-import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport } from '@/lib/pdf/types'
+import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport, CommittedEdit } from '@/lib/pdf/types'
 
 // ─── Block detection ─────────────────────────────────────────────────────────
 
@@ -93,17 +93,23 @@ interface CanvasTextLayerProps {
   scale: number
   searchQuery?: string
   editMode?: 'select' | 'text'
+  committedEdits?: Map<string, CommittedEdit>
+  onCommit?: (blockKey: string, edit: CommittedEdit) => void
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
     // editMode ref — synced without triggering canvas re-init
     const editModeRef = useRef<'select' | 'text'>(editMode ?? 'text')
+    // committedEdits ref — only read at canvas init time (when component mounts)
+    const committedEditsRef = useRef(committedEdits)
+    // onCommit ref — always points to latest version (called from event handlers)
+    const onCommitRef = useRef(onCommit)
 
     // Selection state refs — read/written in Fabric event handlers (no re-render needed)
     const selectedBlockKeyRef = useRef<string | null>(null)
@@ -114,6 +120,11 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     useEffect(() => {
       editModeRef.current = editMode ?? 'text'
     }, [editMode])
+
+    // Sync onCommit prop to ref so event handlers always call the latest version
+    useEffect(() => {
+      onCommitRef.current = onCommit
+    }, [onCommit])
 
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
@@ -314,6 +325,38 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             },
           }
 
+          // Rehydrate committed edit from before last unmount (tool switch)
+          const committed = committedEditsRef.current?.get(blockKey)
+          if (committed) {
+            itext.set({
+              text: committed.text,
+              fontSize: committed.fontSize,
+              fontFamily: committed.fontFamily,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              fontWeight: committed.fontWeight as any,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              fontStyle: committed.fontStyle as any,
+              fill: committed.fill,
+              opacity: 1,
+            })
+            const rehydratedOccluder = new Rect({
+              left: block.left,
+              top: block.top,
+              width: block.width,
+              height: block.height,
+              fill: '#ffffff',
+              strokeWidth: 0,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(rehydratedOccluder as any).data = { type: 'edit-occluder' }
+            fc!.add(rehydratedOccluder)
+            fc!.sendObjectToBack(rehydratedOccluder)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(itext as any).data.committedOccluder = rehydratedOccluder
+          }
+
           // Auto-grow width on typing — registered once at init, not on every click
           itext.on('changed', function (this: typeof itext) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -441,6 +484,17 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               fc!.remove(hoverRectRef.current as any)
               hoverRectRef.current = null
             }
+            // Persist committed edit so it survives tool switches (CanvasTextLayer unmount)
+            onCommitRef.current?.(blockKey, {
+              text: editedObj.text as string,
+              fontSize: editedObj.fontSize as number,
+              fontFamily: editedObj.fontFamily as string,
+              fontWeight: editedObj.fontWeight as string,
+              fontStyle: editedObj.fontStyle as string,
+              fill: typeof editedObj.fill === 'string' ? editedObj.fill : '#000000',
+              anchorItem: editedObj.data.originalItem as ExtractedTextItem,
+              blockBounds: editedObj.data.blockBounds as CommittedEdit['blockBounds'],
+            })
             selectedBlockKeyRef.current = null
             fc!.discardActiveObject()
             fc!.renderAll()

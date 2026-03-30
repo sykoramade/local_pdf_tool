@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { EditMap, ExtractedTextItem, SigEntry, Annotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
+import type { EditMap, ExtractedTextItem, SigEntry, Annotation, ImageEntry, FabricLayerRef, CommittedEdit } from '@/lib/pdf/types'
 import type { ToolDef, SigMode, AMode } from '@/app/workspace/workspace-types'
 
 interface ActionsInput {
@@ -12,6 +12,7 @@ interface ActionsInput {
   editMap: EditMap
   textItems: ExtractedTextItem[]
   fabricLayerRefs: React.MutableRefObject<Map<number, FabricLayerRef>>
+  committedEdits: Map<number, Map<string, CommittedEdit>>
 }
 
 export function useWorkspaceActions({
@@ -22,6 +23,7 @@ export function useWorkspaceActions({
   editMap,
   textItems,
   fabricLayerRefs,
+  committedEdits,
 }: ActionsInput) {
   /* Zoom */
   const [scale, setScale] = useState(1.5)
@@ -178,6 +180,23 @@ export function useWorkspaceActions({
       }
       const canvasTextboxes = Array.from(fabricLayerRefs.current.values())
         .flatMap(layer => layer.getTextboxes())
+      // Fallback: if CanvasTextLayer is unmounted (tool switched away), use committedEdits
+      if (canvasTextboxes.length === 0 && committedEdits.size > 0) {
+        committedEdits.forEach(pageMap => {
+          pageMap.forEach(edit => {
+            canvasTextboxes.push({
+              text: edit.text,
+              anchorItem: edit.anchorItem,
+              blockBounds: edit.blockBounds,
+              fontSize: edit.fontSize,
+              fontFamily: edit.fontFamily,
+              fontWeight: edit.fontWeight,
+              fontStyle: edit.fontStyle,
+              fill: edit.fill,
+            })
+          })
+        })
+      }
       if (canvasTextboxes.length > 0) {
         const { applyCanvasEditsAndSave } = await import('@/lib/pdf/canvas-save')
         outputBytes = await applyCanvasEditsAndSave(outputBytes, canvasTextboxes, scale)
@@ -253,7 +272,7 @@ export function useWorkspaceActions({
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [pdfBytes, file, editMap, textItems, fabricLayerRefs, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets, scale])
+  }, [pdfBytes, file, editMap, textItems, fabricLayerRefs, committedEdits, sigs, images, annotations, compressEnabled, activeTool.key, redactTargets, scale])
 
   return {
     /* Zoom */

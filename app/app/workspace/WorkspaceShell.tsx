@@ -37,6 +37,7 @@ export default function WorkspaceShell() {
     editMap: editHook.editMap,
     textItems: editHook.textItems,
     fabricLayerRefs: editHook.fabricLayerRefs,
+    committedEdits: editHook.committedEdits,
   })
 
   const handleSelectTool = useCallback((key: ToolKey) => {
@@ -82,6 +83,8 @@ export default function WorkspaceShell() {
     handleFieldChange,
     handleTextItems,
     fabricLayerRefs,
+    committedEdits,
+    handleCommit,
     searchOpen,
     setSearchOpen,
     searchQuery,
@@ -403,6 +406,8 @@ export default function WorkspaceShell() {
             scale={scale}
             searchQuery={searchQuery}
             editMode={editMode}
+            committedEdits={committedEdits}
+            onCommit={handleCommit}
           />
         </div>
       </div>

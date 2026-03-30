@@ -11,6 +11,7 @@ import type {
   Annotation,
   ImageEntry,
   FabricLayerRef,
+  CommittedEdit,
 } from '@/lib/pdf/types'
 
 const PdfViewer = dynamic(() => import('@/app/components/PdfViewer'), { ssr: false })
@@ -60,6 +61,8 @@ export default function CanvasArea({
   scale = 1.5,
   searchQuery = '',
   editMode,
+  committedEdits,
+  onCommit,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -97,6 +100,8 @@ export default function CanvasArea({
   scale?: number
   searchQuery?: string
   editMode?: 'select' | 'text'
+  committedEdits?: Map<number, Map<string, CommittedEdit>>
+  onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -272,6 +277,8 @@ export default function CanvasArea({
         fabricLayerRefs={isEdit ? fabricLayerRefs : undefined}
         searchQuery={isEdit ? searchQuery : undefined}
         editMode={isEdit ? editMode : undefined}
+        committedEdits={isEdit ? committedEdits : undefined}
+        onCommit={isEdit ? onCommit : undefined}
       />
     )
   }

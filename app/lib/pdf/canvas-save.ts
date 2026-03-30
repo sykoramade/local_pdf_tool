@@ -68,12 +68,12 @@ export async function applyCanvasEditsAndSave(
     const standardFont = resolveStandardFont(fontMatch.standardFont, bold, italic)
     const font = await getFont(standardFont)
 
-    const fs = item.pdfFontSize
+    const fs = tb.fontSize != null ? tb.fontSize / viewportScale : item.pdfFontSize
     const { r, g, b } = hexToRgb(tb.fill)
 
-    // Place text at anchor item's original PDF coordinates (authoritative — no conversion)
+    // Place text at block start (coverX already computed above), not anchor item center
     page.drawText(tb.text, {
-      x: item.pdfX,
+      x: coverX,
       y: item.pdfY,
       size: fs,
       font,
