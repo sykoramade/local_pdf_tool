@@ -95,12 +95,13 @@ interface CanvasTextLayerProps {
   editMode?: 'select' | 'text'
   committedEdits?: Map<string, CommittedEdit>
   onCommit?: (blockKey: string, edit: CommittedEdit) => void
+  pdfCanvas?: HTMLCanvasElement | null
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -110,6 +111,10 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const committedEditsRef = useRef(committedEdits)
     // onCommit ref — always points to latest version (called from event handlers)
     const onCommitRef = useRef(onCommit)
+
+    // pdfCanvas ref — kept current for color sampling without re-triggering init
+    const pdfCanvasRef = useRef(pdfCanvas)
+    useEffect(() => { pdfCanvasRef.current = pdfCanvas }, [pdfCanvas])
 
     // Selection state refs — read/written in Fabric event handlers (no re-render needed)
     const selectedBlockKeyRef = useRef<string | null>(null)
@@ -268,6 +273,23 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
 
         const blocks = detectBlocks(items)
 
+        // Sample PDF canvas background color at a given pixel position.
+        // Falls back to white if the canvas is unavailable or tainted.
+        function sampleBgColor(x: number, y: number): string {
+          try {
+            const cvs = pdfCanvasRef.current
+            if (!cvs) return '#ffffff'
+            const ctx = cvs.getContext('2d')
+            if (!ctx) return '#ffffff'
+            const px = Math.max(0, Math.min(Math.round(x), cvs.width - 1))
+            const py = Math.max(0, Math.min(Math.round(y), cvs.height - 1))
+            const d = ctx.getImageData(px, py, 1, 1).data
+            return `rgb(${d[0]},${d[1]},${d[2]})`
+          } catch {
+            return '#ffffff'
+          }
+        }
+
         for (let i = 0; i < blocks.length; i++) {
           const block = blocks[i]
           const text = block.items.map(item => item.str).join(' ')
@@ -344,7 +366,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               top: block.top,
               width: block.width,
               height: block.height,
-              fill: '#ffffff',
+              fill: sampleBgColor(block.left, block.top),
               strokeWidth: 0,
               selectable: false,
               evented: false,
@@ -426,14 +448,14 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             occluderRectRef.current = obj.data.committedOccluder
             obj.data.committedOccluder = null // transfer ownership back to ref
           } else {
-            // Fresh edit: create a new white occluder
+            // Fresh edit: create a new occluder sampled from the PDF canvas background
             const bounds = obj.data.blockBounds as Block
             const occluder = new Rect({
               left: bounds.left,
               top: bounds.top,
               width: bounds.width,
               height: bounds.height,
-              fill: '#ffffff',
+              fill: sampleBgColor(bounds.left, bounds.top),
               strokeWidth: 0,
               selectable: false,
               evented: false,

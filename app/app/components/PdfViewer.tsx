@@ -301,6 +301,7 @@ export default function PdfViewer({
                       editMode={editMode}
                       committedEdits={committedEdits?.get(pageNum)}
                       onCommit={onCommit ? (bk, ed) => onCommit(pageNum, bk, ed) : undefined}
+                      pdfCanvas={canvasRefs.current.get(pageNum) ?? null}
                     />
                   ) : (
                     <PdfTextLayer
