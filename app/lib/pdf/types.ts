@@ -120,3 +120,19 @@ export interface FabricTextboxExport {
 export interface FabricLayerRef {
   getTextboxes: () => FabricTextboxExport[]
 }
+
+/**
+ * A committed canvas text edit — persisted in WorkspaceShell across tool switches.
+ * Mirrors FabricTextboxExport so it can be used as a download fallback
+ * when CanvasTextLayer is unmounted (edit tool not active).
+ */
+export interface CommittedEdit {
+  text: string
+  fontSize: number                        // canvas px (divide by scale → PDF pt)
+  fontFamily: string
+  fontWeight: string                      // 'normal' | 'bold'
+  fontStyle: string                       // 'normal' | 'italic'
+  fill: string                            // hex color string e.g. '#000000'
+  anchorItem: ExtractedTextItem
+  blockBounds: { left: number; top: number; width: number; height: number }
+}

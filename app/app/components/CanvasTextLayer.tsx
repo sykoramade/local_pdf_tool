@@ -3,16 +3,20 @@
 /**
  * CanvasTextLayer — Fabric.js canvas overlay for block-based PDF text editing.
  *
- * Renders one transparent Fabric canvas per PDF page. Detects text blocks via
- * Y-band + X-gap grouping (mirrors PdfTextLayer groupLines algorithm), places
- * invisible hit-target Rects, and converts clicked blocks to editable Textboxes.
+ * Interaction model (S36):
+ *   select mode → canvas is passive, no text interaction
+ *   text mode   → 1st click: white occluder + enterEditing() + selectAll() via rAF
+ *                  2nd click: cursor placed at pointer position
+ *                  Escape → dormant; Click away → dormant
  *
- * Exposes getTextboxes() via FabricLayerRef for canvas-save.ts to collect edits.
+ * Z-order within Fabric canvas (bottom → top):
+ *   [0] white occluder  — covers PDF-rendered text at block bounds
+ *   [1..N] IText objects — text rendered on top of occluder
  */
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { Canvas as FabricCanvas } from 'fabric'
-import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport } from '@/lib/pdf/types'
+import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport, CommittedEdit } from '@/lib/pdf/types'
 
 // ─── Block detection ─────────────────────────────────────────────────────────
 
@@ -39,7 +43,7 @@ function detectBlocks(items: ExtractedTextItem[]): Block[] {
     a.canvasY !== b.canvasY ? a.canvasY - b.canvasY : a.canvasX - b.canvasX
   )
 
-  // Phase 1: Y-band grouping (tolerance = fontSize * 0.6, matches PdfTextLayer)
+  // Phase 1: Y-band grouping (tolerance = fontSize * 0.6)
   const yBands: ExtractedTextItem[][] = []
   for (const item of sorted) {
     const tol = item.canvasFontSize * 0.6
@@ -80,7 +84,7 @@ function detectFontFamily(fontName: string): string {
   return 'Helvetica'
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CanvasTextLayerProps {
   items: ExtractedTextItem[]
@@ -88,12 +92,44 @@ interface CanvasTextLayerProps {
   pageHeight: number
   scale: number
   searchQuery?: string
+  editMode?: 'select' | 'text'
+  committedEdits?: Map<string, CommittedEdit>
+  onCommit?: (blockKey: string, edit: CommittedEdit) => void
+  pdfCanvas?: HTMLCanvasElement | null
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, scale, searchQuery }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
+
+    // editMode ref — synced without triggering canvas re-init
+    const editModeRef = useRef<'select' | 'text'>(editMode ?? 'text')
+    // committedEdits ref — only read at canvas init time (when component mounts)
+    const committedEditsRef = useRef(committedEdits)
+    // onCommit ref — always points to latest version (called from event handlers)
+    const onCommitRef = useRef(onCommit)
+
+    // pdfCanvas ref — kept current for color sampling without re-triggering init
+    const pdfCanvasRef = useRef(pdfCanvas)
+    useEffect(() => { pdfCanvasRef.current = pdfCanvas }, [pdfCanvas])
+
+    // Selection state refs — read/written in Fabric event handlers (no re-render needed)
+    const selectedBlockKeyRef = useRef<string | null>(null)
+    const occluderRectRef = useRef<object | null>(null)    // white rect covers PDF text while editing
+    const hoverRectRef = useRef<object | null>(null)       // kept for clearSelectionState compat
+
+    // Sync editMode prop to ref without triggering canvas re-init
+    useEffect(() => {
+      editModeRef.current = editMode ?? 'text'
+    }, [editMode])
+
+    // Sync onCommit prop to ref so event handlers always call the latest version
+    useEffect(() => {
+      onCommitRef.current = onCommit
+    }, [onCommit])
 
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
@@ -101,7 +137,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         if (!fc) return []
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (fc.getObjects() as any[])
-          .filter(o => o.data?.type === 'edited-text')
+          // Only export blocks where text actually changed from the original PDF text
+          .filter(o => o.data?.type === 'edited-text' && o.text !== o.data?.originalText)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .map((tb: any) => ({
             text: (tb.text ?? '') as string,
@@ -120,7 +157,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     useEffect(() => {
       const fc = fabricRef.current
       if (!fc) return
-      const canvas = fc // captured non-null reference for async use
+      const canvas = fc
 
       async function updateHighlights() {
         const { Rect } = await import('fabric')
@@ -160,10 +197,48 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       const el = canvasElRef.current
       if (!el) return
 
+      let cancelled = false
       let fc: FabricCanvas | null = null
 
-      // Ctrl+L/E/R text alignment when an IText is actively being edited
+      // ── Helper: full reset to dormant state ─────────────────────────────────
+      // Committed blocks (text changed from original) keep their occluder + opacity=1.
+      function clearSelectionState(canvas: FabricCanvas) {
+        if (hoverRectRef.current) {
+          canvas.remove(hoverRectRef.current as Parameters<typeof canvas.remove>[0])
+          hoverRectRef.current = null
+        }
+        if (occluderRectRef.current) {
+          canvas.remove(occluderRectRef.current as Parameters<typeof canvas.remove>[0])
+          occluderRectRef.current = null
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        canvas.forEachObject((obj: any) => {
+          if (obj.type === 'i-text' && obj.data?.type === 'edited-text') {
+            // Skip committed blocks — they have a persistent occluder and must stay visible
+            if (obj.data.committedOccluder) return
+            obj.set({ opacity: 0.001, editable: false, selectable: false })
+          }
+        })
+        selectedBlockKeyRef.current = null
+        canvas.discardActiveObject()
+        canvas.renderAll()
+      }
+
+      // ── Keyboard shortcuts ──────────────────────────────────────────────────
       const handleKeydown = (e: KeyboardEvent) => {
+        // Escape while in selection state (not editing) → go dormant.
+        // Escape while editing → Fabric handles it natively; text:editing:exited restores selection.
+        if (e.key === 'Escape') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const active = fabricRef.current?.getActiveObject() as any
+          if (!active?.isEditing && selectedBlockKeyRef.current !== null) {
+            e.preventDefault()
+            clearSelectionState(fabricRef.current!)
+          }
+          return
+        }
+
+        // Ctrl+L/E/R text alignment — only while IText is in edit mode
         if (!(e.ctrlKey || e.metaKey)) return
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const active = fabricRef.current?.getActiveObject() as any
@@ -185,26 +260,42 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       window.addEventListener('keydown', handleKeydown)
 
       async function init() {
-        const { Canvas, IText } = await import('fabric')
-        if (!canvasElRef.current) return
+        const { Canvas, IText, Rect } = await import('fabric')
+        if (cancelled || !canvasElRef.current) return
 
         fc = new Canvas(el!, {
           width: pageWidth,
           height: pageHeight,
-          selection: true,
-          selectionColor: 'rgba(99,102,241,0.08)',
-          selectionBorderColor: '#818cf8',
-          selectionLineWidth: 1,
+          selection: false, // no rubber-band selection — we manage selection ourselves
           renderOnAddRemove: false,
         }) as FabricCanvas
         fabricRef.current = fc
 
         const blocks = detectBlocks(items)
 
-        for (const block of blocks) {
-          const text = block.items.map(i => i.str).join(' ')
+        // Sample PDF canvas background color at a given pixel position.
+        // Falls back to white if the canvas is unavailable or tainted.
+        function sampleBgColor(x: number, y: number): string {
+          try {
+            const cvs = pdfCanvasRef.current
+            if (!cvs) return '#ffffff'
+            const ctx = cvs.getContext('2d')
+            if (!ctx) return '#ffffff'
+            const px = Math.max(0, Math.min(Math.round(x), cvs.width - 1))
+            const py = Math.max(0, Math.min(Math.round(y), cvs.height - 1))
+            const d = ctx.getImageData(px, py, 1, 1).data
+            return `rgb(${d[0]},${d[1]},${d[2]})`
+          } catch {
+            return '#ffffff'
+          }
+        }
 
-          // Use the item nearest the center X for font/size (more representative than items[0])
+        for (let i = 0; i < blocks.length; i++) {
+          const block = blocks[i]
+          const text = block.items.map(item => item.str).join(' ')
+          const blockKey = `block_${i}`
+
+          // Use the item nearest the block's center X for font/size metadata
           const centerX = block.left + block.width / 2
           const anchor = block.items.reduce((closest, item) => {
             const itemMid = item.canvasX + item.canvasWidth / 2
@@ -215,29 +306,39 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           const fnLower = anchor.fontName.toLowerCase()
           const bold = /bold|black|heavy/.test(fnLower)
           const italic = /italic|oblique|slant/.test(fnLower)
+          const detectedFamily = detectFontFamily(anchor.fontName)
+          const fontDetected = detectedFamily !== 'Helvetica'
 
-          // Create IText with opacity:0.001 for invisible hit zone (not 0 — Fabric v6 skips hit detection for true-zero opacity)
           const itext = new IText(text, {
             left: block.left,
             top: block.top,
             width: Math.max(block.width, 20),
             fontSize: anchor.canvasFontSize,
-            fontFamily: detectFontFamily(anchor.fontName),
+            fontFamily: detectedFamily,
             fontWeight: bold ? 'bold' : 'normal',
             fontStyle: italic ? 'italic' : 'normal',
             fill: '#000000',
-            opacity: 0.001, // invisible hit zone
+            opacity: 0.001,
             editable: false,
             selectable: false,
             hoverCursor: 'text',
-            underline: true, // discoverability signal
-            stroke: 'rgba(99,102,241,0.25)', // underline color
+            // Suppress all Fabric object-manipulation chrome
+            hasControls: false,
+            hasBorders: false,
+            lockRotation: true,
+            lockScalingX: true,
+            lockScalingY: true,
           })
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ;(itext as any).data = {
             type: 'edited-text',
+            blockKey,
+            fontDetected,
+            detectedFamily,
             originalItem: anchor,
+            originalText: text,          // used to detect committed edits on exit
+            committedOccluder: null,      // set when edit exits with changed text; keeps block visible
             blockBounds: {
               left: block.left,
               top: block.top,
@@ -246,39 +347,183 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             },
           }
 
-          fc.add(itext)
-        }
+          // Rehydrate committed edit from before last unmount (tool switch)
+          const committed = committedEditsRef.current?.get(blockKey)
+          if (committed) {
+            itext.set({
+              text: committed.text,
+              fontSize: committed.fontSize,
+              fontFamily: committed.fontFamily,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              fontWeight: committed.fontWeight as any,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              fontStyle: committed.fontStyle as any,
+              fill: committed.fill,
+              opacity: 1,
+            })
+            const rehydratedOccluder = new Rect({
+              left: block.left,
+              top: block.top,
+              width: block.width,
+              height: block.height,
+              fill: sampleBgColor(block.left, block.top),
+              strokeWidth: 0,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(rehydratedOccluder as any).data = { type: 'edit-occluder' }
+            fc!.add(rehydratedOccluder)
+            fc!.sendObjectToBack(rehydratedOccluder)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(itext as any).data.committedOccluder = rehydratedOccluder
+          }
 
-        // Handle IText activation on click
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('mouse:down', (e: any) => {
-          const obj = e.target
-          if (!obj || obj.type !== 'i-text' || obj.data?.type !== 'edited-text') return
-
-          // Activate inline editing
-          obj.set({ opacity: 1, editable: true, selectable: true })
-          fc!.setActiveObject(obj)
-          obj.enterEditing()
-
-          // Auto-grow width as user types
-          obj.on('changed', function (this: typeof obj) {
-            const newWidth = Math.max((this as any).calcTextWidth() + 8, obj.data.blockBounds.width)
-            this.set('width', newWidth)
+          // Auto-grow width on typing — registered once at init, not on every click
+          itext.on('changed', function (this: typeof itext) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const self = this as any
+            const newWidth = Math.max(self.calcTextWidth() + 8, self.data.blockBounds.width)
+            self.set('width', newWidth)
             fc!.renderAll()
           })
 
-          fc!.renderAll()
-        })
+          fc.add(itext)
+        }
 
-        // Handle deactivation on selection:cleared (click outside any object)
+        // ── Single-click → immediate editing ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc.on('selection:cleared', () => {
-          fc!.forEachObject((obj: any) => {
-            if (obj.type === 'i-text' && obj.data?.type === 'edited-text') {
-              obj.set({ opacity: 0.001, editable: false, selectable: false })
+        fc.on('mouse:down', (e: any) => {
+          // Select mode — canvas is passive, no text interaction
+          if (editModeRef.current === 'select') return
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const obj = e.target as any
+
+          if (!obj || obj.type !== 'i-text' || obj.data?.type !== 'edited-text') {
+            // Clicked empty canvas → dormant (committed blocks stay visible)
+            if (selectedBlockKeyRef.current !== null) {
+              clearSelectionState(fc!)
+            }
+            return
+          }
+
+          // Already editing this block — place cursor at click position (not selectAll)
+          if (obj.isEditing) {
+            obj.setCursorByClick(e.e)
+            fc!.renderAll()
+            return
+          }
+
+          const blockKey = obj.data.blockKey as string
+          // Is this a committed block being re-clicked?
+          const isCommitted = !!obj.data.committedOccluder
+
+          // Clear hover rect
+          if (hoverRectRef.current) {
+            fc!.remove(hoverRectRef.current as any)
+            hoverRectRef.current = null
+          }
+
+          // Clear any previous active session's occluder (skip if re-editing committed block's own occluder)
+          if (occluderRectRef.current) {
+            fc!.remove(occluderRectRef.current as any)
+            occluderRectRef.current = null
+          }
+
+          // Reset other non-committed IText objects to dormant
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fc!.forEachObject((o: any) => {
+            if (o.type === 'i-text' && o.data?.type === 'edited-text' && o.data.blockKey !== blockKey) {
+              if (!o.data.committedOccluder) {
+                o.set({ opacity: 0.001, editable: false, selectable: false })
+              }
             }
           })
+
+          selectedBlockKeyRef.current = blockKey
+
+          if (isCommitted) {
+            // Re-editing a committed block: reuse its existing occluder (already on canvas)
+            occluderRectRef.current = obj.data.committedOccluder
+            obj.data.committedOccluder = null // transfer ownership back to ref
+          } else {
+            // Fresh edit: create a new occluder sampled from the PDF canvas background
+            const bounds = obj.data.blockBounds as Block
+            const occluder = new Rect({
+              left: bounds.left,
+              top: bounds.top,
+              width: bounds.width,
+              height: bounds.height,
+              fill: sampleBgColor(bounds.left, bounds.top),
+              strokeWidth: 0,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(occluder as any).data = { type: 'edit-occluder' }
+            fc!.add(occluder)
+            fc!.sendObjectToBack(occluder)
+            occluderRectRef.current = occluder
+          }
+
+          // Make IText visible and enter editing immediately
+          obj.set({ opacity: 1, selectable: true, editable: true })
+          fc!.setActiveObject(obj)
+          obj.enterEditing()
           fc!.renderAll()
+          // Bug 4 fix: defer selectAll to after mouse:up so Fabric doesn't override it with cursor placement
+          requestAnimationFrame(() => {
+            if (obj.isEditing) {
+              obj.selectAll()
+              fc!.renderAll()
+            }
+          })
+        })
+
+        // ── Edit exited: commit if text changed, else go dormant ─────────────
+        fc.on('text:editing:exited', () => {
+          const blockKey = selectedBlockKeyRef.current
+          if (blockKey === null) return
+
+          // Find the IText for the block that just exited editing
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let editedObj: any = null
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fc!.forEachObject((o: any) => {
+            if (o.data?.blockKey === blockKey && o.data?.type === 'edited-text') editedObj = o
+          })
+
+          if (editedObj && editedObj.text !== editedObj.data.originalText) {
+            // Text was changed — commit: keep occluder + IText visible
+            editedObj.set({ opacity: 1, editable: false, selectable: false })
+            // Transfer occluder ownership to IText.data so it persists across dormant state
+            if (occluderRectRef.current) {
+              editedObj.data.committedOccluder = occluderRectRef.current
+              occluderRectRef.current = null
+            }
+            if (hoverRectRef.current) {
+              fc!.remove(hoverRectRef.current as any)
+              hoverRectRef.current = null
+            }
+            // Persist committed edit so it survives tool switches (CanvasTextLayer unmount)
+            onCommitRef.current?.(blockKey, {
+              text: editedObj.text as string,
+              fontSize: editedObj.fontSize as number,
+              fontFamily: editedObj.fontFamily as string,
+              fontWeight: editedObj.fontWeight as string,
+              fontStyle: editedObj.fontStyle as string,
+              fill: typeof editedObj.fill === 'string' ? editedObj.fill : '#000000',
+              anchorItem: editedObj.data.originalItem as ExtractedTextItem,
+              blockBounds: editedObj.data.blockBounds as CommittedEdit['blockBounds'],
+            })
+            selectedBlockKeyRef.current = null
+            fc!.discardActiveObject()
+            fc!.renderAll()
+          } else {
+            // No change (or block not found) — full dormant
+            clearSelectionState(fc!)
+          }
         })
 
         fc.renderAll()
@@ -287,6 +532,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       init()
 
       return () => {
+        cancelled = true
         window.removeEventListener('keydown', handleKeydown)
         try {
           fc?.dispose()
@@ -295,7 +541,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         }
         fabricRef.current = null
       }
-    }, [items, pageWidth, pageHeight, scale])
+    }, [items, pageWidth, pageHeight])
 
     return (
       <div

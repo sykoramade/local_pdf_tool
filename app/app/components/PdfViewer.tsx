@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry, FabricLayerRef } from '@/lib/pdf/types'
+import type { ExtractedTextItem, EditMap, FieldData, SigEntry, Annotation, TextHighlight, StickyNote, CheckAnnotation, ImageEntry, FabricLayerRef, CommittedEdit } from '@/lib/pdf/types'
 import PdfTextLayer from './PdfTextLayer'
 import CanvasTextLayer from './CanvasTextLayer'
 import SigOverlay from './SigOverlay'
@@ -28,10 +28,16 @@ interface PdfViewerProps {
   onAnnotationDelete?: (id: string) => void
   images?: ImageEntry[]
   onImageMove?: (id: string, xPct: number, yPct: number) => void
+  onImageResize?: (id: string, widthPct: number) => void
   onImageDelete?: (id: string) => void
   useCanvasLayer?: boolean
   fabricLayerRefs?: React.MutableRefObject<Map<number, FabricLayerRef>>
   searchQuery?: string
+  onRedact?: (item: ExtractedTextItem) => void
+  editMode?: 'select' | 'text'
+  redactTargets?: string[]
+  committedEdits?: Map<number, Map<string, CommittedEdit>>
+  onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
 }
 
 interface PageData {
@@ -81,10 +87,16 @@ export default function PdfViewer({
   onAnnotationDelete,
   images,
   onImageMove,
+  onImageResize,
   onImageDelete,
   useCanvasLayer = false,
   fabricLayerRefs,
   searchQuery,
+  onRedact,
+  editMode,
+  redactTargets,
+  committedEdits,
+  onCommit,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -286,6 +298,10 @@ export default function PdfViewer({
                       pageHeight={height}
                       scale={scale}
                       searchQuery={searchQuery}
+                      editMode={editMode}
+                      committedEdits={committedEdits?.get(pageNum)}
+                      onCommit={onCommit ? (bk, ed) => onCommit(pageNum, bk, ed) : undefined}
+                      pdfCanvas={canvasRefs.current.get(pageNum) ?? null}
                     />
                   ) : (
                     <PdfTextLayer
@@ -299,6 +315,8 @@ export default function PdfViewer({
                           ? annotateMode
                           : null
                       }
+                      onRedact={onRedact}
+                      redactTargets={redactTargets}
                       onHighlight={item => {
                         if (!onAnnotate) return
                         const hl: TextHighlight = {
@@ -339,6 +357,7 @@ export default function PdfViewer({
                     key={img.id}
                     image={img}
                     onMove={onImageMove}
+                    onResize={onImageResize ?? (() => {})}
                     onDelete={onImageDelete}
                   />
                 ))}

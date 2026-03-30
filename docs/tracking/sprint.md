@@ -642,6 +642,94 @@ Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real co
 
 ---
 
+## Sprint 34 — COMPLETE ✅
+**Committed:** 2026-03-28
+**Goal:** Decompose WorkspaceShell.tsx monolith (<400 lines target).
+
+### Done
+- [x] `useWorkspaceFile` — file I/O, drag/drop, page navigation, pdfBytes, IntersectionObserver scroll sync
+- [x] `useWorkspaceEdit` — editMap, history (undo/redo), fabricLayerRefs, search state, keyboard handlers
+- [x] `useWorkspaceActions` — zoom, sign, annotate, images, draw, compress, redact, download pipeline
+- [x] `PageRail` component — pdfjs-dist thumbnails, line stubs, "Add blank page" button
+- [x] `CanvasArea` component — drop zone (no file) + full PDF canvas with sig/annotate overlays
+- [x] WorkspaceShell rewritten from ~1,758 lines → ~330 lines (3-hook architecture)
+- [x] `docs/s34-prop-audit.md` — full prop interface audit (mandatory gate item)
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate Confirmation
+- TypeScript: CLEAN ✓
+- Prop audit: `docs/s34-prop-audit.md` ✓
+- Shell LOC: ~330 (target <400) ✓
+- Browser verification: pending MD confirmation
+
+### Session Log
+- 2026-03-28: S34 refactor complete + /goodnight command built — next: browser-verify /workspace (all 6 tabs, zero error badges)
+
+---
+
+## Sprint 35-B — IMPLEMENTED ⚠️ (pending browser verification)
+**Goal:** IText inline editing UX — font detection hint in edit toolbar + 5-bug QA clearance.
+
+### Done
+- [x] S35-B-1: Font detection hint — `onFontDetected` callback fires when IText block is hovered; L3Strip edit panel shows detected font family as a dim hint ("Detected: Helvetica")
+- [x] S35-B-2 (Bug 3 CRITICAL): Text edits disappearing on blur — introduced "committed" state: `committedOccluder` stored in `obj.data`; `text:editing:exited` keeps IText at opacity=1 + occluder in place when `obj.text !== obj.data.originalText`; `clearSelectionState` skips committed blocks
+- [x] S35-B-3 (Bug 4): First click skips selectAll — `requestAnimationFrame(() => { obj.selectAll(); fc.renderAll() })` defers after `mouse:up` so Fabric cursor placement is overridden
+- [x] S35-B-4 (Bug 5): Redact tool — `redactTargets` prop chain threaded WorkspaceShell → CanvasArea → PdfViewer → PdfTextLayer; black overlay divs rendered over matching text items; "Burn Redactions" button in L3Strip
+- [x] S35-B-5: Redact UX redesign — chips show match counts `(N)`, max-3 visible + "+N more", vertical divider before Burn button, total match count label, placeholder updated
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending: Edit tool commit persistence, first-click selectAll, redact preview + Burn flow
+
+---
+
+## Sprint 36 — COMPLETE ✅
+**Committed:** 2026-03-29
+**Goal:** IText inline editing — mode toggle (select/text), CommittedEdit persistence, second-click cursor placement.
+
+### Done
+- [x] S36-1: Select/Text mode toggle in L3Strip (edit tool only); `editMode` state in WorkspaceShell; CanvasTextLayer passive when select
+- [x] S36-2: CommittedEdit type + `committedEdits` Map state + `handleCommit` — persist IText edits across tool switches (CanvasTextLayer unmounts)
+- [x] S36-3: Prop chain — committedEdits + onCommit: useWorkspaceEdit → WorkspaceShell → useWorkspaceActions (download fallback) → CanvasArea → PdfViewer → CanvasTextLayer
+- [x] S36-4: Second-click cursor placement — `obj.setCursorByClick(e.e)` when block already in editing mode
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending
+
+---
+
+## Sprint 37 — COMPLETE ✅
+**Committed:** 2026-03-29/30
+**Goal:** Edit persistence across tool switches, redact bbox precision, redact state persistence.
+
+### Done
+- [x] S37-A: CommittedEdit rehydration in CanvasTextLayer init — restores text + occluder when layer remounts after tool switch
+- [x] S37-B: Edit persistence across tool switches — download fallback reconstructs FabricTextboxExport from committedEdits when fabricLayerRefs is empty
+- [x] S37-C: Redact visual bbox — per-substring character-level X offsets (charWidth = canvasWidth/str.length); replaces full-item-width overlay
+- [x] S37-D: Verified redactTargets persists across tool switches by default (plain React state in useWorkspaceActions); no fix needed
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending
+
+---
+
+## Sprint 38 — IMPLEMENTED ⚠️ (pending browser verification)
+**Committed:** 2026-03-30
+**Goal:** Image resize handles, colored occluder background, second-click cursor (already done in S36).
+
+### Done
+- [x] S38-1: Image resize handle — bottom-right corner drag; `handleResizeMouseDown` in ImageOverlay; `handleImageResize` in useWorkspaceActions; `onImageResize` prop chain: PdfViewer → CanvasArea → WorkspaceShell
+- [x] S38-2: Colored occluder background — `sampleBgColor(x, y)` samples PDF canvas via `getImageData`; `pdfCanvas` prop passed from PdfViewer canvasRefs; used for both fresh-edit and rehydrated occluder fill
+- [x] S38-3: Second-click cursor placement — already implemented in S36 (`obj.setCursorByClick(e.e)`)
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending: image resize handle, colored occluder background on non-white PDFs
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF

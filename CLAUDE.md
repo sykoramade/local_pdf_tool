@@ -49,5 +49,22 @@ Competitive edge: fully client-side (privacy), clean UX, no dark patterns.
 - Default answer to new dependencies: "Do we already have something that does this?"
 - When in doubt on a decision: write it to `docs/messages/` for Managing Director review
 
+## Session End Protocol — MANDATORY, NO EXCEPTIONS
+Every response (not just the last one in a session) must end with a **Session Status** block in this exact format:
+
+```
+---
+**Session Status**
+Sprint: [current sprint + status]
+This session: [bullet list of what was completed]
+Pending browser verification: [what needs human eyes before marking COMPLETE]
+Next: [next sprint/task in queue]
+Milestone: [one-line — where we are vs ProductHunt September 2026]
+Confidence: [X/10 + one-line reason if below 8]
+---
+```
+
+This block is non-negotiable. It prevents context loss across sessions, keeps the MD oriented in the wider plan, and stops sessions from ending mid-feature with no handoff. If the block is missing, the session is incomplete.
+
 ## Current Sprint
 See `docs/tracking/sprint.md`
