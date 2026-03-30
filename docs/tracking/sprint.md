@@ -683,6 +683,53 @@ Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real co
 
 ---
 
+## Sprint 36 — COMPLETE ✅
+**Committed:** 2026-03-29
+**Goal:** IText inline editing — mode toggle (select/text), CommittedEdit persistence, second-click cursor placement.
+
+### Done
+- [x] S36-1: Select/Text mode toggle in L3Strip (edit tool only); `editMode` state in WorkspaceShell; CanvasTextLayer passive when select
+- [x] S36-2: CommittedEdit type + `committedEdits` Map state + `handleCommit` — persist IText edits across tool switches (CanvasTextLayer unmounts)
+- [x] S36-3: Prop chain — committedEdits + onCommit: useWorkspaceEdit → WorkspaceShell → useWorkspaceActions (download fallback) → CanvasArea → PdfViewer → CanvasTextLayer
+- [x] S36-4: Second-click cursor placement — `obj.setCursorByClick(e.e)` when block already in editing mode
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending
+
+---
+
+## Sprint 37 — COMPLETE ✅
+**Committed:** 2026-03-29/30
+**Goal:** Edit persistence across tool switches, redact bbox precision, redact state persistence.
+
+### Done
+- [x] S37-A: CommittedEdit rehydration in CanvasTextLayer init — restores text + occluder when layer remounts after tool switch
+- [x] S37-B: Edit persistence across tool switches — download fallback reconstructs FabricTextboxExport from committedEdits when fabricLayerRefs is empty
+- [x] S37-C: Redact visual bbox — per-substring character-level X offsets (charWidth = canvasWidth/str.length); replaces full-item-width overlay
+- [x] S37-D: Verified redactTargets persists across tool switches by default (plain React state in useWorkspaceActions); no fix needed
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending
+
+---
+
+## Sprint 38 — IMPLEMENTED ⚠️ (pending browser verification)
+**Committed:** 2026-03-30
+**Goal:** Image resize handles, colored occluder background, second-click cursor (already done in S36).
+
+### Done
+- [x] S38-1: Image resize handle — bottom-right corner drag; `handleResizeMouseDown` in ImageOverlay; `handleImageResize` in useWorkspaceActions; `onImageResize` prop chain: PdfViewer → CanvasArea → WorkspaceShell
+- [x] S38-2: Colored occluder background — `sampleBgColor(x, y)` samples PDF canvas via `getImageData`; `pdfCanvas` prop passed from PdfViewer canvasRefs; used for both fresh-edit and rehydrated occluder fill
+- [x] S38-3: Second-click cursor placement — already implemented in S36 (`obj.setCursorByClick(e.e)`)
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending: image resize handle, colored occluder background on non-white PDFs
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
