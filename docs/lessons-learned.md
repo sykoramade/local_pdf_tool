@@ -8,6 +8,14 @@ Each entry: what went wrong, what the fix was, and the rule going forward.
 
 ---
 
+## 2026-03-30 — Session End Protocol (MANDATORY)
+
+**What went wrong:** Multiple sessions ended mid-feature with no handoff summary, causing MD to lose context across the sprint plan and forcing re-explanation every session.
+
+**Rule:** Every response ends with a Session Status block. See CLAUDE.md "Session End Protocol" for the exact format. No exceptions. This is as mandatory as TypeScript passing.
+
+---
+
 ## 2026-03-11 — pdf-lib Italic Font Names
 
 **What went wrong:** Italic standard font names for Helvetica and Courier use `Oblique` not `Italic` in pdf-lib. Constructing `Helvetica-Italic` or `Courier-Italic` throws at runtime.

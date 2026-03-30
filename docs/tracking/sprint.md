@@ -642,6 +642,47 @@ Prove PDF.js 3.11.174 and Fabric.js v6 coexist without visual drift on a real co
 
 ---
 
+## Sprint 34 — COMPLETE ✅
+**Committed:** 2026-03-28
+**Goal:** Decompose WorkspaceShell.tsx monolith (<400 lines target).
+
+### Done
+- [x] `useWorkspaceFile` — file I/O, drag/drop, page navigation, pdfBytes, IntersectionObserver scroll sync
+- [x] `useWorkspaceEdit` — editMap, history (undo/redo), fabricLayerRefs, search state, keyboard handlers
+- [x] `useWorkspaceActions` — zoom, sign, annotate, images, draw, compress, redact, download pipeline
+- [x] `PageRail` component — pdfjs-dist thumbnails, line stubs, "Add blank page" button
+- [x] `CanvasArea` component — drop zone (no file) + full PDF canvas with sig/annotate overlays
+- [x] WorkspaceShell rewritten from ~1,758 lines → ~330 lines (3-hook architecture)
+- [x] `docs/s34-prop-audit.md` — full prop interface audit (mandatory gate item)
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate Confirmation
+- TypeScript: CLEAN ✓
+- Prop audit: `docs/s34-prop-audit.md` ✓
+- Shell LOC: ~330 (target <400) ✓
+- Browser verification: pending MD confirmation
+
+### Session Log
+- 2026-03-28: S34 refactor complete + /goodnight command built — next: browser-verify /workspace (all 6 tabs, zero error badges)
+
+---
+
+## Sprint 35-B — IMPLEMENTED ⚠️ (pending browser verification)
+**Goal:** IText inline editing UX — font detection hint in edit toolbar + 5-bug QA clearance.
+
+### Done
+- [x] S35-B-1: Font detection hint — `onFontDetected` callback fires when IText block is hovered; L3Strip edit panel shows detected font family as a dim hint ("Detected: Helvetica")
+- [x] S35-B-2 (Bug 3 CRITICAL): Text edits disappearing on blur — introduced "committed" state: `committedOccluder` stored in `obj.data`; `text:editing:exited` keeps IText at opacity=1 + occluder in place when `obj.text !== obj.data.originalText`; `clearSelectionState` skips committed blocks
+- [x] S35-B-3 (Bug 4): First click skips selectAll — `requestAnimationFrame(() => { obj.selectAll(); fc.renderAll() })` defers after `mouse:up` so Fabric cursor placement is overridden
+- [x] S35-B-4 (Bug 5): Redact tool — `redactTargets` prop chain threaded WorkspaceShell → CanvasArea → PdfViewer → PdfTextLayer; black overlay divs rendered over matching text items; "Burn Redactions" button in L3Strip
+- [x] S35-B-5: Redact UX redesign — chips show match counts `(N)`, max-3 visible + "+N more", vertical divider before Burn button, total match count label, placeholder updated
+- [x] `npx tsc --noEmit` → 0 errors
+
+### Gate
+- Browser verification pending: Edit tool commit persistence, first-click selectAll, redact preview + Burn flow
+
+---
+
 ## Backlog
 - Word ↔ PDF convert
 - PDF → JPG, JPG → PDF
