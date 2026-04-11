@@ -131,6 +131,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const preEditSnapshotRef = useRef<string | null>(null)  // snapshot captured at text:editing:entered
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)  // debounce timer for object:modified events
 
+    // Unsynced changes tracking — prevents re-initialization of Fabric from stale items array
+    const hasUnsyncedChangesRef = useRef(false)
+
     // Sync editMode prop to ref without triggering canvas re-init
     useEffect(() => {
       editModeRef.current = editMode ?? 'text'
@@ -315,6 +318,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       window.addEventListener('keydown', handleKeydown)
 
       async function init() {
+        // Skip re-initialization if there are unsynced changes — Fabric is source of truth during editing
+        if (hasUnsyncedChangesRef.current) return
+
         const { Canvas, IText, Rect } = await import('fabric')
         if (cancelled || !canvasElRef.current) return
 
@@ -570,6 +576,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               fc!.remove(hoverRectRef.current as any)
               hoverRectRef.current = null
             }
+            // Mark as having unsynced changes — prevents re-initialization from stale items array
+            hasUnsyncedChangesRef.current = true
             // Persist committed edit so it survives tool switches (CanvasTextLayer unmount)
             onCommitRef.current?.(blockKey, {
               text: editedObj.text as string,
@@ -622,6 +630,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         if (debounceTimerRef.current) {
           clearTimeout(debounceTimerRef.current)
         }
+        // Reset unsynced changes flag when canvas is disposed (PDF close/reset)
+        hasUnsyncedChangesRef.current = false
         try {
           fc?.dispose()
         } catch {
