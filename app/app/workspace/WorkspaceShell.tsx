@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { TOOLS, SVG_DEFS, type ToolDef, type ToolKey } from '@/app/workspace/workspace-types'
+import type { FieldData } from '@/lib/pdf/types'
 import { formatBytes } from '@/lib/pdf/compress'
 import SignatureModal from '@/app/components/SignatureModal'
 import SelRail from '@/app/components/workspace/SelRail'
@@ -25,6 +26,7 @@ export default function WorkspaceShell() {
 
   const [activeTool, setActiveTool] = useState<ToolDef>(initialTool)
   const [editMode, setEditMode] = useState<'select' | 'text'>('text')
+  const [canvasSelectedField, setCanvasSelectedField] = useState<FieldData | null>(null)
 
   // ── Hooks ──
   const fileHook = useWorkspaceFile()
@@ -44,6 +46,16 @@ export default function WorkspaceShell() {
     const tool = TOOLS.find(t => t.key === key)
     if (tool && !tool.pro) setActiveTool(tool)
   }, [])
+
+  const handleCanvasFieldChange = useCallback((patch: Partial<FieldData>) => {
+    if (!canvasSelectedField) return
+    // Update canvas selected field to trigger toolbar UI update
+    const updated: FieldData = { ...canvasSelectedField, ...patch }
+    setCanvasSelectedField(updated)
+    // Apply the change to the active Fabric IText object on the current page
+    const fabricLayerRef = editHook.fabricLayerRefs.current.get(fileHook.activePage)
+    fabricLayerRef?.applyFieldChange(patch)
+  }, [canvasSelectedField, editHook.fabricLayerRefs, fileHook.activePage])
 
   /* Keep ?tool= URL param in sync — use history API to avoid React remounting */
   useEffect(() => {
@@ -327,11 +339,11 @@ export default function WorkspaceShell() {
               activeTool={activeTool}
               editMode={editMode}
               onEditModeChange={setEditMode}
-              selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
+              selectedField={activeTool.key === 'edit' ? (canvasSelectedField ?? (selectedFieldId ? editMap.get(selectedFieldId) ?? null : null)) : (selectedFieldId ? editMap.get(selectedFieldId) ?? null : null)}
               editCount={editMap.size}
               canUndo={hIdx > 0}
               canRedo={hIdx < histRef.current.length - 1}
-              onFieldChange={handleFieldChange}
+              onFieldChange={canvasSelectedField ? handleCanvasFieldChange : handleFieldChange}
               onUndo={histUndo}
               onRedo={histRedo}
               compressEnabled={compressEnabled}
@@ -382,6 +394,7 @@ export default function WorkspaceShell() {
             onDragLeave={handleDragLeave}
             onFileSelect={handleFileSelect}
             onFieldSelect={setSelectedFieldId}
+            onBlockSelect={setCanvasSelectedField}
             pageRefs={pageRefsMap}
             sigMode={sigMode}
             onSigPlace={handleSigPlace}

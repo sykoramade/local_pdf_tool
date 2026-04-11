@@ -39,6 +39,7 @@ export default function CanvasArea({
   onDragLeave,
   onFileSelect,
   onFieldSelect,
+  onBlockSelect,
   pageRefs,
   sigMode,
   onSigPlace,
@@ -79,6 +80,7 @@ export default function CanvasArea({
   onDragLeave: () => void
   onFileSelect: (file: File) => void
   onFieldSelect?: (id: string) => void
+  onBlockSelect?: (field: FieldData | null) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
   sigMode?: SigMode
   onSigPlace?: (pageNum: number, xPct: number, yPct: number) => void
@@ -249,6 +251,7 @@ export default function CanvasArea({
         onImageDelete={onImageDelete}
         onRedact={onRedact}
         redactTargets={redactTargets}
+        onBlockSelect={onBlockSelect}
       />
     )
   } else {
@@ -263,6 +266,7 @@ export default function CanvasArea({
         onLoad={onPageCount}
         onTextItems={onTextItems}
         onFieldSelect={isEdit ? onFieldSelect : undefined}
+        onBlockSelect={isEdit ? onBlockSelect : undefined}
         pageRefs={pageRefs}
         sigs={sigs}
         onSigMove={onSigMove}

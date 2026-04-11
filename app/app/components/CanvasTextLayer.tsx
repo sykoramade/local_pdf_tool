@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { Canvas as FabricCanvas } from 'fabric'
-import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport, CommittedEdit } from '@/lib/pdf/types'
+import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport, CommittedEdit, FieldData } from '@/lib/pdf/types'
 
 // ─── Block detection ─────────────────────────────────────────────────────────
 
@@ -96,12 +96,13 @@ interface CanvasTextLayerProps {
   committedEdits?: Map<string, CommittedEdit>
   onCommit?: (blockKey: string, edit: CommittedEdit) => void
   pdfCanvas?: HTMLCanvasElement | null
+  onBlockSelect?: (field: FieldData | null) => void
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas, onBlockSelect }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -111,6 +112,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const committedEditsRef = useRef(committedEdits)
     // onCommit ref — always points to latest version (called from event handlers)
     const onCommitRef = useRef(onCommit)
+    // onBlockSelect ref — always points to latest version (called from event handlers)
+    const onBlockSelectRef = useRef(onBlockSelect)
 
     // pdfCanvas ref — kept current for color sampling without re-triggering init
     const pdfCanvasRef = useRef(pdfCanvas)
@@ -131,6 +134,11 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       onCommitRef.current = onCommit
     }, [onCommit])
 
+    // Sync onBlockSelect prop to ref so event handlers always call the latest version
+    useEffect(() => {
+      onBlockSelectRef.current = onBlockSelect
+    }, [onBlockSelect])
+
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
         const fc = fabricRef.current
@@ -150,6 +158,23 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             fontStyle: (tb.fontStyle ?? 'normal') as string,
             fill: (typeof tb.fill === 'string' ? tb.fill : '#000000') as string,
           }))
+      },
+      applyFieldChange(change: Partial<FieldData>): void {
+        const fc = fabricRef.current
+        if (!fc) return
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const activeObj = fc.getActiveObject() as any
+        if (!activeObj || activeObj.type !== 'i-text') return
+
+        // Apply each field change to the active IText object
+        if (change.family) activeObj.set('fontFamily', change.family)
+        if (change.size !== undefined) activeObj.set('fontSize', change.size)
+        if (change.bold !== undefined) activeObj.set('fontWeight', change.bold ? 'bold' : 'normal')
+        if (change.italic !== undefined) activeObj.set('fontStyle', change.italic ? 'italic' : 'normal')
+        if (change.underline !== undefined) activeObj.set('underline', change.underline)
+        if (change.color) activeObj.set('fill', change.color)
+
+        fc.renderAll()
       },
     }), [])
 
@@ -200,6 +225,20 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       let cancelled = false
       let fc: FabricCanvas | null = null
 
+      // ── Helper: extract FieldData from an IText object ─────────────────────────
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function extractFieldDataFromIText(itext: any): FieldData {
+        return {
+          value: itext.text ?? '',
+          family: itext.fontFamily ?? 'Helvetica',
+          size: itext.fontSize ?? 12,
+          color: typeof itext.fill === 'string' ? itext.fill : '#000000',
+          bold: itext.fontWeight === 'bold',
+          italic: itext.fontStyle === 'italic',
+          underline: itext.underline ?? false,
+        }
+      }
+
       // ── Helper: full reset to dormant state ─────────────────────────────────
       // Committed blocks (text changed from original) keep their occluder + opacity=1.
       function clearSelectionState(canvas: FabricCanvas) {
@@ -220,6 +259,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           }
         })
         selectedBlockKeyRef.current = null
+        onBlockSelectRef.current?.(null)
         canvas.discardActiveObject()
         canvas.renderAll()
       }
@@ -472,6 +512,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           fc!.setActiveObject(obj)
           obj.enterEditing()
           fc!.renderAll()
+          // Call onBlockSelect with the selected field's data
+          const fieldData = extractFieldDataFromIText(obj)
+          onBlockSelectRef.current?.(fieldData)
           // Bug 4 fix: defer selectAll to after mouse:up so Fabric doesn't override it with cursor placement
           requestAnimationFrame(() => {
             if (obj.isEditing) {
@@ -518,6 +561,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               blockBounds: editedObj.data.blockBounds as CommittedEdit['blockBounds'],
             })
             selectedBlockKeyRef.current = null
+            onBlockSelectRef.current?.(null)
             fc!.discardActiveObject()
             fc!.renderAll()
           } else {

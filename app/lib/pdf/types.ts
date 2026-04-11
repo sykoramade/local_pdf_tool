@@ -119,6 +119,7 @@ export interface FabricTextboxExport {
 /** Ref handle exposed by CanvasTextLayer for collecting edits at export time. */
 export interface FabricLayerRef {
   getTextboxes: () => FabricTextboxExport[]
+  applyFieldChange: (change: Partial<FieldData>) => void
 }
 
 /**
