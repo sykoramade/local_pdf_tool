@@ -27,6 +27,8 @@ export default function WorkspaceShell() {
   const [activeTool, setActiveTool] = useState<ToolDef>(initialTool)
   const [editMode, setEditMode] = useState<'select' | 'text'>('text')
   const [canvasSelectedField, setCanvasSelectedField] = useState<FieldData | null>(null)
+  const [undoStack, setUndoStack] = useState<string[]>([])
+  const [redoStack, setRedoStack] = useState<string[]>([])
 
   // ── Hooks ──
   const fileHook = useWorkspaceFile()
@@ -56,6 +58,56 @@ export default function WorkspaceShell() {
     const fabricLayerRef = editHook.fabricLayerRefs.current.get(fileHook.activePage)
     fabricLayerRef?.applyFieldChange(patch)
   }, [canvasSelectedField, editHook.fabricLayerRefs, fileHook.activePage])
+
+  const handleUndoSnapshot = useCallback((pageNum: number, snapshot: string) => {
+    // Push snapshot to undo stack and clear redo stack
+    setUndoStack(prev => [...prev, snapshot])
+    setRedoStack([])
+  }, [])
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return
+    const fabricLayerRef = editHook.fabricLayerRefs.current.get(fileHook.activePage)
+    if (!fabricLayerRef) return
+    const fc = fabricLayerRef.getFabricCanvas()
+    if (!fc) return
+
+    // Get the state to redo
+    const currentState = JSON.stringify(fc.toObject())
+
+    // Pop from undo stack
+    const snapshotToRestore = undoStack[undoStack.length - 1]
+    setUndoStack(prev => prev.slice(0, -1))
+    setRedoStack(prev => [...prev, currentState])
+
+    // Load the canvas state
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fc.loadFromJSON(JSON.parse(snapshotToRestore), () => {
+      fc.renderAll()
+    })
+  }, [undoStack, editHook.fabricLayerRefs, fileHook.activePage])
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return
+    const fabricLayerRef = editHook.fabricLayerRefs.current.get(fileHook.activePage)
+    if (!fabricLayerRef) return
+    const fc = fabricLayerRef.getFabricCanvas()
+    if (!fc) return
+
+    // Get the current state to push to undo
+    const currentState = JSON.stringify(fc.toObject())
+
+    // Pop from redo stack
+    const snapshotToRestore = redoStack[redoStack.length - 1]
+    setRedoStack(prev => prev.slice(0, -1))
+    setUndoStack(prev => [...prev, currentState])
+
+    // Load the canvas state
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fc.loadFromJSON(JSON.parse(snapshotToRestore), () => {
+      fc.renderAll()
+    })
+  }, [redoStack, editHook.fabricLayerRefs, fileHook.activePage])
 
   /* Keep ?tool= URL param in sync — use history API to avoid React remounting */
   useEffect(() => {
@@ -341,11 +393,11 @@ export default function WorkspaceShell() {
               onEditModeChange={setEditMode}
               selectedField={activeTool.key === 'edit' ? (canvasSelectedField ?? (selectedFieldId ? editMap.get(selectedFieldId) ?? null : null)) : (selectedFieldId ? editMap.get(selectedFieldId) ?? null : null)}
               editCount={editMap.size}
-              canUndo={hIdx > 0}
-              canRedo={hIdx < histRef.current.length - 1}
+              canUndo={canvasSelectedField ? undoStack.length > 0 : hIdx > 0}
+              canRedo={canvasSelectedField ? redoStack.length > 0 : hIdx < histRef.current.length - 1}
               onFieldChange={canvasSelectedField ? handleCanvasFieldChange : handleFieldChange}
-              onUndo={histUndo}
-              onRedo={histRedo}
+              onUndo={canvasSelectedField ? handleUndo : histUndo}
+              onRedo={canvasSelectedField ? handleRedo : histRedo}
               compressEnabled={compressEnabled}
               compressStats={compressStats}
               compressLoading={compressLoading}
@@ -423,6 +475,7 @@ export default function WorkspaceShell() {
             editMode={editMode}
             committedEdits={committedEdits}
             onCommit={handleCommit}
+            onUndoSnapshot={handleUndoSnapshot}
           />
         </div>
       </div>

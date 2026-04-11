@@ -39,6 +39,7 @@ interface PdfViewerProps {
   redactTargets?: string[]
   committedEdits?: Map<number, Map<string, CommittedEdit>>
   onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
+  onUndoSnapshot?: (pageNum: number, snapshot: string) => void
 }
 
 interface PageData {
@@ -99,6 +100,7 @@ export default function PdfViewer({
   redactTargets,
   committedEdits,
   onCommit,
+  onUndoSnapshot,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -305,6 +307,7 @@ export default function PdfViewer({
                       onCommit={onCommit ? (bk, ed) => onCommit(pageNum, bk, ed) : undefined}
                       pdfCanvas={canvasRefs.current.get(pageNum) ?? null}
                       onBlockSelect={onBlockSelect}
+                      onUndoSnapshot={onUndoSnapshot ? (snapshot) => onUndoSnapshot(pageNum, snapshot) : undefined}
                     />
                   ) : (
                     <PdfTextLayer

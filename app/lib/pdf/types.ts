@@ -120,6 +120,7 @@ export interface FabricTextboxExport {
 export interface FabricLayerRef {
   getTextboxes: () => FabricTextboxExport[]
   applyFieldChange: (change: Partial<FieldData>) => void
+  getFabricCanvas: () => import('fabric').Canvas | null
 }
 
 /**

@@ -97,12 +97,13 @@ interface CanvasTextLayerProps {
   onCommit?: (blockKey: string, edit: CommittedEdit) => void
   pdfCanvas?: HTMLCanvasElement | null
   onBlockSelect?: (field: FieldData | null) => void
+  onUndoSnapshot?: (snapshot: string) => void
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas, onBlockSelect }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas, onBlockSelect, onUndoSnapshot }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -114,6 +115,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const onCommitRef = useRef(onCommit)
     // onBlockSelect ref — always points to latest version (called from event handlers)
     const onBlockSelectRef = useRef(onBlockSelect)
+    // onUndoSnapshot ref — always points to latest version (called from event handlers)
+    const onUndoSnapshotRef = useRef(onUndoSnapshot)
 
     // pdfCanvas ref — kept current for color sampling without re-triggering init
     const pdfCanvasRef = useRef(pdfCanvas)
@@ -123,6 +126,10 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const selectedBlockKeyRef = useRef<string | null>(null)
     const occluderRectRef = useRef<object | null>(null)    // white rect covers PDF text while editing
     const hoverRectRef = useRef<object | null>(null)       // kept for clearSelectionState compat
+
+    // Undo/redo snapshot tracking
+    const preEditSnapshotRef = useRef<string | null>(null)  // snapshot captured at text:editing:entered
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)  // debounce timer for object:modified events
 
     // Sync editMode prop to ref without triggering canvas re-init
     useEffect(() => {
@@ -138,6 +145,11 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     useEffect(() => {
       onBlockSelectRef.current = onBlockSelect
     }, [onBlockSelect])
+
+    // Sync onUndoSnapshot prop to ref so event handlers always call the latest version
+    useEffect(() => {
+      onUndoSnapshotRef.current = onUndoSnapshot
+    }, [onUndoSnapshot])
 
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
@@ -175,6 +187,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         if (change.color) activeObj.set('fill', change.color)
 
         fc.renderAll()
+      },
+      getFabricCanvas(): import('fabric').Canvas | null {
+        return fabricRef.current
       },
     }), [])
 
@@ -524,6 +539,12 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           })
         })
 
+        // ── Edit entered: capture pre-edit snapshot ─────────────────────────
+        fc.on('text:editing:entered', () => {
+          // Capture canvas state before user starts typing
+          preEditSnapshotRef.current = JSON.stringify(fc!.toObject())
+        })
+
         // ── Edit exited: commit if text changed, else go dormant ─────────────
         fc.on('text:editing:exited', () => {
           const blockKey = selectedBlockKeyRef.current
@@ -560,14 +581,33 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               anchorItem: editedObj.data.originalItem as ExtractedTextItem,
               blockBounds: editedObj.data.blockBounds as CommittedEdit['blockBounds'],
             })
+            // Push pre-edit snapshot to undo stack
+            if (preEditSnapshotRef.current) {
+              onUndoSnapshotRef.current?.(preEditSnapshotRef.current)
+              preEditSnapshotRef.current = null
+            }
             selectedBlockKeyRef.current = null
             onBlockSelectRef.current?.(null)
             fc!.discardActiveObject()
             fc!.renderAll()
           } else {
             // No change (or block not found) — full dormant
+            preEditSnapshotRef.current = null
             clearSelectionState(fc!)
           }
+        })
+
+        // ── Object modified (moves/resizes): debounced snapshot ─────────────
+        fc.on('object:modified', () => {
+          // Debounce to avoid snapshot flooding on every pixel change
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+          }
+          debounceTimerRef.current = setTimeout(() => {
+            const snapshot = JSON.stringify(fc!.toObject())
+            onUndoSnapshotRef.current?.(snapshot)
+            debounceTimerRef.current = null
+          }, 300)
         })
 
         fc.renderAll()
@@ -578,6 +618,10 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       return () => {
         cancelled = true
         window.removeEventListener('keydown', handleKeydown)
+        // Clean up debounce timer
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current)
+        }
         try {
           fc?.dispose()
         } catch {
