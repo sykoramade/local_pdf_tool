@@ -87,7 +87,7 @@ export default function AnnotateTool() {
               const tx: number[] = pdfjs.Util.transform(viewport.transform, raw.transform)
               const fontSizePx = Math.max(Math.abs(tx[3]), 4)
               const x = tx[4]
-              const y = viewport.height - tx[5] - fontSizePx  // top edge of text in canvas coords
+              const y = tx[5] - fontSizePx  // top edge of text
               const w = Math.max(raw.width * SCALE, 4)
               const h = fontSizePx
 

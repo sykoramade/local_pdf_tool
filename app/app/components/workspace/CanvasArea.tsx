@@ -39,7 +39,6 @@ export default function CanvasArea({
   onDragLeave,
   onFileSelect,
   onFieldSelect,
-  onBlockSelect,
   pageRefs,
   sigMode,
   onSigPlace,
@@ -65,7 +64,6 @@ export default function CanvasArea({
   editMode,
   committedEdits,
   onCommit,
-  onUndoSnapshot,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -81,7 +79,6 @@ export default function CanvasArea({
   onDragLeave: () => void
   onFileSelect: (file: File) => void
   onFieldSelect?: (id: string) => void
-  onBlockSelect?: (field: FieldData | null) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
   sigMode?: SigMode
   onSigPlace?: (pageNum: number, xPct: number, yPct: number) => void
@@ -107,7 +104,6 @@ export default function CanvasArea({
   editMode?: 'select' | 'text'
   committedEdits?: Map<number, Map<string, CommittedEdit>>
   onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
-  onUndoSnapshot?: (pageNum: number, snapshot: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -253,7 +249,6 @@ export default function CanvasArea({
         onImageDelete={onImageDelete}
         onRedact={onRedact}
         redactTargets={redactTargets}
-        onBlockSelect={onBlockSelect}
       />
     )
   } else {
@@ -268,7 +263,6 @@ export default function CanvasArea({
         onLoad={onPageCount}
         onTextItems={onTextItems}
         onFieldSelect={isEdit ? onFieldSelect : undefined}
-        onBlockSelect={isEdit ? onBlockSelect : undefined}
         pageRefs={pageRefs}
         sigs={sigs}
         onSigMove={onSigMove}
@@ -289,7 +283,6 @@ export default function CanvasArea({
         editMode={isEdit ? editMode : undefined}
         committedEdits={isEdit ? committedEdits : undefined}
         onCommit={isEdit ? onCommit : undefined}
-        onUndoSnapshot={isEdit ? onUndoSnapshot : undefined}
       />
     )
   }
