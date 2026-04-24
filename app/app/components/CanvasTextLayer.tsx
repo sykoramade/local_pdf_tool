@@ -162,6 +162,90 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       onCommitRef.current = onCommit
     }, [onCommit])
 
+    // ── Canvas-level undo/redo (component-scope so useImperativeHandle can expose them) ──
+
+    function applyUndo() {
+      const canvas = fabricRef.current
+      if (!canvas || undoStackRef.current.length === 0) return
+      const item = undoStackRef.current.pop()!
+      redoStackRef.current.push(item)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let obj: any = null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      canvas.forEachObject((o: any) => {
+        if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
+      })
+      if (!obj) return
+
+      if (item.kind === 'text') {
+        obj.set({ text: item.before })
+        if (item.before === obj.data.originalText) {
+          if (obj.data.committedOccluder) {
+            canvas.remove(obj.data.committedOccluder)
+            obj.data.committedOccluder = null
+          }
+          obj.set({ opacity: 0.001, editable: false, selectable: false })
+          committedEditsRef.current?.delete(item.blockKey)
+        } else {
+          obj.set({ opacity: 1 })
+        }
+      } else if (item.kind === 'move') {
+        obj.set({ left: item.bLeft, top: item.bTop })
+      }
+      canvas.renderAll()
+    }
+
+    function applyRedo() {
+      const canvas = fabricRef.current
+      if (!canvas || redoStackRef.current.length === 0) return
+      const item = redoStackRef.current.pop()!
+      undoStackRef.current.push(item)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let obj: any = null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      canvas.forEachObject((o: any) => {
+        if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
+      })
+      if (!obj) return
+
+      if (item.kind === 'text') {
+        obj.set({ text: item.after })
+        if (item.after === obj.data.originalText) {
+          if (obj.data.committedOccluder) {
+            canvas.remove(obj.data.committedOccluder)
+            obj.data.committedOccluder = null
+          }
+          obj.set({ opacity: 0.001, editable: false, selectable: false })
+        } else {
+          const RectClass = rectClassRef.current
+          if (!obj.data.committedOccluder && RectClass) {
+            const bounds = obj.data.blockBounds as { left: number; top: number; width: number; height: number }
+            const occ = new RectClass({
+              left: bounds.left,
+              top: bounds.top,
+              width: bounds.width,
+              height: bounds.height,
+              fill: sampleBgColor(pdfCanvasRef.current, bounds.left, bounds.top),
+              strokeWidth: 0,
+              selectable: false,
+              evented: false,
+            })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(occ as any).data = { type: 'edit-occluder' }
+            canvas.add(occ)
+            canvas.sendObjectToBack(occ)
+            obj.data.committedOccluder = occ
+          }
+          obj.set({ opacity: 1 })
+        }
+      } else if (item.kind === 'move') {
+        obj.set({ left: item.aLeft, top: item.aTop })
+      }
+      canvas.renderAll()
+    }
+
     useImperativeHandle(ref, () => ({
       getTextboxes(): FabricTextboxExport[] {
         const fc = fabricRef.current
@@ -182,6 +266,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             fill: (typeof tb.fill === 'string' ? tb.fill : '#000000') as string,
           }))
       },
+      undo: applyUndo,
+      redo: applyRedo,
     }), [])
 
     // Search highlight effect — runs when searchQuery changes
@@ -325,97 +411,6 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         }
       }
       window.addEventListener('keydown', handleKeydown)
-
-      // Apply an undo item: restore canvas state
-      const applyUndo = () => {
-        if (undoStackRef.current.length === 0) return
-        const item = undoStackRef.current.pop()!
-        redoStackRef.current.push(item)
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let obj: any = null
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc?.forEachObject((o: any) => {
-          if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
-        })
-        if (!obj) return
-
-        if (item.kind === 'text') {
-          // Restore text
-          obj.set({ text: item.before })
-          if (item.before === obj.data.originalText) {
-            // Text reverted to original — remove occluder, set dormant
-            if (obj.data.committedOccluder) {
-              fc!.remove(obj.data.committedOccluder)
-              obj.data.committedOccluder = null
-            }
-            obj.set({ opacity: 0.001, editable: false, selectable: false })
-          } else {
-            // Text still modified — keep visible (edge case)
-            obj.set({ opacity: 1 })
-          }
-        } else if (item.kind === 'move') {
-          // Restore IText to pre-move position.
-          // The occluder stays at the original block position (covers original PDF text — never moves).
-          obj.set({ left: item.bLeft, top: item.bTop })
-        }
-        fc?.renderAll()
-      }
-
-      // Apply a redo item: restore canvas state from redo stack
-      const applyRedo = () => {
-        if (redoStackRef.current.length === 0) return
-        const item = redoStackRef.current.pop()!
-        undoStackRef.current.push(item)
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let obj: any = null
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fc?.forEachObject((o: any) => {
-          if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
-        })
-        if (!obj) return
-
-        if (item.kind === 'text') {
-          // Restore text to "after" state
-          obj.set({ text: item.after })
-          if (item.after === obj.data.originalText) {
-            // Text reverted to original — remove occluder, set dormant
-            if (obj.data.committedOccluder) {
-              fc!.remove(obj.data.committedOccluder)
-              obj.data.committedOccluder = null
-            }
-            obj.set({ opacity: 0.001, editable: false, selectable: false })
-          } else {
-            // Text modified — keep visible; create occluder if missing
-            const RectClass = rectClassRef.current
-            if (!obj.data.committedOccluder && RectClass) {
-              const bounds = obj.data.blockBounds as { left: number; top: number; width: number; height: number }
-              const occ = new RectClass({
-                left: bounds.left,
-                top: bounds.top,
-                width: bounds.width,
-                height: bounds.height,
-                fill: sampleBgColor(pdfCanvasRef.current, bounds.left, bounds.top),
-                strokeWidth: 0,
-                selectable: false,
-                evented: false,
-              })
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ;(occ as any).data = { type: 'edit-occluder' }
-              fc!.add(occ)
-              fc!.sendObjectToBack(occ)
-              obj.data.committedOccluder = occ
-            }
-            obj.set({ opacity: 1 })
-          }
-        } else if (item.kind === 'move') {
-          // Restore IText to "after" position.
-          // The occluder stays at the original block position (covers original PDF text — never moves).
-          obj.set({ left: item.aLeft, top: item.aTop })
-        }
-        fc?.renderAll()
-      }
 
       async function init() {
         const { Canvas, IText, Rect } = await import('fabric')

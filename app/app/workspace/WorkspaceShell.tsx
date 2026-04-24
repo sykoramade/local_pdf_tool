@@ -351,11 +351,11 @@ export default function WorkspaceShell() {
               onEditModeChange={setEditMode}
               selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
               editCount={editMap.size}
-              canUndo={hIdx > 0}
-              canRedo={hIdx < histRef.current.length - 1}
+              canUndo={!!file}
+              canRedo={!!file}
               onFieldChange={handleFieldChange}
-              onUndo={histUndo}
-              onRedo={histRedo}
+              onUndo={() => fabricLayerRefs.current.get(activePage)?.undo()}
+              onRedo={() => fabricLayerRefs.current.get(activePage)?.redo()}
               compressEnabled={compressEnabled}
               compressStats={compressStats}
               compressLoading={compressLoading}
