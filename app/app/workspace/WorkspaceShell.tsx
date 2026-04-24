@@ -25,6 +25,8 @@ export default function WorkspaceShell() {
 
   const [activeTool, setActiveTool] = useState<ToolDef>(initialTool)
   const [editMode, setEditMode] = useState<'select' | 'text'>('text')
+  const [undoCount, setUndoCount] = useState(0)
+  const [redoCount, setRedoCount] = useState(0)
 
   // ── Hooks ──
   const fileHook = useWorkspaceFile()
@@ -52,6 +54,9 @@ export default function WorkspaceShell() {
     window.history.replaceState(null, '', `/workspace?${params.toString()}`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool.key])
+
+  /* Reset undo/redo counts when file is cleared or page changes */
+  useEffect(() => { setUndoCount(0); setRedoCount(0) }, [fileHook.file, fileHook.activePage])
 
   const {
     file,
@@ -351,8 +356,8 @@ export default function WorkspaceShell() {
               onEditModeChange={setEditMode}
               selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
               editCount={editMap.size}
-              canUndo={!!file}
-              canRedo={!!file}
+              canUndo={undoCount > 0}
+              canRedo={redoCount > 0}
               onFieldChange={handleFieldChange}
               onUndo={() => fabricLayerRefs.current.get(activePage)?.undo()}
               onRedo={() => fabricLayerRefs.current.get(activePage)?.redo()}
@@ -432,6 +437,7 @@ export default function WorkspaceShell() {
             editMode={editMode}
             committedEdits={committedEdits}
             onCommit={handleCommit}
+            onStackChange={useCallback((u: number, r: number) => { setUndoCount(u); setRedoCount(r) }, [])}
           />
         </div>
       </div>

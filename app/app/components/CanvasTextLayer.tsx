@@ -116,13 +116,14 @@ interface CanvasTextLayerProps {
   editMode?: 'select' | 'text'
   committedEdits?: Map<string, CommittedEdit>
   onCommit?: (blockKey: string, edit: CommittedEdit) => void
+  onStackChange?: (undoLen: number, redoLen: number) => void
   pdfCanvas?: HTMLCanvasElement | null
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
-  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, pdfCanvas }, ref) {
+  function CanvasTextLayer({ items, pageWidth, pageHeight, searchQuery, editMode, committedEdits, onCommit, onStackChange, pdfCanvas }, ref) {
     const canvasElRef = useRef<HTMLCanvasElement>(null)
     const fabricRef = useRef<FabricCanvas | null>(null)
 
@@ -134,6 +135,9 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     useEffect(() => { committedEditsRef.current = committedEdits }, [committedEdits])
     // onCommit ref — always points to latest version (called from event handlers)
     const onCommitRef = useRef(onCommit)
+    // onStackChange ref — always points to latest version
+    const onStackChangeRef = useRef(onStackChange)
+    useEffect(() => { onStackChangeRef.current = onStackChange }, [onStackChange])
 
     // pdfCanvas ref — kept current for color sampling without re-triggering init
     const pdfCanvasRef = useRef(pdfCanvas)
@@ -166,6 +170,10 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
 
     // ── Canvas-level undo/redo (component-scope so useImperativeHandle can expose them) ──
 
+    function notifyStackChange() {
+      onStackChangeRef.current?.(undoStackRef.current.length, redoStackRef.current.length)
+    }
+
     function applyUndo() {
       const canvas = fabricRef.current
       if (!canvas || undoStackRef.current.length === 0) return
@@ -196,6 +204,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         obj.set({ left: item.bLeft, top: item.bTop })
       }
       canvas.renderAll()
+      notifyStackChange()
     }
 
     function applyRedo() {
@@ -246,6 +255,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         obj.set({ left: item.aLeft, top: item.aTop })
       }
       canvas.renderAll()
+      notifyStackChange()
     }
 
     useImperativeHandle(ref, () => ({
@@ -365,8 +375,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             // Fabric handles per-char undo internally
             return
           }
-          // Check if active element is an input/textarea
-          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+          const el = document.activeElement as HTMLElement | null
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el?.isContentEditable) {
             return
           }
           e.preventDefault()
@@ -375,16 +385,19 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           return
         }
 
-        // Redo: Ctrl+Shift+Z
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && e.shiftKey) {
+        // Redo: Ctrl+Shift+Z or Ctrl+Y
+        if (
+          ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && e.shiftKey) ||
+          ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && !e.shiftKey)
+        ) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const active = fabricRef.current?.getActiveObject() as any
           if (active?.type === 'i-text' && active.isEditing) {
             // Fabric handles per-char undo internally
             return
           }
-          // Check if active element is an input/textarea
-          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+          const el = document.activeElement as HTMLElement | null
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el?.isContentEditable) {
             return
           }
           e.preventDefault()
@@ -670,6 +683,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             undoStackRef.current.push(item)
             if (undoStackRef.current.length > 50) undoStackRef.current.shift()
             redoStackRef.current = [] // Clear redo stack on new action
+            notifyStackChange()
           }
           prePositionRef.current = null
         })
@@ -710,6 +724,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               undoStackRef.current.push(item)
               if (undoStackRef.current.length > 50) undoStackRef.current.shift()
               redoStackRef.current = [] // Clear redo stack on new action
+              notifyStackChange()
               preEditTextRef.current = null
             }
             // Persist committed edit so it survives tool switches (CanvasTextLayer unmount)

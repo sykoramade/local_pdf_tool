@@ -64,6 +64,7 @@ export default function CanvasArea({
   editMode,
   committedEdits,
   onCommit,
+  onStackChange,
 }: {
   hasFile: boolean
   pdfBytes: Uint8Array | null
@@ -104,6 +105,7 @@ export default function CanvasArea({
   editMode?: 'select' | 'text'
   committedEdits?: Map<number, Map<string, CommittedEdit>>
   onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
+  onStackChange?: (undoLen: number, redoLen: number) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -283,6 +285,7 @@ export default function CanvasArea({
         editMode={isEdit ? editMode : undefined}
         committedEdits={isEdit ? committedEdits : undefined}
         onCommit={isEdit ? onCommit : undefined}
+        onStackChange={isEdit ? onStackChange : undefined}
       />
     )
   }
