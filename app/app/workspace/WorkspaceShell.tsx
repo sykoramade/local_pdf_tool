@@ -133,6 +133,7 @@ export default function WorkspaceShell() {
     redactInput,
     setRedactInput,
     downloadError,
+    redactError,
     handleDownload,
   } = actionsHook
 
@@ -310,6 +311,27 @@ export default function WorkspaceShell() {
             </span>
           )}
         </header>
+
+        {redactError && (
+          <div
+            role="alert"
+            style={{
+              background: '#7f1d1d',
+              borderBottom: '2px solid #ef4444',
+              color: '#fef2f2',
+              padding: '12px 20px',
+              fontSize: 13,
+              lineHeight: 1.5,
+              flexShrink: 0,
+              zIndex: 60,
+            }}
+          >
+            <strong style={{ display: 'block', marginBottom: 4 }}>
+              ⛔ Redaction failed — do not share this PDF
+            </strong>
+            {redactError}
+          </div>
+        )}
 
         {/* ── L2: tool selector rail + L3 contextual strip ── */}
         <div

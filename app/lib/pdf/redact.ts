@@ -179,6 +179,7 @@ export async function redactPdf(
 
   let totalStreams = 0
   let totalReplacements = 0
+  let skippedStreams = 0
 
   for (let pi = 0; pi < pages.length; pi++) {
     const page = pages[pi]
@@ -200,13 +201,13 @@ export async function redactPdf(
         try {
           decompressed = await inflateZlib(rawBytes)
         } catch {
-          // Unsupported or corrupt — skip this stream
+          skippedStreams++
           continue
         }
       } else if (!filterName) {
         decompressed = rawBytes
       } else {
-        // Unsupported filter (JBIG2, CCITTFax, etc.) — skip
+        skippedStreams++
         continue
       }
 
@@ -227,6 +228,12 @@ export async function redactPdf(
         )
       }
     }
+  }
+
+  if (skippedStreams > 0) {
+    throw new Error(
+      `Redaction incomplete: ${skippedStreams} stream(s) could not be processed (unsupported filter or decompression failure). The output PDF may still contain the content you attempted to redact. See docs/F008-redaction-silent-failure.md.`
+    )
   }
 
   const saved = await pdfDoc.save({ useObjectStreams: false })
