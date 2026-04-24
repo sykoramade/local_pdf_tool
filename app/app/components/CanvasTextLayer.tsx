@@ -18,6 +18,11 @@ import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { Canvas as FabricCanvas } from 'fabric'
 import type { ExtractedTextItem, FabricLayerRef, FabricTextboxExport, CommittedEdit } from '@/lib/pdf/types'
 
+// ─── Undo/Redo types ──────────────────────────────────────────────────────
+type UndoItem =
+  | { kind: 'text'; blockKey: string; before: string; after: string }
+  | { kind: 'move'; blockKey: string; bLeft: number; bTop: number; aLeft: number; aTop: number }
+
 // ─── Block detection ─────────────────────────────────────────────────────────
 
 interface Block {
@@ -84,6 +89,22 @@ function detectFontFamily(fontName: string): string {
   return 'Helvetica'
 }
 
+// Sample PDF canvas background color at a given pixel position.
+// Falls back to white if the canvas is unavailable or tainted.
+function sampleBgColor(cvs: HTMLCanvasElement | null | undefined, x: number, y: number): string {
+  try {
+    if (!cvs) return '#ffffff'
+    const ctx = cvs.getContext('2d')
+    if (!ctx) return '#ffffff'
+    const px = Math.max(0, Math.min(Math.round(x), cvs.width - 1))
+    const py = Math.max(0, Math.min(Math.round(y), cvs.height - 1))
+    const d = ctx.getImageData(px, py, 1, 1).data
+    return `rgb(${d[0]},${d[1]},${d[2]})`
+  } catch {
+    return '#ffffff'
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CanvasTextLayerProps {
@@ -120,6 +141,16 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     const selectedBlockKeyRef = useRef<string | null>(null)
     const occluderRectRef = useRef<object | null>(null)    // white rect covers PDF text while editing
     const hoverRectRef = useRef<object | null>(null)       // kept for clearSelectionState compat
+
+    // Undo/Redo stacks — capped at 50 entries
+    const undoStackRef = useRef<UndoItem[]>([])
+    const redoStackRef = useRef<UndoItem[]>([])
+    // Pre-edit state for text: saved on text:editing:entered
+    const preEditTextRef = useRef<{ blockKey: string; text: string } | null>(null)
+    // Pre-move state: saved on mouse:down before dragging
+    const prePositionRef = useRef<{ blockKey: string; left: number; top: number } | null>(null)
+    // Rect class cached from import for redo occluder creation
+    const rectClassRef = useRef<typeof import('fabric').Rect | null>(null)
 
     // Sync editMode prop to ref without triggering canvas re-init
     useEffect(() => {
@@ -224,7 +255,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         canvas.renderAll()
       }
 
-      // ── Keyboard shortcuts ──────────────────────────────────────────────────
+      // ── Keyboard shortcuts + Undo/Redo ──────────────────────────────────────
       const handleKeydown = (e: KeyboardEvent) => {
         // Escape while in selection state (not editing) → go dormant.
         // Escape while editing → Fabric handles it natively; text:editing:exited restores selection.
@@ -235,6 +266,42 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             e.preventDefault()
             clearSelectionState(fabricRef.current!)
           }
+          return
+        }
+
+        // Undo: Ctrl+Z (not while IText is in edit mode — let Fabric handle per-char undo)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const active = fabricRef.current?.getActiveObject() as any
+          if (active?.type === 'i-text' && active.isEditing) {
+            // Fabric handles per-char undo internally
+            return
+          }
+          // Check if active element is an input/textarea
+          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          applyUndo()
+          return
+        }
+
+        // Redo: Ctrl+Shift+Z
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && e.shiftKey) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const active = fabricRef.current?.getActiveObject() as any
+          if (active?.type === 'i-text' && active.isEditing) {
+            // Fabric handles per-char undo internally
+            return
+          }
+          // Check if active element is an input/textarea
+          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          applyRedo()
           return
         }
 
@@ -259,9 +326,102 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
       }
       window.addEventListener('keydown', handleKeydown)
 
+      // Apply an undo item: restore canvas state
+      const applyUndo = () => {
+        if (undoStackRef.current.length === 0) return
+        const item = undoStackRef.current.pop()!
+        redoStackRef.current.push(item)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let obj: any = null
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fc?.forEachObject((o: any) => {
+          if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
+        })
+        if (!obj) return
+
+        if (item.kind === 'text') {
+          // Restore text
+          obj.set({ text: item.before })
+          if (item.before === obj.data.originalText) {
+            // Text reverted to original — remove occluder, set dormant
+            if (obj.data.committedOccluder) {
+              fc!.remove(obj.data.committedOccluder)
+              obj.data.committedOccluder = null
+            }
+            obj.set({ opacity: 0.001, editable: false, selectable: false })
+          } else {
+            // Text still modified — keep visible (edge case)
+            obj.set({ opacity: 1 })
+          }
+        } else if (item.kind === 'move') {
+          // Restore IText to pre-move position.
+          // The occluder stays at the original block position (covers original PDF text — never moves).
+          obj.set({ left: item.bLeft, top: item.bTop })
+        }
+        fc?.renderAll()
+      }
+
+      // Apply a redo item: restore canvas state from redo stack
+      const applyRedo = () => {
+        if (redoStackRef.current.length === 0) return
+        const item = redoStackRef.current.pop()!
+        undoStackRef.current.push(item)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let obj: any = null
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fc?.forEachObject((o: any) => {
+          if (o.data?.blockKey === item.blockKey && o.data?.type === 'edited-text') obj = o
+        })
+        if (!obj) return
+
+        if (item.kind === 'text') {
+          // Restore text to "after" state
+          obj.set({ text: item.after })
+          if (item.after === obj.data.originalText) {
+            // Text reverted to original — remove occluder, set dormant
+            if (obj.data.committedOccluder) {
+              fc!.remove(obj.data.committedOccluder)
+              obj.data.committedOccluder = null
+            }
+            obj.set({ opacity: 0.001, editable: false, selectable: false })
+          } else {
+            // Text modified — keep visible; create occluder if missing
+            const RectClass = rectClassRef.current
+            if (!obj.data.committedOccluder && RectClass) {
+              const bounds = obj.data.blockBounds as { left: number; top: number; width: number; height: number }
+              const occ = new RectClass({
+                left: bounds.left,
+                top: bounds.top,
+                width: bounds.width,
+                height: bounds.height,
+                fill: sampleBgColor(pdfCanvasRef.current, bounds.left, bounds.top),
+                strokeWidth: 0,
+                selectable: false,
+                evented: false,
+              })
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(occ as any).data = { type: 'edit-occluder' }
+              fc!.add(occ)
+              fc!.sendObjectToBack(occ)
+              obj.data.committedOccluder = occ
+            }
+            obj.set({ opacity: 1 })
+          }
+        } else if (item.kind === 'move') {
+          // Restore IText to "after" position.
+          // The occluder stays at the original block position (covers original PDF text — never moves).
+          obj.set({ left: item.aLeft, top: item.aTop })
+        }
+        fc?.renderAll()
+      }
+
       async function init() {
         const { Canvas, IText, Rect } = await import('fabric')
         if (cancelled || !canvasElRef.current) return
+
+        rectClassRef.current = Rect
 
         fc = new Canvas(el!, {
           width: pageWidth,
@@ -272,23 +432,6 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         fabricRef.current = fc
 
         const blocks = detectBlocks(items)
-
-        // Sample PDF canvas background color at a given pixel position.
-        // Falls back to white if the canvas is unavailable or tainted.
-        function sampleBgColor(x: number, y: number): string {
-          try {
-            const cvs = pdfCanvasRef.current
-            if (!cvs) return '#ffffff'
-            const ctx = cvs.getContext('2d')
-            if (!ctx) return '#ffffff'
-            const px = Math.max(0, Math.min(Math.round(x), cvs.width - 1))
-            const py = Math.max(0, Math.min(Math.round(y), cvs.height - 1))
-            const d = ctx.getImageData(px, py, 1, 1).data
-            return `rgb(${d[0]},${d[1]},${d[2]})`
-          } catch {
-            return '#ffffff'
-          }
-        }
 
         for (let i = 0; i < blocks.length; i++) {
           const block = blocks[i]
@@ -366,7 +509,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               top: block.top,
               width: block.width,
               height: block.height,
-              fill: sampleBgColor(block.left, block.top),
+              fill: sampleBgColor(pdfCanvasRef.current, block.left, block.top),
               strokeWidth: 0,
               selectable: false,
               evented: false,
@@ -394,11 +537,21 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
         // ── Single-click → immediate editing ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fc.on('mouse:down', (e: any) => {
-          // Select mode — canvas is passive, no text interaction
-          if (editModeRef.current === 'select') return
-
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const obj = e.target as any
+
+          // Capture pre-position for move undo — must happen before select-mode early return
+          // so that drags initiated in Select mode (Fix 3) are also tracked
+          if (obj && obj.type === 'i-text' && obj.data?.type === 'edited-text') {
+            prePositionRef.current = {
+              blockKey: obj.data.blockKey as string,
+              left: obj.left as number,
+              top: obj.top as number,
+            }
+          }
+
+          // Select mode — canvas is passive for text interaction
+          if (editModeRef.current === 'select') return
 
           if (!obj || obj.type !== 'i-text' || obj.data?.type !== 'edited-text') {
             // Clicked empty canvas → dormant (committed blocks stay visible)
@@ -455,7 +608,7 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               top: bounds.top,
               width: bounds.width,
               height: bounds.height,
-              fill: sampleBgColor(bounds.left, bounds.top),
+              fill: sampleBgColor(pdfCanvasRef.current, bounds.left, bounds.top),
               strokeWidth: 0,
               selectable: false,
               evented: false,
@@ -479,6 +632,49 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
               fc!.renderAll()
             }
           })
+        })
+
+        // ── Text editing started: capture pre-edit text for undo ──────────────
+        fc.on('text:editing:entered', () => {
+          const obj = fc!.getActiveObject()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const itext = obj as any
+          if (itext && itext.type === 'i-text' && itext.data?.type === 'edited-text') {
+            preEditTextRef.current = {
+              blockKey: itext.data.blockKey as string,
+              text: (itext.text ?? '') as string,
+            }
+          }
+        })
+
+        // ── Object modified: push move to undo stack if position changed ─────
+        fc.on('object:modified', (e: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const o = e.target as any
+          if (!o || o.type !== 'i-text' || o.data?.type !== 'edited-text') return
+          if (!prePositionRef.current) return
+
+          const blockKey = o.data.blockKey as string
+          const newLeft = o.left as number
+          const newTop = o.top as number
+          const prevLeft = prePositionRef.current.left
+          const prevTop = prePositionRef.current.top
+
+          // Only push if position actually changed
+          if (newLeft !== prevLeft || newTop !== prevTop) {
+            const item: UndoItem = {
+              kind: 'move',
+              blockKey,
+              bLeft: prevLeft,
+              bTop: prevTop,
+              aLeft: newLeft,
+              aTop: newTop,
+            }
+            undoStackRef.current.push(item)
+            if (undoStackRef.current.length > 50) undoStackRef.current.shift()
+            redoStackRef.current = [] // Clear redo stack on new action
+          }
+          prePositionRef.current = null
         })
 
         // ── Edit exited: commit if text changed, else go dormant ─────────────
@@ -505,6 +701,19 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
             if (hoverRectRef.current) {
               fc!.remove(hoverRectRef.current as any)
               hoverRectRef.current = null
+            }
+            // Push text edit to undo stack
+            if (preEditTextRef.current && preEditTextRef.current.blockKey === blockKey) {
+              const item: UndoItem = {
+                kind: 'text',
+                blockKey,
+                before: preEditTextRef.current.text,
+                after: editedObj.text as string,
+              }
+              undoStackRef.current.push(item)
+              if (undoStackRef.current.length > 50) undoStackRef.current.shift()
+              redoStackRef.current = [] // Clear redo stack on new action
+              preEditTextRef.current = null
             }
             // Persist committed edit so it survives tool switches (CanvasTextLayer unmount)
             onCommitRef.current?.(blockKey, {
