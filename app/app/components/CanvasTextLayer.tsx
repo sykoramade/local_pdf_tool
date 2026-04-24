@@ -158,15 +158,50 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
     // Rect class cached from import for redo occluder creation
     const rectClassRef = useRef<typeof import('fabric').Rect | null>(null)
 
-    // Sync editMode prop to ref without triggering canvas re-init
+    // Sync editMode prop → ref AND canvas selection state
     useEffect(() => {
       editModeRef.current = editMode ?? 'text'
+      const canvas = fabricRef.current
+      if (!canvas) return
+      applyEditModeToCanvas(canvas, editMode ?? 'text')
     }, [editMode])
 
     // Sync onCommit prop to ref so event handlers always call the latest version
     useEffect(() => {
       onCommitRef.current = onCommit
     }, [onCommit])
+
+    // ── Edit-mode ↔ canvas selection sync ────────────────────────────────────────
+    // Called both from the editMode useEffect and at the end of init() so a
+    // canvas re-init while already in Select mode comes up in the right state.
+    function applyEditModeToCanvas(canvas: FabricCanvas, mode: 'select' | 'text') {
+      if (mode === 'select') {
+        // Enable rubber-band marquee; make all text blocks selectable + moveable
+        canvas.selection = true
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        canvas.forEachObject((obj: any) => {
+          if (obj.data?.type === 'edited-text') {
+            obj.set({ selectable: true, evented: true, hasBorders: true, hasControls: false })
+          }
+        })
+      } else {
+        // Restore text-edit mode: dismiss any active selection, make objects non-selectable
+        canvas.selection = false
+        canvas.discardActiveObject()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        canvas.forEachObject((obj: any) => {
+          if (obj.data?.type !== 'edited-text') return
+          if (obj.data.committedOccluder) {
+            // Committed block: stays visible but not selectable
+            obj.set({ selectable: false, hasBorders: false })
+          } else {
+            // Ghost block: fully dormant
+            obj.set({ selectable: false, editable: false, opacity: 0.001, hasBorders: false })
+          }
+        })
+      }
+      canvas.renderAll()
+    }
 
     // ── Canvas-level undo/redo (component-scope so useImperativeHandle can expose them) ──
 
@@ -747,7 +782,8 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
           }
         })
 
-        fc.renderAll()
+        // Apply current editMode in case we re-inited while already in select mode
+        applyEditModeToCanvas(fc, editModeRef.current)
       }
 
       init()
