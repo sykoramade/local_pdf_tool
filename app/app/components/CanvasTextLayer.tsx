@@ -128,8 +128,10 @@ const CanvasTextLayer = forwardRef<FabricLayerRef, CanvasTextLayerProps>(
 
     // editMode ref — synced without triggering canvas re-init
     const editModeRef = useRef<'select' | 'text'>(editMode ?? 'text')
-    // committedEdits ref — only read at canvas init time (when component mounts)
+    // committedEdits ref — kept current so canvas re-init (items/size change) rehydrates
+    // with the latest committed state rather than the snapshot at mount time
     const committedEditsRef = useRef(committedEdits)
+    useEffect(() => { committedEditsRef.current = committedEdits }, [committedEdits])
     // onCommit ref — always points to latest version (called from event handlers)
     const onCommitRef = useRef(onCommit)
 
