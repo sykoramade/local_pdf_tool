@@ -39,7 +39,7 @@ jobs:
         id: classify
         run: |
           # Clone HELM repo to access refgraph module
-          git clone --depth 1 https://x-access-token:${{ secrets.HELM_TOKEN }}@github.com/sykoramade/helm.git /tmp/helm-repo
+          git clone --depth 1 "https://x-access-token:${{ secrets.HELM_TOKEN }}@github.com/sykoramade/helm.git" /tmp/helm-repo
           cd /tmp/helm-repo/refgraph
           npm install --silent
 
