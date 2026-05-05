@@ -21,11 +21,12 @@ jobs:
       - name: Fetch HELM graph
         run: |
           mkdir -p .helm
-          curl -s https://raw.githubusercontent.com/sykoramade/helm/main/graphs/localpdf/graph-current.json \
-            -o .helm/graph-current.json
-          if [ ! -f .helm/graph-current.json ]; then
-            echo "Failed to fetch graph" >&2
-            exit 1
+          if curl -fs https://raw.githubusercontent.com/sykoramade/helm-graphs/main/graphs/localpdf/graph-current.json \
+            -o .helm/graph-current.json; then
+            echo "Graph fetched successfully"
+          else
+            echo "HELM: graph not available, skipping classification" >&2
+            echo '{"skipped":true}' > .helm/graph-current.json
           fi
 
       - name: Get PR diff
@@ -38,7 +39,7 @@ jobs:
         id: classify
         run: |
           # Clone HELM repo to access refgraph module
-          git clone --depth 1 https://github.com/sykoramade/helm.git /tmp/helm-repo
+          git clone --depth 1 https://x-access-token:${{ secrets.HELM_TOKEN }}@github.com/sykoramade/helm.git /tmp/helm-repo
           cd /tmp/helm-repo/refgraph
           npm install --silent
 
