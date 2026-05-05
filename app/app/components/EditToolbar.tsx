@@ -298,20 +298,27 @@ export default function EditToolbar({
         disabled={!canUndo}
         onMouseDown={e => e.preventDefault()}
         onClick={onUndo}
-        title="Undo (Cmd+Z)"
+        title="Undo (Ctrl+Z)"
+        className={canUndo ? 'group' : ''}
         style={{
           background: 'none',
-          border: '1px solid rgba(255,255,255,.14)',
+          border: '1px solid rgba(255,255,255,.18)',
           borderRadius: 6,
           width: 28,
           height: 28,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: !canUndo ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.5)',
-          transition: 'color .15s, opacity .15s',
-          opacity: !canUndo ? 0.4 : 1,
+          color: !canUndo ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.85)',
+          transition: 'color .12s, background .12s, border-color .12s',
+          opacity: !canUndo ? 0.35 : 1,
           cursor: !canUndo ? 'default' : 'pointer',
+        }}
+        onMouseEnter={e => {
+          if (canUndo) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,.08)'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'none'
         }}
       >
         <svg
@@ -320,7 +327,7 @@ export default function EditToolbar({
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -334,20 +341,26 @@ export default function EditToolbar({
         disabled={!canRedo}
         onMouseDown={e => e.preventDefault()}
         onClick={onRedo}
-        title="Redo (Cmd+Shift+Z)"
+        title="Redo (Ctrl+Shift+Z)"
         style={{
           background: 'none',
-          border: '1px solid rgba(255,255,255,.14)',
+          border: '1px solid rgba(255,255,255,.18)',
           borderRadius: 6,
           width: 28,
           height: 28,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: !canRedo ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.5)',
-          transition: 'color .15s, opacity .15s',
-          opacity: !canRedo ? 0.4 : 1,
+          color: !canRedo ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.85)',
+          transition: 'color .12s, background .12s, border-color .12s',
+          opacity: !canRedo ? 0.35 : 1,
           cursor: !canRedo ? 'default' : 'pointer',
+        }}
+        onMouseEnter={e => {
+          if (canRedo) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,.08)'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'none'
         }}
       >
         <svg
@@ -356,7 +369,7 @@ export default function EditToolbar({
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
         >

@@ -168,10 +168,12 @@ export function useWorkspaceActions({
 
   /* Download */
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [redactError, setRedactError] = useState<string | null>(null)
 
   const handleDownload = useCallback(async () => {
     if (!pdfBytes || !file) return
     setDownloadError(null)
+    setRedactError(null)
     let url: string | null = null
     try {
       let outputBytes = pdfBytes
@@ -270,7 +272,11 @@ export function useWorkspaceActions({
       a.download = outputName
       a.click()
     } catch (err) {
-      setDownloadError('Download failed — the PDF could not be processed. Please try again.')
+      if (err instanceof Error && err.message.startsWith('Redaction incomplete:')) {
+        setRedactError(err.message)
+      } else {
+        setDownloadError('Download failed — the PDF could not be processed. Please try again.')
+      }
       console.error('[handleDownload]', err)
     } finally {
       if (url) URL.revokeObjectURL(url)
@@ -326,6 +332,7 @@ export function useWorkspaceActions({
     setRedactInput,
     /* Download */
     downloadError,
+    redactError,
     handleDownload,
   }
 }

@@ -25,6 +25,8 @@ export default function WorkspaceShell() {
 
   const [activeTool, setActiveTool] = useState<ToolDef>(initialTool)
   const [editMode, setEditMode] = useState<'select' | 'text'>('text')
+  const [undoCount, setUndoCount] = useState(0)
+  const [redoCount, setRedoCount] = useState(0)
 
   // ── Hooks ──
   const fileHook = useWorkspaceFile()
@@ -52,6 +54,9 @@ export default function WorkspaceShell() {
     window.history.replaceState(null, '', `/workspace?${params.toString()}`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool.key])
+
+  /* Reset undo/redo counts when file is cleared or page changes */
+  useEffect(() => { setUndoCount(0); setRedoCount(0) }, [fileHook.file, fileHook.activePage])
 
   const {
     file,
@@ -133,6 +138,7 @@ export default function WorkspaceShell() {
     redactInput,
     setRedactInput,
     downloadError,
+    redactError,
     handleDownload,
   } = actionsHook
 
@@ -311,6 +317,27 @@ export default function WorkspaceShell() {
           )}
         </header>
 
+        {redactError && (
+          <div
+            role="alert"
+            style={{
+              background: '#7f1d1d',
+              borderBottom: '2px solid #ef4444',
+              color: '#fef2f2',
+              padding: '12px 20px',
+              fontSize: 13,
+              lineHeight: 1.5,
+              flexShrink: 0,
+              zIndex: 60,
+            }}
+          >
+            <strong style={{ display: 'block', marginBottom: 4 }}>
+              ⛔ Redaction failed — do not share this PDF
+            </strong>
+            {redactError}
+          </div>
+        )}
+
         {/* ── L2: tool selector rail + L3 contextual strip ── */}
         <div
           style={{
@@ -329,11 +356,11 @@ export default function WorkspaceShell() {
               onEditModeChange={setEditMode}
               selectedField={selectedFieldId ? editMap.get(selectedFieldId) ?? null : null}
               editCount={editMap.size}
-              canUndo={hIdx > 0}
-              canRedo={hIdx < histRef.current.length - 1}
+              canUndo={undoCount > 0}
+              canRedo={redoCount > 0}
               onFieldChange={handleFieldChange}
-              onUndo={histUndo}
-              onRedo={histRedo}
+              onUndo={() => fabricLayerRefs.current.get(activePage)?.undo()}
+              onRedo={() => fabricLayerRefs.current.get(activePage)?.redo()}
               compressEnabled={compressEnabled}
               compressStats={compressStats}
               compressLoading={compressLoading}
@@ -410,6 +437,7 @@ export default function WorkspaceShell() {
             editMode={editMode}
             committedEdits={committedEdits}
             onCommit={handleCommit}
+            onStackChange={useCallback((u: number, r: number) => { setUndoCount(u); setRedoCount(r) }, [])}
           />
         </div>
       </div>

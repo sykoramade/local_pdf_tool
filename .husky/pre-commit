@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+cd app
+npx tsc --noEmit
+npx lint-staged
+npm run lint
