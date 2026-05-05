@@ -1,0 +1,61 @@
+name: HELM Refgraph Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  helm-classify:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout LocalPDF
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch HELM graph
+        run: |
+          mkdir -p .helm
+          curl -s https://raw.githubusercontent.com/sykoramade/helm/main/graphs/localpdf/graph-current.json \
+            -o .helm/graph-current.json
+          if [ ! -f .helm/graph-current.json ]; then
+            echo "Failed to fetch graph" >&2
+            exit 1
+          fi
+
+      - name: Get PR diff
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr.diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run HELM classifier
+        id: classify
+        run: |
+          # Clone HELM repo to access refgraph module
+          git clone --depth 1 https://github.com/sykoramade/helm.git /tmp/helm-repo
+          cd /tmp/helm-repo/refgraph
+          npm install --silent
+
+          # Run the action
+          export HELM_GRAPH_PATH="$GITHUB_WORKSPACE/.helm/graph-current.json"
+          export PR_DIFF="$(cat /tmp/pr.diff)"
+          export ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+
+          npx tsx src/run-action.ts > /tmp/comment.txt 2>&1 || echo "Classification completed"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Post PR comment
+        if: always()
+        run: |
+          if [ -f /tmp/comment.txt ] && [ -s /tmp/comment.txt ]; then
+            gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment.txt
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
