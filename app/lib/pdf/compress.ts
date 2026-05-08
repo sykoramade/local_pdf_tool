@@ -39,6 +39,7 @@ export async function compressPdf(inputBytes: Uint8Array): Promise<CompressResul
 }
 
 export function formatBytes(bytes: number): string {
+  // format bytes for human-readable display
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
