@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+cd app
+npx tsc --noEmit
+npx lint-staged
+npm run lint
+cd ..
+# HELM refgraph classifier (advisory — never blocks commits)
+HELM_REFGRAPH_PATH="${HELM_REFGRAPH_PATH:-../helm/refgraph}"
+if [ ! -d "$HELM_REFGRAPH_PATH" ]; then
+  printf 'HELM: refgraph not found at %s, skipping\n' "$HELM_REFGRAPH_PATH" >&2
+elif [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  printf 'HELM: ANTHROPIC_API_KEY not set, skipping\n' >&2
+else
+  REPO_ROOT="$PWD"
+  (cd "$HELM_REFGRAPH_PATH" && LOCAL_PDF_REPO="$REPO_ROOT" npx tsx src/precommit-runner.ts) || true
+fi
