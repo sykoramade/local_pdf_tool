@@ -3,6 +3,7 @@ name: HELM Refgraph Analysis
 on:
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch:
 
 jobs:
   helm-classify:
