@@ -16,6 +16,7 @@ interface PdfViewerProps {
   onTextItems?: (items: ExtractedTextItem[]) => void
   onLoad?: (pageCount: number) => void
   onFieldSelect?: (id: string) => void
+  onBlockSelect?: (field: FieldData | null) => void
   pageRefs?: React.MutableRefObject<Map<number, HTMLDivElement>>
   sigs?: SigEntry[]
   onSigMove?: (id: string, xPct: number, yPct: number) => void
@@ -38,6 +39,7 @@ interface PdfViewerProps {
   redactTargets?: string[]
   committedEdits?: Map<number, Map<string, CommittedEdit>>
   onCommit?: (pageNum: number, blockKey: string, edit: CommittedEdit) => void
+  onUndoSnapshot?: (pageNum: number, snapshot: string) => void
 }
 
 interface PageData {
@@ -75,6 +77,7 @@ export default function PdfViewer({
   onTextItems,
   onLoad,
   onFieldSelect,
+  onBlockSelect,
   pageRefs,
   sigs,
   onSigMove,
@@ -97,6 +100,7 @@ export default function PdfViewer({
   redactTargets,
   committedEdits,
   onCommit,
+  onUndoSnapshot,
 }: PdfViewerProps) {
   const [pages, setPages] = useState<PageData[]>([])
   const [loading, setLoading] = useState(true)
@@ -185,7 +189,7 @@ export default function PdfViewer({
                 pdfWidth: raw.width,
                 pdfFontSize,
                 canvasX: tx[4],
-                canvasY: tx[5] - canvasFontSize * 0.8,
+                canvasY: viewport.height - tx[5] - canvasFontSize,
                 canvasWidth: Math.max(raw.width * scale, 4),
                 canvasFontSize,
               }
@@ -302,6 +306,8 @@ export default function PdfViewer({
                       committedEdits={committedEdits?.get(pageNum)}
                       onCommit={onCommit ? (bk, ed) => onCommit(pageNum, bk, ed) : undefined}
                       pdfCanvas={canvasRefs.current.get(pageNum) ?? null}
+                      onBlockSelect={onBlockSelect}
+                      onUndoSnapshot={onUndoSnapshot ? (snapshot) => onUndoSnapshot(pageNum, snapshot) : undefined}
                     />
                   ) : (
                     <PdfTextLayer
